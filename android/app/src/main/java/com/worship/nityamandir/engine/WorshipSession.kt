@@ -19,6 +19,8 @@ data class WorshipSession(
     val bathed: Set<Int> = emptySet(),
     val tilak: Set<Int> = emptySet(),
     val flowers: Set<Int> = emptySet(),
+    val offeredFlowers: Map<Int, Int> = emptyMap(),
+    val recitationComplete: Boolean = false,
     val bellRung: Boolean = false,
     val conchBlown: Boolean = false,
     val prasadOffered: Boolean = false,
@@ -34,7 +36,7 @@ data class WorshipSession(
         WorshipStep.BELL -> bellRung
         WorshipStep.CONCH -> conchBlown
         WorshipStep.PRASAD -> prasadOffered
-        WorshipStep.RECITATION -> true
+        WorshipStep.RECITATION -> recitationComplete
         WorshipStep.AARTI -> aartiComplete
     }
     fun next(): WorshipSession = if(!canContinue || complete) this else if(step==WorshipStep.AARTI) copy(complete=true)

@@ -41,7 +41,7 @@ fun RitualFlamesOverlay(oilLit: Boolean, aartiLit: Boolean, lamp: TemplePoint) {
             drawOval(Color(0xAA689AF0),base-Offset(width*.35f,height*.10f),androidx.compose.ui.geometry.Size(width*.7f,height*.12f))
             drawLine(Color(0xFF482819),base+Offset(0f,unit*.004f),base-Offset(0f,unit*.004f),unit*.0025f,StrokeCap.Round)
         }
-        if(oilLit) flame(TemplePoint(.505f,.605f),0f)
-        if(aartiLit) flame(TemplePoint(lamp.x,lamp.y-.088f),1.71f)
+        if(oilLit) flame(TemplePoint(.505f,TempleSceneLayout.oil.y-.06f*1.6f),0f)
+        if(aartiLit) flame(TemplePoint(lamp.x,lamp.y-.088f*1.8f),1.71f)
     }
 }

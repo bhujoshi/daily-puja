@@ -9,6 +9,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.TransformOrigin
+import io.github.sceneview.math.Scale
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalDensity
@@ -36,7 +39,9 @@ fun MandirAltarView(
     flowerTarget: Int?, flowerProgress: Float,
     aartiRunning: Boolean, aartiProgress: Float,
     onDeityClick: (Int) -> Unit, onDiyaClick: () -> Unit, onBellClick: () -> Unit,
-    onPlateClick: () -> Unit, onAartiClick: () -> Unit,
+    selectedFlower: Int, bellRunning: Boolean, bellProgress: Float,
+    conchRunning: Boolean, conchProgress: Float,
+    onFlowerClick: (Int) -> Unit, onConchClick: () -> Unit, onAartiClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val engine = rememberEngine()
@@ -45,11 +50,16 @@ fun MandirAltarView(
     val nodes = rememberNodes()
     val flowers = remember { mutableListOf<ModelNode>() }
     var bellNode by remember { mutableStateOf<ModelNode?>(null) }
+    var conchNode by remember { mutableStateOf<ModelNode?>(null) }
+    var conchScale by remember {mutableStateOf(Scale(1f))}
+    val selectedNow by rememberUpdatedState(selectedFlower)
+    val bellActive by rememberUpdatedState(bellRunning)
+    val bellTime by rememberUpdatedState(bellProgress)
+    val conchActive by rememberUpdatedState(conchRunning)
+    val conchTime by rememberUpdatedState(conchProgress)
     val sessionNow by rememberUpdatedState(session)
     val targetNow by rememberUpdatedState(flowerTarget)
     val flightNow by rememberUpdatedState(flowerProgress)
-    val aartiNow by rememberUpdatedState(aartiRunning)
-    val aartiTime by rememberUpdatedState(aartiProgress)
 
     LaunchedEffect(loader) {
         fun model(file: String, point: TemplePoint, units: Float, tilt: Float=0f, z: Float=0f): ModelNode {
@@ -63,8 +73,10 @@ fun MandirAltarView(
         model("golden_oil_lamp",TempleSceneLayout.oil,TempleSceneLayout.OIL_SIZE,12f)
         model("royal_side_plate",TempleSceneLayout.plate,TempleSceneLayout.PLATE_SIZE,32f)
         bellNode=model("hindu_temple_bell",TempleSceneLayout.bell,.22f,10f)
+        conchNode=model("sankh",TempleSceneLayout.conch,.20f,20f,.2f)
+        conchScale=conchNode!!.scale
         yield()
-        repeat(10) { i ->
+        repeat(TempleSceneLayout.FLOWER_COUNT) { i ->
             flowers.add(model(if(i%2==0) "sunflower" else "single_peony_flower",TempleSceneLayout.plateFlower(i),.10f+(i%3)*.008f,45f+(i%4)*8f,.15f+i*.001f))
             yield()
         }
@@ -73,33 +85,43 @@ fun MandirAltarView(
     BoxWithConstraints(modifier.fillMaxSize()) {
         val density=LocalDensity.current
         val viewport=remember(maxWidth,maxHeight,density) { with(density) { TempleViewport(maxWidth.toPx(),maxHeight.toPx()) } }
-        Image(painterResource(R.drawable.temple_portrait),null,Modifier.fillMaxSize(),alignment=Alignment.TopCenter,contentScale=ContentScale.Crop)
+        Image(painterResource(R.drawable.temple_portrait),null,Modifier.fillMaxSize().graphicsLayer {scaleX=TempleViewport.ZOOM;scaleY=TempleViewport.ZOOM;transformOrigin=TransformOrigin(.5f,0f)},alignment=Alignment.TopCenter,contentScale=ContentScale.Crop)
         Scene(Modifier.fillMaxSize(),engine=engine,modelLoader=loader,cameraNode=camera,cameraManipulator=null,childNodes=nodes,isOpaque=false,
             onFrame={ _ ->
                 val halfWidth=viewport.width/viewport.imageWidth
                 camera.setProjection(Camera.Projection.ORTHO,-halfWidth.toDouble(),halfWidth.toDouble(),(1-2*viewport.height/viewport.imageWidth).toDouble(),1.0,.1,10.0)
                 flowers.forEachIndexed { i,node ->
-                    val owner=if(i<4) i/2 else -1
+                    val owner=sessionNow.offeredFlowers[i]
+                    val flying=i==selectedNow && targetNow!=null
+                    val destination=TempleSceneLayout.feet(owner ?: targetNow ?: 0,(i%5))
                     val point=when {
-                        owner>=0 && owner in sessionNow.flowers -> TempleSceneLayout.feet(owner,i%2)
-                        owner>=0 && owner==targetNow -> TempleSceneLayout.flowerFlight(TempleSceneLayout.plateFlower(i),TempleSceneLayout.feet(owner,i%2),flightNow)
+                        owner!=null -> destination
+                        flying -> TempleSceneLayout.flowerFlight(TempleSceneLayout.plateFlower(i),destination,flightNow)
                         else -> TempleSceneLayout.plateFlower(i)
                     }
-                    node.position=Position(2*point.x-1,1-2*point.y,if(owner==targetNow) .35f else .15f+i*.001f)
-                    node.rotation=Rotation(x=55f,z=if(owner==targetNow) flightNow*220f else (i*31f))
+                    node.position=Position(2*point.x-1,1-2*point.y,if(flying) .35f else .15f+i*.001f)
+                    node.rotation=Rotation(x=55f,z=if(flying) flightNow*220f else (i*31f))
                 }
+                conchNode?.apply {
+                    val lift=if(conchActive) sin(Math.PI.toFloat()*conchTime).coerceAtLeast(0f) else 0f
+                    val point=TempleSceneLayout.conch
+                    position=Position(2*(point.x-.12f*lift)-1,1-2*(point.y-.34f*lift),.2f+.3f*lift)
+                    scale=conchScale*(1f+.8f*lift)
+                    rotation=Rotation(x=20f-15f*lift,z=-20f*lift)
+                }
+
                 bellNode?.apply {
-                    val lift=if(aartiNow) kotlin.math.min(aartiTime/.10f,(1-aartiTime)/.10f).coerceIn(0f,1f) else 0f
+                    val lift=if(bellActive) kotlin.math.min(bellTime/.15f,(1-bellTime)/.15f).coerceIn(0f,1f) else 0f
                     position=Position(2*TempleSceneLayout.bell.x-1,1-2*(TempleSceneLayout.bell.y-.045f*lift),.12f*lift)
-                    rotation=Rotation(x=10f,z=sin(aartiTime*10.5f*18f)*12f*lift)
+                    rotation=Rotation(x=10f,z=sin(bellTime*3.5f*18f)*12f*lift)
                 }
             })
         val aartiPoint=if(aartiRunning) TempleSceneLayout.aartiPosition(aartiProgress) else TempleSceneLayout.aartiRest
         val lampPixel=viewport.pixel(aartiPoint)
         with(density) {
             Image(painterResource(R.drawable.aarti_diya),"Brass aarti diya",
-                Modifier.offset((lampPixel.x-viewport.imageWidth*.10f).toDp(),(lampPixel.y-viewport.imageWidth*.125f).toDp())
-                    .size((viewport.imageWidth*.20f).toDp(),(viewport.imageWidth*.25f).toDp()),contentScale=ContentScale.FillBounds)
+                Modifier.offset((lampPixel.x-viewport.imageWidth*.18f).toDp(),(lampPixel.y-viewport.imageWidth*.225f).toDp())
+                    .size((viewport.imageWidth*.36f).toDp(),(viewport.imageWidth*.45f).toDp()),contentScale=ContentScale.FillBounds)
         }
         RitualFlamesOverlay(session.lit,session.aartiLit,
             if(aartiRunning) TempleSceneLayout.aartiPosition(aartiProgress) else TempleSceneLayout.aartiRest)
@@ -117,9 +139,15 @@ fun MandirAltarView(
         }
         Box(target(TemplePoint(.31f,.43f),.18f,.26f).clickable(onClickLabel="गणेश जी · Ganesha") {onDeityClick(0)})
         Box(target(TemplePoint(.53f,.41f),.16f,.28f).clickable(onClickLabel="लक्ष्मी जी · Lakshmi") {onDeityClick(1)})
-        Box(target(TemplePoint(.44f,.59f),.13f,.17f).clickable(onClickLabel="दीप जलाएँ · Light oil lamp",onClick=onDiyaClick))
+        Box(target(TemplePoint(.44f,.53f),.13f,.28f).clickable(onClickLabel="दीप जलाएँ · Light oil lamp",onClick=onDiyaClick))
         Box(target(TemplePoint(.16f,.98f),.12f,.16f).clickable(onClickLabel="घंटी · Bell",onClick=onBellClick))
-        Box(target(TemplePoint(.32f,1.00f),.36f,.17f).clickable(onClickLabel="पुष्प अर्पण · Offer flowers",onClick=onPlateClick))
-        Box(target(TemplePoint(.70f,.95f),.18f,.25f).clickable(onClickLabel="दीप आरती · Diya aarti",onClick=onAartiClick))
+        repeat(TempleSceneLayout.FLOWER_COUNT) { i ->
+            if(i !in session.offeredFlowers && !(flowerTarget!=null && selectedFlower==i)) {
+                val point=TempleSceneLayout.plateFlower(i)
+                Box(target(TemplePoint(point.x-.025f,point.y-.025f),.05f,.05f).clickable(onClickLabel="पुष्प ${i+1} · Offer flower ${i+1}") {onFlowerClick(i)})
+            }
+        }
+        Box(target(TemplePoint(TempleSceneLayout.conch.x-.055f,TempleSceneLayout.conch.y-.065f),.11f,.13f).clickable(onClickLabel="शंख · Sound conch",onClick=onConchClick))
+        Box(target(TemplePoint(.72f,.84f),.20f,.40f).clickable(onClickLabel="दीप आरती · Diya aarti",onClick=onAartiClick))
     }
 }

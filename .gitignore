@@ -1,0 +1,36 @@
+# Local system and editor files
+.DS_Store
+.idea/
+*.iml
+.vscode/
+
+# Android / Gradle outputs and local SDK configuration
+.gradle/
+.kotlin/
+**/build/
+local.properties
+*.apk
+*.aab
+*.hprof
+.cxx/
+.externalNativeBuild/
+
+# Swift / Xcode outputs
+.build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.swiftpm/
+
+# Backend dependencies, caches and local configuration
+node_modules/
+dist/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.env
+.env.*
+!.env.example
+*.log

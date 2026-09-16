@@ -9,13 +9,6 @@ def save(name,duration,sample):
         f.writeframes(b''.join(struct.pack('<h',int(max(-1,min(1,sample(i/RATE)))*28000)) for i in range(int(duration*RATE))))
 def note(t,f):
     return math.sin(2*math.pi*f*t)+.24*math.sin(4*math.pi*f*t)+.08*math.sin(6*math.pi*f*t)
-notes=[261.63,293.66,329.63,392,440,392,329.63,293.66]
-def music(t):
-    beat=t%1.5; index=int(t/1.5)%8
-    env=(1-math.exp(-beat*24))*math.exp(-beat*1.6)
-    drone=.045*(math.sin(2*math.pi*130.815*t)+math.sin(2*math.pi*196*t))
-    return .16*env*note(beat,notes[index])+drone
-save('ritual_music',12,music)
 random.seed(17)
 low=0
 def water(t):
@@ -27,3 +20,8 @@ save('water_offering',2.8,water)
 def offering(t):
     return sum(.12*math.exp(-(t-start)*3)*note(t-start,f) for start,f in [(0,523.25),(.18,659.25),(.36,783.99)] if t>=start)*min(1,t*100,(1.6-t)*20)
 save('flower_offering',1.6,offering)
+
+# A single tap produces a 3.5-second bell phrase matching the swing animation.
+def bell(t):
+    return sum(.20*math.exp(-3.8*(t-start))*sum(math.sin(2*math.pi*f*(t-start))*gain for f,gain in [(880,1),(1372,.5),(2112,.25)]) for start in (0,.55,1.1,1.65,2.2) if t>=start)*min(1,t*150,(3.5-t)*8)
+save('bell',3.5,bell)

@@ -5,6 +5,19 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class WorshipSessionTest {
+    @Test fun recitationWaitsForAudioCompletion() {
+        val pending=WorshipSession(step=WorshipStep.RECITATION)
+        assertEquals(pending,pending.next())
+        assertEquals(WorshipStep.AARTI,pending.copy(recitationComplete=true).next().step)
+    }
+    @Test fun bellAndConchWaitForTheirAnimations() {
+        val bell=WorshipSession(step=WorshipStep.BELL)
+        assertEquals(bell,bell.next())
+        assertEquals(WorshipStep.CONCH,bell.copy(bellRung=true).next().step)
+        val conch=WorshipSession(step=WorshipStep.CONCH)
+        assertEquals(conch,conch.next())
+        assertEquals(WorshipStep.PRASAD,conch.copy(conchBlown=true).next().step)
+    }
     @Test fun aartiReturnsToRestWithoutJumping() {
         assertEquals(TempleSceneLayout.aartiRest,TempleSceneLayout.aartiPosition(0f))
         assertEquals(TempleSceneLayout.aartiRest,TempleSceneLayout.aartiPosition(1f))
