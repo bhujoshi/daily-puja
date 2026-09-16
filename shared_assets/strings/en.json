@@ -1,0 +1,98 @@
+{
+  "app_name": "Nitya Mandir",
+  "app_tagline": "Daily Sacred Virtual Worship & Sanctuary",
+  
+  "purity_gate": {
+    "title": "Purity Affirmation",
+    "question": "Have you bathed and purified yourself?",
+    "subtitle": "Bodily and mental purity is essential before entering the sacred sanctum.",
+    "confirm_btn": "Yes, I am pure",
+    "snan_mantra_btn": "Listen to Snan Mantra",
+    "snan_mantra_text": "Gange cha Yamune chaiva Godavari Saraswati | Narmade Sindhu Kaveri jalesmin sannidhim kuru ||"
+  },
+
+  "cleaning": {
+    "title": "Temple Purification & Cleaning",
+    "status_dusty": "Dust has settled on the altar and yesterday's flowers have withered into nirmalya.",
+    "step_flowers": "1. Collect withered flowers into the sacred Nirmalya Patra",
+    "step_wipe": "2. Wipe the temple altar clean with a damp cloth",
+    "step_diya": "3. Rinse and clean the brass diya",
+    "clean_complete": "The temple is now pristine and sacred. You may begin pooja.",
+    "nirmalya_patra": "Nirmalya Patra (For sacred immersion)",
+    "action_clean": "Clean Temple"
+  },
+
+  "ritual_steps": {
+    "step_1": {
+      "name": "Gather Items",
+      "instruction": "Gather Gangajal, fresh blossoms, chandan, and offerings onto the brass thali.",
+      "mantra": "Om Pavitratayai Namah"
+    },
+    "step_2": {
+      "name": "Light Diya & Incense",
+      "instruction": "Touch the flame to the diya wick and kindle the fragrant incense sticks.",
+      "mantra": "Shubham Karoti Kalyanam Aarogyam Dhanasampada | Shatrubuddhivinashaya Deepajyotir Namostu Te ||"
+    },
+    "step_3": {
+      "name": "Bathing Deities (Abhishek)",
+      "instruction": "Pour holy water gently over Shri Ganesh and Maa Lakshmi, then pat dry with silken cloth.",
+      "mantra": "Om Apavitrah Pavitro Va Sarvavastham Gato'pi Va | Yah Smaret Pundarikaksham Sa Bahyabhyantarah Shuchih ||"
+    },
+    "step_4": {
+      "name": "Tilak & Flower Offering",
+      "instruction": "Apply sacred Chandan and Kumkum on deities' foreheads and offer fresh blossoms.",
+      "mantra": "Om Shri Ganeshaya Namah | Om Mahalaksmyai Namah"
+    },
+    "step_5": {
+      "name": "Bell Ringing & Aarti",
+      "instruction": "Ring the brass bell while rotating the illuminated Aarti Thali in clockwise circles.",
+      "mantra": "Karpura Gauram Karunavataram Sansarasaram Bhujagendraharam | Sada Vasantam Hridayaravinde Bhavam Bhavani Sahitam Namami ||"
+    },
+    "step_6": {
+      "name": "Blowing the Shankh",
+      "instruction": "Press and hold the conch to purify the environment with primordial resonance.",
+      "mantra": "Tvam Pura Sagarotpanno Vishnuna Vidhritah Kare | Nirmitah Sarvadevaishcha Panchajanya Namostu Te ||"
+    },
+    "step_7": {
+      "name": "Offering Prasad (Bhog)",
+      "instruction": "Offer Modak and Kheer, and perform three circular waves of Achaman water.",
+      "mantra": "Om Pranaya Swaha | Om Apanaya Swaha | Om Vyanaya Swaha | Om Udanaya Swaha | Om Samanaya Swaha ||"
+    },
+    "step_8": {
+      "name": "Singing Aarti",
+      "instruction": "Listen, sing along, and immerse in divine surrender with the sacred Aarti.",
+      "mantra": "Aarti Shri Ganesh Ji & Maa Lakshmi Ji"
+    }
+  },
+
+  "deities": {
+    "ganesh_ji": "Lord Shri Ganesha",
+    "ganesh_desc": "Remover of Obstacles, First Worshipped, Bestower of Intellect",
+    "lakshmi_ji": "Mother Maha Lakshmi",
+    "lakshmi_desc": "Goddess of Wealth, Prosperity, and Divine Grace"
+  },
+
+  "temple_styles": {
+    "wood": "Carved Sheesham Wood Altar",
+    "marble": "Makrana White Marble Altar",
+    "brass": "Golden Brass Altar"
+  },
+
+  "completion": {
+    "title": "Pooja Completed!",
+    "blessing": "May Lord Ganesha and Mother Lakshmi bless your home with peace, happiness, and prosperity.",
+    "streak_label": "Daily Devotion Streak",
+    "days": "days",
+    "close_mandir_evening": "Close Curtains for Evening"
+  },
+
+  "time_travel_drawer": {
+    "title": "Temple Time Machine (Testing)",
+    "preset_now": "Now (0 Hours)",
+    "preset_12h": "+12 Hours (Evening)",
+    "preset_24h": "+24 Hours (Next Morning - Cleaning)",
+    "preset_72h": "+72 Hours (3 Days - Dust & Nirmalya)",
+    "preset_7d": "+7 Days (Neglected State)",
+    "reset_all": "Reset to Initial State"
+  }
+}

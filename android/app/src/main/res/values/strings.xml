@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Nitya Mandir</string>
+    <string name="app_tagline">Daily Sacred Virtual Worship &amp; Sanctuary</string>
+
+    <!-- Purity Gate -->
+    <string name="purity_gate_title">Purity Affirmation</string>
+    <string name="purity_question">Have you bathed and purified yourself?</string>
+    <string name="purity_subtitle">Bodily and mental purity is essential before entering the sacred sanctum.</string>
+    <string name="purity_confirm_btn">Yes, I am pure</string>
+    <string name="snan_mantra_btn">Listen to Snan Mantra</string>
+    <string name="snan_mantra_text">Gange cha Yamune chaiva Godavari Saraswati | Narmade Sindhu Kaveri jalesmin sannidhim kuru ||</string>
+
+    <!-- Cleaning -->
+    <string name="cleaning_title">Temple Purification &amp; Cleaning</string>
+    <string name="cleaning_status_dusty">Dust has settled on the altar and yesterday\'s flowers have withered into nirmalya.</string>
+    <string name="cleaning_step_flowers">1. Collect withered flowers into the sacred Nirmalya Patra</string>
+    <string name="cleaning_step_wipe">2. Wipe the temple altar clean with a damp cloth</string>
+    <string name="cleaning_step_diya">3. Rinse and clean the brass diya</string>
+    <string name="cleaning_complete">The temple is now pristine and sacred. You may begin pooja.</string>
+    <string name="nirmalya_patra">Nirmalya Patra (For sacred immersion)</string>
+    <string name="action_clean">Clean Temple</string>
+
+    <!-- Deities -->
+    <string name="deity_ganesh">Lord Shri Ganesha</string>
+    <string name="deity_ganesh_desc">Remover of Obstacles, First Worshipped</string>
+    <string name="deity_lakshmi">Mother Maha Lakshmi</string>
+    <string name="deity_lakshmi_desc">Goddess of Wealth &amp; Prosperity</string>
+
+    <!-- Completion -->
+    <string name="completion_title">Pooja Completed!</string>
+    <string name="completion_blessing">May Lord Ganesha and Mother Lakshmi bless your home with peace and prosperity.</string>
+    <string name="streak_label">Daily Devotion Streak</string>
+    <string name="days">days</string>
+    <string name="close_mandir_evening">Close Curtains for Evening</string>
+</resources>
