@@ -9,9 +9,10 @@ enum class WorshipStep(val hi: String, val en: String) {
     BELL("घंटी नाद", "Ring the bell"),
     CONCH("शंख नाद", "Sound the conch"),
     PRASAD("प्रसाद अर्पण", "Offer prasad"),
-    RECITATION("आरती पाठ", "Aarti recitation"),
     AARTI("दीप से आरती", "Aarti with the diya")
 }
+
+data class FlowerOffering(val flowerIndex: Int, val deity: Int, val position: TemplePoint)
 
 data class WorshipSession(
     val step: WorshipStep = WorshipStep.LIGHT,
@@ -19,8 +20,7 @@ data class WorshipSession(
     val bathed: Set<Int> = emptySet(),
     val tilak: Set<Int> = emptySet(),
     val flowers: Set<Int> = emptySet(),
-    val offeredFlowers: Map<Int, Int> = emptyMap(),
-    val recitationComplete: Boolean = false,
+    val offeredFlowers: List<FlowerOffering> = emptyList(),
     val bellRung: Boolean = false,
     val conchBlown: Boolean = false,
     val prasadOffered: Boolean = false,
@@ -28,6 +28,11 @@ data class WorshipSession(
     val aartiComplete: Boolean = false,
     val complete: Boolean = false
 ) {
+    fun offerFlower(index: Int, deity: Int, position: TemplePoint) = copy(
+        flowers=flowers+deity,
+        offeredFlowers=offeredFlowers+FlowerOffering(index,deity,position)
+    )
+
     val canContinue: Boolean get() = when(step) {
         WorshipStep.LIGHT -> lit
         WorshipStep.BATH -> bathed.containsAll(listOf(0,1))
@@ -36,7 +41,6 @@ data class WorshipSession(
         WorshipStep.BELL -> bellRung
         WorshipStep.CONCH -> conchBlown
         WorshipStep.PRASAD -> prasadOffered
-        WorshipStep.RECITATION -> recitationComplete
         WorshipStep.AARTI -> aartiComplete
     }
     fun next(): WorshipSession = if(!canContinue || complete) this else if(step==WorshipStep.AARTI) copy(complete=true)

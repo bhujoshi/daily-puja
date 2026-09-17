@@ -16,8 +16,8 @@ class RitualAudio(context: Context) {
             }
         }
     }
-    fun cue(id: Int) { players[id]?.apply {seekTo(0);start()} }
-    fun stopCue(id: Int) {players[id]?.apply {if(isPlaying) pause();seekTo(0)} }
+    fun cue(id: Int, loop: Boolean = false) { players[id]?.apply {isLooping=loop;seekTo(0);start()} }
+    fun stopCue(id: Int) {players[id]?.apply {if(isPlaying) pause();isLooping=false;seekTo(0)} }
     fun stop() {players.values.forEach {if(it.isPlaying) it.pause();it.seekTo(0)}}
     fun release() {players.values.forEach {it.release()};players.clear()}
 }

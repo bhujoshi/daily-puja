@@ -20,13 +20,13 @@ fun RitualFlamesOverlay(oilLit: Boolean, aartiLit: Boolean, lamp: TemplePoint) {
     }
     Canvas(Modifier.fillMaxSize()) {
         val viewport=TempleViewport(size.width,size.height)
-        fun flame(point: TemplePoint, phase: Float) {
+        fun flame(point: TemplePoint, phase: Float, scale: Float = 1f) {
             val pixel=viewport.pixel(point)
             val base=Offset(pixel.x,pixel.y)
             val unit=viewport.imageWidth
             val t=seconds+phase
-            val height=unit*.047f*(1f+.06f*sin(t*11f)+.025f*sin(t*23f))
-            val width=unit*.008f
+            val height=unit*.047f*scale*(1f+.06f*sin(t*11f)+.025f*sin(t*23f))
+            val width=unit*.008f*scale
             val bend=width*(.32f*sin(t*7f)+.15f*sin(t*17f))
             val glowCenter=base-Offset(0f,height*.35f)
             drawCircle(Brush.radialGradient(listOf(Color(0x50FFB23E),Color(0x18FF7C18),Color.Transparent),glowCenter,height*1.25f),height*1.25f,glowCenter)
@@ -41,7 +41,7 @@ fun RitualFlamesOverlay(oilLit: Boolean, aartiLit: Boolean, lamp: TemplePoint) {
             drawOval(Color(0xAA689AF0),base-Offset(width*.35f,height*.10f),androidx.compose.ui.geometry.Size(width*.7f,height*.12f))
             drawLine(Color(0xFF482819),base+Offset(0f,unit*.004f),base-Offset(0f,unit*.004f),unit*.0025f,StrokeCap.Round)
         }
-        if(oilLit) flame(TemplePoint(.505f,TempleSceneLayout.oil.y-.06f*1.6f),0f)
-        if(aartiLit) flame(TemplePoint(lamp.x,lamp.y-.088f*1.8f),1.71f)
+        if(oilLit) flame(TemplePoint(.505f,TempleSceneLayout.oil.y-.06f*1.6f*TempleSceneLayout.LAMP_SCALE),0f,1.5f)
+        if(aartiLit) flame(TemplePoint(lamp.x,lamp.y-.088f*1.8f*TempleSceneLayout.LAMP_SCALE),1.71f)
     }
 }

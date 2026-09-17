@@ -5,10 +5,43 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class WorshipSessionTest {
-    @Test fun recitationWaitsForAudioCompletion() {
-        val pending=WorshipSession(step=WorshipStep.RECITATION)
-        assertEquals(pending,pending.next())
-        assertEquals(WorshipStep.AARTI,pending.copy(recitationComplete=true).next().step)
+    @Test fun repeatedOfferingsRetainEveryFlowerAndItsPosition() {
+        var session=WorshipSession()
+        val first=TemplePoint(.40f,.62f)
+        session=session.offerFlower(0,0,first)
+        repeat(100) { session=session.offerFlower(0,1,TempleSceneLayout.randomFlowerPosition(1)) }
+        assertEquals(101,session.offeredFlowers.size)
+        assertEquals(first,session.offeredFlowers.first().position)
+        assertEquals(setOf(0,1),session.flowers)
+    }
+    @Test fun flowerDestinationsStayBelowFacesAndWithinIdols() {
+        repeat(1000) {
+            for(deity in 0..1) {
+                val point=TempleSceneLayout.randomFlowerPosition(deity)
+                val center=if(deity==0) .405f else .604f
+                assertTrue(point.x in (center-.045f)..(center+.045f))
+                assertTrue(point.y in .585f.. .690f)
+            }
+        }
+    }
+    @Test fun allFourLaddusTravelFromPlateToRightOfLamp() {
+        val destinations=(0 until TempleSceneLayout.LADDU_COUNT).map { i ->
+            val start=TempleSceneLayout.plateLaddu(i)
+            val end=TempleSceneLayout.offeredLaddu(i)
+            assertEquals(start,TempleSceneLayout.flowerFlight(start,end,0f))
+            val landed=TempleSceneLayout.flowerFlight(start,end,1f)
+            assertEquals(end.x,landed.x,.00001f)
+            assertEquals(end.y,landed.y,.00001f)
+            assertTrue(end.x>TempleSceneLayout.oil.x)
+            end
+        }
+        assertEquals(4,destinations.toSet().size)
+        assertFalse(WorshipSession(step=WorshipStep.PRASAD).canContinue)
+    }
+
+    @Test fun prasadAdvancesDirectlyToAarti() {
+        assertEquals(8,WorshipStep.values().size)
+        assertEquals(WorshipStep.AARTI,WorshipSession(step=WorshipStep.PRASAD,prasadOffered=true).next().step)
     }
     @Test fun bellAndConchWaitForTheirAnimations() {
         val bell=WorshipSession(step=WorshipStep.BELL)
