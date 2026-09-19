@@ -9,19 +9,20 @@ class WorshipSessionTest {
         var session=WorshipSession()
         val first=TemplePoint(.40f,.62f)
         session=session.offerFlower(0,0,first)
-        repeat(100) { session=session.offerFlower(0,1,TempleSceneLayout.randomFlowerPosition(1)) }
+        repeat(100) { session=session.offerFlower(0,1,TempleSceneLayout.offeredFlower(1,it)) }
         assertEquals(101,session.offeredFlowers.size)
         assertEquals(first,session.offeredFlowers.first().position)
         assertEquals(setOf(0,1),session.flowers)
     }
-    @Test fun flowerDestinationsStayBelowFacesAndWithinIdols() {
-        repeat(1000) {
-            for(deity in 0..1) {
-                val point=TempleSceneLayout.randomFlowerPosition(deity)
-                val center=if(deity==0) .405f else .604f
-                assertTrue(point.x in (center-.045f)..(center+.045f))
-                assertTrue(point.y in .585f.. .690f)
+    @Test fun flowerBedsStayOrderedAndReuseSlots() {
+        for(deity in 0..1) {
+            val positions=(0 until TempleSceneLayout.OFFERED_FLOWER_SLOTS).map {
+                TempleSceneLayout.offeredFlower(deity,it)
             }
+            assertEquals(10,positions.toSet().size)
+            assertTrue(positions.all {it.y in .685f.. .714f})
+            assertEquals(positions.first(),TempleSceneLayout.offeredFlower(deity,10))
+            assertTrue(positions.all {kotlin.math.abs(it.x-TempleSceneLayout.oil.x)>.045f})
         }
     }
     @Test fun allFourLaddusTravelFromPlateToRightOfLamp() {

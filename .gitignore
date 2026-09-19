@@ -11,6 +11,10 @@
 local.properties
 *.apk
 *.aab
+keystore.properties
+*.jks
+*.keystore
+*.p12
 *.hprof
 .cxx/
 .externalNativeBuild/

@@ -3,6 +3,8 @@ package com.worship.nityamandir.ui.components
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.zIndex
@@ -28,6 +30,7 @@ import io.github.sceneview.rememberNodes
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
 import io.github.sceneview.math.Scale
+import io.github.sceneview.math.toQuaternion
 import kotlinx.coroutines.yield
 import kotlin.math.sin
 
@@ -56,12 +59,12 @@ fun MandirAltarView(
     val nodes = rememberNodes()
     val flowers = remember { mutableListOf<ModelNode>() }
     var modelsReady by remember { mutableStateOf(false) }
-    val showerFlowers = remember { mutableListOf<ModelNode>() }
     val aartiActive by rememberUpdatedState(aartiRunning)
     val aartiTime by rememberUpdatedState(aartiProgress)
     val offerings = remember { mutableListOf<ModelNode>() }
     val laddus = remember { mutableListOf<ModelNode>() }
     var conchRestScale by remember { mutableStateOf(Scale(1f)) }
+    var aartiNode by remember { mutableStateOf<ModelNode?>(null) }
     var bellNode by remember { mutableStateOf<ModelNode?>(null) }
     var conchNode by remember { mutableStateOf<ModelNode?>(null) }
     val bellActive by rememberUpdatedState(bellRunning)
@@ -89,6 +92,12 @@ fun MandirAltarView(
         }
         model("golden_oil_lamp",TempleSceneLayout.oil,TempleSceneLayout.OIL_SIZE,12f)
         model("royal_side_plate",TempleSceneLayout.plate,TempleSceneLayout.PLATE_SIZE,32f)
+        aartiNode=model("golden_aarti_lamp",TempleSceneLayout.aartiRest,TempleSceneLayout.AARTI_MODEL_SIZE,20f,TempleSceneLayout.AARTI_DEPTH).apply {
+            // Apply yaw before the viewing tilt so the broad bowl points up toward
+            // the idols and the curved handle extends down toward the worshipper.
+            quaternion=Rotation(x=TempleSceneLayout.AARTI_TILT).toQuaternion() *
+                Rotation(y=TempleSceneLayout.AARTI_YAW).toQuaternion()
+        }
         bellNode=model("hindu_temple_bell",TempleSceneLayout.bell,.22f,10f)
         conchNode=model("sankh",TempleSceneLayout.conch,TempleSceneLayout.CONCH_SIZE,0f,TempleSceneLayout.CONCH_REST_DEPTH).apply {
             conchRestScale=scale
@@ -104,39 +113,29 @@ fun MandirAltarView(
         }
         yield()
         repeat(TempleSceneLayout.FLOWER_COUNT) { i ->
-            flowers.add(model(if(i%2==0) "sunflower" else "single_peony_flower",TempleSceneLayout.plateFlower(i),.10f+(i%3)*.008f,45f+(i%4)*8f,.15f+i*.001f))
-            yield()
-        }
-        // Reuse loaded geometry for a bounded decorative shower.
-        repeat(24) { i ->
-            val instance=checkNotNull(loader.createInstance(flowers[i%flowers.size].model))
-            val node=ModelNode(instance,scaleToUnits=3f*(.055f+(i%3)*.008f)).apply {
-                isTouchable=false
-                isVisible=false
-            }
-            nodes.add(node);showerFlowers.add(node)
+            flowers.add(model(if(i%2==0) "sunflower" else "single_peony_flower",TempleSceneLayout.plateFlower(i),TempleSceneLayout.flowerSize(i),45f+(i%4)*8f,.15f+i*.001f))
             yield()
         }
         modelsReady=true
     }
 
-    // Append one scene instance per completed offering; never recycle an earlier flower.
+    // Keep offering history while rendering a bounded, neatly arranged flower bed.
     LaunchedEffect(session.offeredFlowers.size,modelsReady) {
         if(!modelsReady) return@LaunchedEffect
-        if(session.offeredFlowers.isEmpty()) {
-            offerings.forEach { nodes.remove(it);it.destroy() }
-            offerings.clear()
+        offerings.forEach { nodes.remove(it);it.destroy() }
+        offerings.clear()
+        val visibleOfferings=(0..1).flatMap { deity ->
+            session.offeredFlowers.filter {it.deity==deity}.takeLast(TempleSceneLayout.OFFERED_FLOWER_SLOTS)
         }
-        while(offerings.size<session.offeredFlowers.size) {
-            val offering=session.offeredFlowers[offerings.size]
+        while(offerings.size<visibleOfferings.size) {
+            val offering=visibleOfferings[offerings.size]
             val instance=checkNotNull(loader.createInstance(flowers[offering.flowerIndex].model))
-            val node=ModelNode(instance,scaleToUnits=.10f+(offering.flowerIndex%3)*.008f).apply {
+            val node=ModelNode(instance,scaleToUnits=TempleSceneLayout.flowerSize(offering.flowerIndex)).apply {
                 position=Position(2*offering.position.x-1,1-2*offering.position.y,.20f)
-                rotation=Rotation(x=55f,z=offering.flowerIndex*31f)
+                rotation=Rotation(x=55f,z=(offering.flowerIndex%3-1)*12f)
                 isTouchable=false
             }
             nodes.add(node);offerings.add(node)
-            yield()
         }
     }
 
@@ -151,7 +150,7 @@ fun MandirAltarView(
                 val index=flight.offering.flowerIndex
                 val instance=checkNotNull(loader.createInstance(flowers[index].model))
                 val point=TempleSceneLayout.plateFlower(index)
-                val node=ModelNode(instance,scaleToUnits=.10f+(index%3)*.008f).apply {
+                val node=ModelNode(instance,scaleToUnits=TempleSceneLayout.flowerSize(index)).apply {
                     position=Position(2*point.x-1,1-2*point.y,.35f)
                     isTouchable=false
                 }
@@ -176,21 +175,6 @@ fun MandirAltarView(
                         node.rotation=Rotation(x=55f,z=progress*220f)
                     }
                 }
-                showerFlowers.forEachIndexed { i,node ->
-                    // Stop emitting early so the shower clears before the lamp rests.
-                    val elapsed=aartiTime*10.5f-i*.085f
-                    val duration=5.4f+(i%4)*.36f
-                    val cycle=kotlin.math.floor(elapsed/duration)
-                    val age=elapsed-cycle*duration
-                    node.isVisible=aartiActive && elapsed>=0f && cycle*duration+i*.085f+duration<=10.5f
-                    if(node.isVisible) {
-                        val fall=age/duration
-                        val x=.18f+(i*37%101)/101f*.64f+.025f*sin(age*2.4f+i)
-                        val y=-.14f+1.85f*fall
-                        node.position=Position(2*x-1,1-2*y,.30f+(i%3)*.015f)
-                        node.rotation=Rotation(x=35f+age*24f,y=age*15f,z=i*31f+age*(if(i%2==0) 58f else -48f))
-                    }
-                }
                 laddus.forEachIndexed { i,node ->
                     val point=when {
                         sessionNow.prasadOffered -> TempleSceneLayout.offeredLaddu(i)
@@ -210,23 +194,21 @@ fun MandirAltarView(
                     rotation=Rotation(y=-90f+180f*TempleSceneLayout.conchTurn(progress))
                 }
 
+                aartiNode?.apply {
+                    val point=if(aartiActive) TempleSceneLayout.aartiPosition(aartiTime) else TempleSceneLayout.aartiRest
+                    // Keep the entire lamp in front of the plate and offerings.
+                    position=Position(2*point.x-1,1-2*point.y,TempleSceneLayout.AARTI_DEPTH)
+                }
                 bellNode?.apply {
                     val lift=if(bellActive) kotlin.math.min(bellTime/.15f,(1-bellTime)/.15f).coerceIn(0f,1f) else 0f
                     position=Position(2*TempleSceneLayout.bell.x-1,1-2*(TempleSceneLayout.bell.y-.045f*lift),.12f*lift)
-                    rotation=Rotation(x=10f,z=sin(bellTime*3.5f*18f)*12f*lift)
+                    rotation=Rotation(x=10f,z=sin(bellTime*3.5f*18f*1.5f)*12f*lift)
                 }
             })
         if(session.aartiComplete && !aartiRunning) DeityHalosOverlay()
         val aartiPoint=if(aartiRunning) TempleSceneLayout.aartiPosition(aartiProgress) else TempleSceneLayout.aartiRest
-        val lampPixel=viewport.pixel(aartiPoint)
         Box(Modifier.fillMaxSize().zIndex(10f)) {
-            with(density) {
-                Image(painterResource(R.drawable.aarti_diya),"Brass aarti diya",
-                    Modifier.offset((lampPixel.x-viewport.imageWidth*TempleSceneLayout.AARTI_WIDTH/2f).toDp(),(lampPixel.y-viewport.imageWidth*TempleSceneLayout.AARTI_HEIGHT/2f).toDp())
-                        .size((viewport.imageWidth*TempleSceneLayout.AARTI_WIDTH).toDp(),(viewport.imageWidth*TempleSceneLayout.AARTI_HEIGHT).toDp()),contentScale=ContentScale.FillBounds)
-            }
-            RitualFlamesOverlay(session.lit,session.aartiLit,
-                if(aartiRunning) TempleSceneLayout.aartiPosition(aartiProgress) else TempleSceneLayout.aartiRest)
+            RitualFlamesOverlay(session.lit,session.aartiLit,aartiPoint)
         }
         WaterFlowOverlay(bathTarget,bathProgress)
         Canvas(Modifier.fillMaxSize()) {
@@ -244,9 +226,21 @@ fun MandirAltarView(
         Box(target(TemplePoint(.53f,.41f),.16f,.28f).clickable(onClickLabel="लक्ष्मी जी · Lakshmi") {onDeityClick(1)})
         Box(target(TemplePoint(.455f,.59f),.10f,.16f).clickable(onClickLabel="दीप जलाएँ · Light oil lamp",onClick=onDiyaClick))
         Box(target(TemplePoint(TempleSceneLayout.bell.x-.06f,TempleSceneLayout.bell.y-.08f),.12f,.16f).clickable(onClickLabel="घंटी · Bell",onClick=onBellClick))
+        val offerFlower by rememberUpdatedState(onFlowerClick)
         repeat(TempleSceneLayout.FLOWER_COUNT) { i ->
                 val point=TempleSceneLayout.plateFlower(i)
-                Box(target(TemplePoint(point.x-.025f,point.y-.025f),.05f,.05f).clickable(onClickLabel="पुष्प ${i+1} · Offer flower ${i+1}") {onFlowerClick(i)})
+                Box(target(TemplePoint(point.x-.0325f,point.y-.0325f),.065f,.065f)
+                    .pointerInput(i) {
+                        var drag=Offset.Zero
+                        detectDragGestures(
+                            onDragStart={drag=Offset.Zero},
+                            onDragCancel={drag=Offset.Zero},
+                            onDragEnd={
+                                if(drag.y < -24.dp.toPx() && -drag.y > kotlin.math.abs(drag.x)) offerFlower(i)
+                            },
+                            onDrag={change,amount -> change.consume();drag+=amount}
+                        )
+                    }.clickable(onClickLabel="पुष्प ${i+1} · Offer flower ${i+1}") {onFlowerClick(i)})
         }
         Box(target(TemplePoint(TempleSceneLayout.conch.x-.075f,TempleSceneLayout.conch.y-.12f),.15f,.24f).clickable(onClickLabel="शंख · Sound conch",onClick=onConchClick))
         Box(target(TemplePoint(TempleSceneLayout.aartiRest.x-TempleSceneLayout.AARTI_WIDTH/2f,TempleSceneLayout.aartiRest.y-TempleSceneLayout.AARTI_HEIGHT/2f),TempleSceneLayout.AARTI_WIDTH,TempleSceneLayout.AARTI_HEIGHT).clickable(onClickLabel="दीप आरती · Diya aarti",onClick=onAartiClick))

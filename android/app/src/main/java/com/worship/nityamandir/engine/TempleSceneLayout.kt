@@ -24,6 +24,20 @@ object TempleSceneLayout {
     const val CONCH_REST_DEPTH = .58f
     const val FLOWER_COUNT = 24
     val bell = TemplePoint(.16f,.97f)
+    const val AARTI_MODEL_SIZE = AARTI_WIDTH * 2f
+    const val AARTI_DEPTH = 1.1f
+    const val AARTI_YAW = -90f
+    const val AARTI_TILT = 40f
+    // The GLB's broad bowl points along -X; yaw first, then tilt toward the altar.
+    // Project the same transformed wick into the screen-space flame overlay.
+    fun aartiWick(lamp: TemplePoint): TemplePoint {
+        val yaw = AARTI_YAW * PI.toFloat() / 180f
+        val tilt = AARTI_TILT * PI.toFloat() / 180f
+        // Seat the wick inside the bowl rather than above its far rim.
+        val x = -.052f
+        val y = .018f
+        return TemplePoint(lamp.x+x*cos(yaw),lamp.y-(y*cos(tilt)+x*sin(yaw)*sin(tilt)))
+    }
     val aartiRest = TemplePoint(.79f,1.08f)
     fun feet(deity: Int, petal: Int = 0) = TemplePoint((if(deity==0) .405f else .604f)+(petal-2f)*.015f,.689f)
     fun plateFlower(index: Int): TemplePoint {
@@ -34,13 +48,17 @@ object TempleSceneLayout {
     const val LADDU_COUNT = 4
     const val LADDU_SIZE = .085f
     fun plateLaddu(index: Int) = TemplePoint(.635f+(index%2)*.05f,1.105f+(index/2)*.048f)
-    fun offeredLaddu(index: Int) = TemplePoint(.59f+(index%2)*.05f,.705f+(index/2)*.045f)
+    fun offeredLaddu(index: Int) = TemplePoint(.59f+(index%2)*.055f,.775f+(index/2)*.048f)
 
-    // Lower torso and feet only; include a flower-radius margin below either face.
-    fun randomFlowerPosition(deity: Int): TemplePoint {
-        val center = if(deity==0) .405f else .604f
-        return TemplePoint(center+kotlin.random.Random.nextFloat()*.09f-.045f,
-            .585f+kotlin.random.Random.nextFloat()*.105f)
+    const val OFFERED_FLOWER_SLOTS = 10
+    fun flowerSize(index: Int) = (.10f+(index%3)*.008f)*1.3f
+
+    // Two orderly rows at the feet, leaving the central lamp and prasad clear.
+    fun offeredFlower(deity: Int, count: Int): TemplePoint {
+        val slot=count%OFFERED_FLOWER_SLOTS
+        val center=if(deity==0) .395f else .615f
+        val column=when(slot%5) {0 -> 0;1 -> -1;2 -> 1;3 -> -2;else -> 2}
+        return TemplePoint(center+column*.030f,.685f+(slot/5)*.028f)
     }
 
     fun flowerFlight(start: TemplePoint, end: TemplePoint, progress: Float): TemplePoint {
@@ -70,7 +88,9 @@ object TempleSceneLayout {
         val p = progress.coerceIn(0f,1f)
         val center = TemplePoint(.51f,.58f)
         val angle = ((p-.22f)/.56f).coerceIn(0f,1f)*6f*PI.toFloat()
-        val orbit = TemplePoint(center.x+.145f*cos(angle),center.y+.063f*(sin(angle)+.25f*max(0f,sin(angle))))
+        // Extend the lower half of the circle by 50%, keeping its upper reach fixed.
+        val vertical = sin(angle)
+        val orbit = TemplePoint(center.x+.145f*cos(angle),center.y+.063f*(vertical+.875f*max(0f,vertical)))
         val lift = pickup(p)
         val travel = smooth((lift-.3f)/.7f)
         val raised = TemplePoint(aartiRest.x, aartiRest.y-.10f*lift)

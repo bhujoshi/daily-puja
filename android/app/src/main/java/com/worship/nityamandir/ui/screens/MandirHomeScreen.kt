@@ -74,9 +74,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
     val conch=remember {Animatable(0f)}
     val bath=remember {Animatable(0f)}
     val aarti=remember {Animatable(0f)}
-    // Repeat the original 10.5-second motion twice over the 21-second ritual.
-    // Keep overall progress separate so the progress bar and completion do not reset.
-    val aartiMotion=if(aarti.value>=1f) 1f else (aarti.value*2f)%1f
+    val aartiMotion=aarti.value
     var sceneSize by remember {mutableStateOf(IntSize.Zero)}
     var sceneOrigin by remember {mutableStateOf(Offset.Zero)}
     LaunchedEffect(Unit) {while(true) {now=System.currentTimeMillis();delay(30000)}}
@@ -95,7 +93,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
         if(!entered || aging.needsCleaning || ritualBusy || !foreground) return
         val covered=session.flowers+flowerFlights.map {it.offering.deity}
         val target=(listOf(0,1)-covered).randomOrNull() ?: (0..1).random()
-        flowerFlights.add(FlowerFlight(nextFlowerId++,FlowerOffering(index,target,TempleSceneLayout.randomFlowerPosition(target))))
+        flowerFlights.add(FlowerFlight(nextFlowerId++,FlowerOffering(index,target,TempleSceneLayout.offeredFlower(target,session.offeredFlowers.count {it.deity==target}+flowerFlights.count {it.offering.deity==target}))))
     }
     fun light() {if(entered && !aging.needsCleaning && session.step==WorshipStep.LIGHT) {session=session.copy(lit=true);audio.cue(com.worship.nityamandir.R.raw.flower_offering)}}
     fun deityAction(deity:Int) {
@@ -195,11 +193,14 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                 if(!entered) {
                     Text(tr("एक पल, अपने आराध्य के लिए","A moment for the divine"),color=RitualInk,fontSize=19.sp)
                     Text(tr("मैं स्वच्छ हूँ और पूजा के लिए तैयार हूँ।","I am clean and ready to enter my temple."),color=RitualInk,fontSize=13.sp)
-                    Button({entered=true},Modifier.fillMaxWidth().heightIn(min=48.dp),colors=buttonColors) {Text(tr("संकल्प लें · मंदिर खोलें","Confirm · Open temple"))}
+                    Button({entered=true},Modifier.fillMaxWidth().heightIn(min=48.dp),colors=buttonColors) {Text(tr("मंदिर खोलें","Open temple"))}
                 } else if(aging.needsCleaning) {
                     Text(tr("मंदिर की स्वच्छता","Refresh your temple"),color=RitualInk,fontSize=20.sp)
                     Text(tr("मंदिर पर उंगली फेरें","Swipe across the temple"),color=RitualGold)
                     LinearProgressIndicator(progress={wipe},modifier=Modifier.fillMaxWidth(),color=RitualGold)
+                } else if(aartiRunning) {
+                    Text(tr("आरती चल रही है …","Offering aarti …"),color=RitualInk,fontSize=16.sp)
+                    LinearProgressIndicator(progress={aarti.value},modifier=Modifier.fillMaxWidth().height(2.dp),color=RitualGold)
                 } else if(session.complete) {
                     Text(tr("पूजा पूर्ण हुई","Worship complete"),color=RitualInk,fontSize=22.sp)
                     Text(tr("आपका दिन मंगलमय हो।","May your day be peaceful."),color=RitualGold)
@@ -215,7 +216,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                     AnimatedContent(targetState=session.step,transitionSpec={ (slideInHorizontally {it}+fadeIn()) togetherWith (slideOutHorizontally {-it}+fadeOut()) },label="ritual step") { displayedStep ->
                     when(displayedStep) {
                         WorshipStep.LIGHT -> RitualChoice(tr("दीप जलाएँ","Light oil lamp"),session.lit,{light()},Modifier.fillMaxWidth())
-                        WorshipStep.FLOWERS -> Text(tr("फूल छूकर अर्पित करें। आगे भी फूल चढ़ा सकते हैं।","Tap flowers to offer; you can keep offering during later steps"),color=RitualInk,fontSize=14.sp)
+                        WorshipStep.FLOWERS -> Text(tr("फूल छुएँ या ऊपर स्वाइप करके अर्पित करें।","Tap a flower or swipe it upward to offer"),color=RitualInk,fontSize=14.sp)
                         WorshipStep.BATH, WorshipStep.TILAK -> Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                             val done=when(displayedStep) {WorshipStep.BATH -> session.bathed;WorshipStep.TILAK -> session.tilak;else -> session.flowers}
                             listOf(tr("गणेश जी","Ganesha"),tr("लक्ष्मी जी","Lakshmi")).forEachIndexed {i,label ->
