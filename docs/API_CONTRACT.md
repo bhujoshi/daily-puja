@@ -1,6 +1,6 @@
-# Nitya Mandir (नित्य मंदिर) - API Specification & Contract
+# Pavitra Mandir (पवित्र मंदिर) - API Specification & Contract
 
-The Nitya Mandir backend exposes a lightweight, high-performance RESTful API written in Go. It supports offline-first synchronization, daily devotion streaks, temporal aging reconciliation, and sacred audio catalog delivery.
+The Pavitra Mandir backend exposes a lightweight, high-performance RESTful API written in Go. It supports offline-first synchronization, daily devotion streaks, temporal aging reconciliation, and sacred audio catalog delivery.
 
 **Base URL**: `/api/v1`  
 **Content-Type**: `application/json; charset=utf-8`

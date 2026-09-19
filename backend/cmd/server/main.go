@@ -43,7 +43,7 @@ func main() {
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		log.Printf("ॐ Nitya Mandir (नित्य मंदिर) Backend Service running on port %s...", port)
+		log.Printf("ॐ Pavitra Mandir (पवित्र मंदिर) Backend Service running on port %s...", port)
 		log.Printf("Endpoints:")
 		log.Printf("  GET  /api/v1/mandir/state")
 		log.Printf("  POST /api/v1/mandir/pooja/complete")
@@ -57,7 +57,7 @@ func main() {
 	}()
 
 	<-stop
-	log.Println("Shutting down Nitya Mandir server gracefully...")
+	log.Println("Shutting down Pavitra Mandir server gracefully...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

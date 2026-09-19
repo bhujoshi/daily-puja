@@ -2,7 +2,7 @@
 
 Open `privacy-policy.html` directly in a browser. It is a responsive, standalone page with no JavaScript, remote fonts, or tracking dependencies.
 
-The draft reflects the Android source at the time of writing: app label Nitya Mandir, package com.pavitramandir.app, local SharedPreferences (last, clean, hindi, saffron), INTERNET and VIBRATE permissions, and allowBackup enabled. No login, ads, analytics, or server uploads were found in the inspected Android source. This is not verification of a shipped APK or of external business practices.
+The draft reflects the Android source at the time of writing: app label Pavitra Mandir, package com.pavitramandir.app, local SharedPreferences (last, clean, hindi, saffron), INTERNET and VIBRATE permissions, and allowBackup enabled. No login, ads, analytics, or server uploads were found in the inspected Android source. This is not verification of a shipped APK or of external business practices.
 
 Before publication:
 

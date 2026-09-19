@@ -38,3 +38,4 @@ venv/
 .env.*
 !.env.example
 *.log
+play_store/

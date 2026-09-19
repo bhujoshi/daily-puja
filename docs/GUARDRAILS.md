@@ -1,6 +1,6 @@
-# Nitya Mandir (नित्य मंदिर) - Guardrails & Integrity Framework
+# Pavitra Mandir (पवित्र मंदिर) - Guardrails & Integrity Framework
 
-This document defines the non-negotiable **Cultural Sanctity**, **Ritual Integrity**, **Technical Security**, and **Privacy Guardrails** governing the Nitya Mandir application across all platforms (Backend, Android, and iOS).
+This document defines the non-negotiable **Cultural Sanctity**, **Ritual Integrity**, **Technical Security**, and **Privacy Guardrails** governing the Pavitra Mandir application across all platforms (Backend, Android, and iOS).
 
 ---
 

@@ -1,4 +1,4 @@
-# Nitya Mandir (नित्य मंदिर) - Testing Strategy & Environments
+# Pavitra Mandir (पवित्र मंदिर) - Testing Strategy & Environments
 
 This document details the quality assurance strategy, testing environments, automated test suites, and the specialized **Time-Travel Test Harness** designed to validate temple aging, dust accumulation, and cleaning mechanics.
 

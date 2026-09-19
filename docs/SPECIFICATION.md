@@ -1,8 +1,8 @@
-# Nitya Mandir (नित्य मंदिर) - Product & Ritual Specification
+# Pavitra Mandir (पवित्र मंदिर) - Product & Ritual Specification
 
 ## 1. Executive Summary & Vision
 
-**Nitya Mandir (नित्य मंदिर)** is a sacred, culturally authentic daily virtual worship playground designed for Indian users and the global Sanatan diaspora. It translates the deeply personal, tactile, and spiritual experience of an authentic Indian home temple (घरेलू पूजा घर) into a digital sanctuary on Android and iOS.
+**Pavitra Mandir (पवित्र मंदिर)** is a sacred, culturally authentic daily virtual worship playground designed for Indian users and the global Sanatan diaspora. It translates the deeply personal, tactile, and spiritual experience of an authentic Indian home temple (घरेलू पूजा घर) into a digital sanctuary on Android and iOS.
 
 ### Core Philosophy
 - **Authenticity over Gamification**: Traditional worship is mindful and reverent. The application does not trivialize devotion with arcade scoreboards; instead, it fosters authentic spiritual discipline through realistic interactions, gentle mindfulness gates, and natural consequences (such as dust settling on neglected altars and flowers withering into *nirmalya*).

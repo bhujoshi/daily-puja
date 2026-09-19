@@ -80,7 +80,7 @@ public struct MandirHomeView: View {
             VStack {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(isHindi ? "नित्य मंदिर" : "Nitya Mandir")
+                        Text(isHindi ? "पवित्र मंदिर" : "Pavitra Mandir")
                             .font(.title3.bold())
                             .foregroundColor(SacredTheme.gold)
                         Text(isHindi ? "दैनिक साधना एवं उपासना" : "Daily Sacred Worship")
