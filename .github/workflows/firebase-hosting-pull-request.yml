@@ -18,3 +18,4 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PAVITRA_MANDIR }}
           channelId: live
           projectId: pavitra-mandir
+          entryPoint: web
