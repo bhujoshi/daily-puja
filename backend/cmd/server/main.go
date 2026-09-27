@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/worship/nityamandir/backend/internal/api"
+	"github.com/worship/nityamandir/backend/internal/community"
 	"github.com/worship/nityamandir/backend/internal/repository"
 	"github.com/worship/nityamandir/backend/internal/service"
 )
@@ -28,10 +29,26 @@ func main() {
 	aartiService := service.NewAartiService()
 
 	handler := api.NewHandler(mandirService, panchangService, aartiService)
-	router := api.NewRouter(handler)
+	legacy := api.NewRouter(handler)
+	dataPath := os.Getenv("ACCOUNT_DATA_PATH")
+	if dataPath == "" {
+		dataPath = "data/accounts.json"
+	}
+	accounts, err := community.New(dataPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	accounts.MockMode = os.Getenv("MOCK_MODE") == "true"
+	router := http.NewServeMux()
+	router.Handle("/api/v2/", accounts)
+	// Legacy prototype routes are opt-in: they trust arbitrary user headers.
+	if os.Getenv("ENABLE_LEGACY_DEMO") == "true" {
+		router.Handle("/api/v1/", legacy)
+	}
+	router.Handle("/healthz", legacy)
 
 	server := &http.Server{
-		Addr:         ":" + port,
+		Addr:         "127.0.0.1:" + port,
 		Handler:      router,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 15 * time.Second,
@@ -44,13 +61,8 @@ func main() {
 
 	go func() {
 		log.Printf("ॐ Pavitra Mandir (पवित्र मंदिर) Backend Service running on port %s...", port)
-		log.Printf("Endpoints:")
-		log.Printf("  GET  /api/v1/mandir/state")
-		log.Printf("  POST /api/v1/mandir/pooja/complete")
-		log.Printf("  POST /api/v1/mandir/clean")
-		log.Printf("  GET  /api/v1/panchang/today")
-		log.Printf("  GET  /api/v1/aartis")
-		log.Printf("  GET  /healthz")
+		log.Printf("Account API: /api/v2/ (catalog, register, login, me, activity/puja, shrine)")
+		log.Printf("Health: /healthz; legacy demo enabled: %t", os.Getenv("ENABLE_LEGACY_DEMO") == "true")
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server listen failed: %v", err)
 		}

@@ -1,0 +1,18 @@
+{
+  "flowers/sunflower": "temple_models/source/flowers/sunflower.glb",
+  "flowers/peony": "temple_models/source/flowers/peony.glb",
+  "flowers/orchid": "temple_models/source/flowers/orchid.glb",
+  "flowers/rose": "temple_models/source/flowers/rose.glb",
+  "flowers/bouquet": "temple_models/source/flowers/bouquet.glb",
+  "lamps/golden_oil": "temple_models/source/lamps/golden_oil.glb",
+  "lamps/brass_diya": "temple_models/source/lamps/brass_diya.glb",
+  "aarti/golden": "temple_models/source/aarti/golden.glb",
+  "aarti/traditional": "temple_models/source/aarti/traditional.glb",
+  "shankh/classic": "temple_models/source/shankh/classic.glb",
+  "shankh/ivory": "temple_models/source/shankh/ivory.glb",
+  "prasad/laddu": "temple_models/source/prasad/laddu.glb",
+  "accessories/plate": "temple_models/source/accessories/plate.glb",
+  "accessories/bell": "temple_models/source/accessories/bell.glb",
+  "accessories/water_jug": "temple_models/source/accessories/water_jug.glb",
+  "flowers/azalea": "temple_models/source/flowers/azalea.glb"
+}

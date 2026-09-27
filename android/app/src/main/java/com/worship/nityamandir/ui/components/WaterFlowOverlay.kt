@@ -15,13 +15,13 @@ import kotlin.math.*
 
 /** A continuous transparent stream, surface run-off, droplets and expanding impact ripples. */
 @Composable
-fun WaterFlowOverlay(deity: Int?, progress: Float, modifier: Modifier = Modifier) {
+fun WaterFlowOverlay(deity: Int?, progress: Float, modifier: Modifier = Modifier, single: Boolean = false, altarOffset:Float=0f) {
     if(deity==null) return
     Canvas(modifier.fillMaxSize().testTag("bath-animation")) {
         val viewport = TempleViewport(size.width,size.height)
         val unit = viewport.imageWidth
-        val x = if(deity==0) .405f else .614f
-        val headY = if(deity==0) .483f else .449f
+        val x = if(single) .50f else if(deity==0) .405f else .614f
+        val headY = (if(single) .43f else if(deity==0) .483f else .449f)+altarOffset
         fun at(px: Float, py: Float): Offset = viewport.pixel(TemplePoint(px,py)).let { Offset(it.x,it.y) }
         val opacity = min(progress*9f,(1-progress)*9f).coerceIn(0f,1f)
         val source = at(x-.040f,headY-.105f)
@@ -50,14 +50,14 @@ fun WaterFlowOverlay(deity: Int?, progress: Float, modifier: Modifier = Modifier
         repeat(32) { i ->
             val t = ((progress*3.4f+i*.071f)%1f)
             val side = sin(i*14.31f)
-            val start = at(x,.689f)
+            val start = at(x,.689f+altarOffset)
             val point = Offset(start.x+side*unit*.060f*t,start.y-unit*.040f*sin(PI.toFloat()*t)+unit*.016f*t*t)
             drawCircle(Color(0xFFE8FCFF).copy(alpha=opacity*(1-t)*.8f),unit*(.0009f+(i%3)*.00045f),point)
         }
         repeat(4) { i ->
             val t = (progress*2.6f+i*.25f)%1f
             val radius = unit*(.012f+.044f*t)
-            drawOval(Color(0xFFBCE9EF).copy(alpha=opacity*(1-t)*.38f),at(x,.694f)-Offset(radius,radius*.2f),Size(radius*2,radius*.4f),style=Stroke(unit*.0012f))
+            drawOval(Color(0xFFBCE9EF).copy(alpha=opacity*(1-t)*.38f),at(x,.694f+altarOffset)-Offset(radius,radius*.2f),Size(radius*2,radius*.4f),style=Stroke(unit*.0012f))
         }
     }
 }

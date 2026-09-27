@@ -33,9 +33,9 @@ object TempleSceneLayout {
     fun aartiWick(lamp: TemplePoint): TemplePoint {
         val yaw = AARTI_YAW * PI.toFloat() / 180f
         val tilt = AARTI_TILT * PI.toFloat() / 180f
-        // Seat the wick inside the bowl rather than above its far rim.
+        // Keep the flame slightly above the bowl, both in motion and at rest.
         val x = -.052f
-        val y = .018f
+        val y = .070f
         return TemplePoint(lamp.x+x*cos(yaw),lamp.y-(y*cos(tilt)+x*sin(yaw)*sin(tilt)))
     }
     val aartiRest = TemplePoint(.79f,1.08f)
@@ -45,10 +45,28 @@ object TempleSceneLayout {
         val radius = .012f + .014f*sqrt(index.toFloat())
         return TemplePoint(plate.x-.16f+cos(angle)*radius,plate.y+sin(angle)*radius*.45f-.012f)
     }
-    const val LADDU_COUNT = 4
-    const val LADDU_SIZE = .085f
-    fun plateLaddu(index: Int) = TemplePoint(.635f+(index%2)*.05f,1.105f+(index/2)*.048f)
-    fun offeredLaddu(index: Int) = TemplePoint(.59f+(index%2)*.055f,.775f+(index/2)*.048f)
+    const val PRASAD_SIZE = .18f
+    const val PRASAD_DEPTH = .95f
+    val prasadRest = TemplePoint(.66f,1.08f)
+    val prasadFloor = TemplePoint(.60f,.86f)
+
+    /** Lift, offer one clockwise circle, then set the bowl on the floor. */
+    fun prasadPosition(progress: Float): TemplePoint {
+        val p = progress.coerceIn(0f,1f)
+        val circleStart = TemplePoint(.65f,.56f)
+        fun travel(from: TemplePoint, to: TemplePoint, t: Float): TemplePoint {
+            val eased = smooth(t)
+            return TemplePoint(from.x+(to.x-from.x)*eased,from.y+(to.y-from.y)*eased)
+        }
+        return when {
+            p < .22f -> travel(prasadRest,circleStart,p/.22f)
+            p <= .78f -> {
+                val angle = (p-.22f)/.56f*2f*PI.toFloat()
+                TemplePoint(.51f+.14f*cos(angle),.56f+.10f*sin(angle))
+            }
+            else -> travel(circleStart,prasadFloor,(p-.78f)/.22f)
+        }
+    }
 
     const val OFFERED_FLOWER_SLOTS = 10
     fun flowerSize(index: Int) = (.10f+(index%3)*.008f)*1.3f

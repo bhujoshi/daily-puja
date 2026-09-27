@@ -15,3 +15,5 @@ Before publication:
 - Keep the Play Console Data safety declarations consistent with the release build and policy. Disclose website hosting logs separately if the hosting setup collects visitor information.
 
 Policy reference: https://support.google.com/googleplay/android-developer/answer/10144311
+
+Account pilot update (2026-09-26): the new optional Android account flow sends email and completed puja days to the configured backend. The existing privacy-policy.html is an older draft and must not be published as the policy for an account-enabled build. See docs/DEVOTION_BACKEND.md for data flow and release requirements.

@@ -20,7 +20,7 @@ import kotlin.math.hypot
 
 /** Hollow halos leave the photographed faces and crowns untouched. */
 @Composable
-fun DeityHalosOverlay() {
+fun DeityHalosOverlay(single: Boolean = false, altarOffset:Float=0f) {
     var seconds by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(Unit) {
         val start = withFrameNanos { it }
@@ -40,8 +40,8 @@ fun DeityHalosOverlay() {
         // Light travels outward once and clears completely. A permanent full-screen
         // tint flattens the photograph's shadows and makes the shrine look washed out.
         val waveAlpha = .12f * fade * (1f-smooth((seconds-1.6f)/2.4f))
-        listOf(TemplePoint(.405f, .477f), TemplePoint(.614f, .447f)).forEachIndexed { index, head ->
-            val pixel = viewport.pixel(head)
+        (if(single) listOf(TemplePoint(.50f,.43f)) else listOf(TemplePoint(.405f, .477f), TemplePoint(.614f, .447f))).forEachIndexed { index, head ->
+            val pixel = viewport.pixel(head.copy(y=head.y+altarOffset))
             val center = Offset(pixel.x, pixel.y)
             val radius = unit * if(index == 0) .073f else .061f
             if(waveAlpha > .001f) {

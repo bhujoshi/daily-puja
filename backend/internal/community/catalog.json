@@ -1,0 +1,251 @@
+{
+  "version": 1,
+  "package_id": "personal-mandir",
+  "purchase_available": false,
+  "asset_variants_available": true,
+  "streak_days": 7,
+  "qualified_referrals": 1,
+  "categories": [
+    {
+      "id": "shrine",
+      "label_en": "Shrine",
+      "label_hi": "मंदिर",
+      "options": [
+        {
+          "id": "original",
+          "label_en": "Wooden mandir",
+          "label_hi": "लकड़ी का मंदिर",
+          "path": "shrine/backgrounds/wood.png",
+          "kind": "image",
+          "thumbnail": "shrine/backgrounds/wood.png"
+        },
+        {
+          "id": "marble",
+          "label_en": "Marble arch",
+          "label_hi": "संगमरमर मंदिर",
+          "path": "shrine/backgrounds/marble.png",
+          "kind": "image",
+          "thumbnail": "shrine/backgrounds/marble.png"
+        },
+        {
+          "id": "ivory",
+          "label_en": "Ivory alcove",
+          "label_hi": "हाथीदाँत रंग का मंदिर",
+          "path": "shrine/backgrounds/ivory.png",
+          "kind": "image",
+          "thumbnail": "shrine/backgrounds/ivory.png"
+        },
+        {
+          "id": "carved",
+          "label_en": "Carved sanctuary",
+          "label_hi": "नक्काशीदार मंदिर",
+          "path": "shrine/backgrounds/carved.png",
+          "kind": "image",
+          "thumbnail": "shrine/backgrounds/carved.png"
+        }
+      ]
+    },
+    {
+      "id": "idols",
+      "label_en": "Idols",
+      "label_hi": "मूर्तियाँ",
+      "options": [
+        {
+          "id": "original",
+          "label_en": "Ganesha & Lakshmi",
+          "label_hi": "गणेश जी और लक्ष्मी जी",
+          "path": "shrine/idols/original.png",
+          "kind": "image",
+          "thumbnail": "shrine/idols/original.png"
+        },
+        {
+          "id": "ganesh_hanuman",
+          "label_en": "Ganesha & Hanuman",
+          "label_hi": "गणेश जी और हनुमान जी",
+          "path": "shrine/idols/ganesh_hanuman.png",
+          "kind": "image",
+          "thumbnail": "shrine/idols/ganesh_hanuman.png"
+        },
+        {
+          "id": "shiva",
+          "label_en": "Shiva",
+          "label_hi": "शिव जी",
+          "path": "shrine/idols/shiva.png",
+          "kind": "image",
+          "thumbnail": "shrine/idols/shiva.png"
+        },
+        {
+          "id": "lakshmi",
+          "label_en": "Lakshmi",
+          "label_hi": "लक्ष्मी जी",
+          "path": "shrine/idols/lakshmi.png",
+          "kind": "image",
+          "thumbnail": "shrine/idols/lakshmi.png"
+        },
+        {
+          "id": "durga",
+          "label_en": "Durga",
+          "label_hi": "दुर्गा माँ",
+          "path": "shrine/idols/durga.png",
+          "kind": "image",
+          "thumbnail": "shrine/idols/durga.png"
+        },
+        {
+          "id": "ram_darbar",
+          "label_en": "Ram Darbar",
+          "label_hi": "राम दरबार",
+          "path": "shrine/idols/ram_darbar.png",
+          "kind": "image",
+          "thumbnail": "shrine/idols/ram_darbar.png"
+        }
+      ]
+    },
+    {
+      "id": "flowers",
+      "label_en": "Flowers",
+      "label_hi": "फूल",
+      "options": [
+        {
+          "id": "original",
+          "label_en": "Sunflower & peony",
+          "label_hi": "सूरजमुखी और पियोनी",
+          "path": "shrine/flowers/sunflower.glb",
+          "kind": "model",
+          "thumbnail": "shrine/flowers/sunflower.png"
+        },
+        {
+          "id": "orchid",
+          "label_en": "Orchid",
+          "label_hi": "ऑर्किड",
+          "path": "shrine/flowers/orchid.glb",
+          "kind": "model",
+          "thumbnail": "shrine/flowers/orchid.png"
+        },
+        {
+          "id": "rose",
+          "label_en": "Rose",
+          "label_hi": "गुलाब",
+          "path": "shrine/flowers/rose.glb",
+          "kind": "model",
+          "thumbnail": "shrine/flowers/rose.png"
+        },
+        {
+          "id": "azalea",
+          "label_en": "Azalea",
+          "label_hi": "अज़ेलिया",
+          "path": "shrine/flowers/azalea.glb",
+          "kind": "model",
+          "thumbnail": "shrine/flowers/azalea.png"
+        },
+        {
+          "id": "bouquet",
+          "label_en": "Lily",
+          "label_hi": "लिली",
+          "path": "shrine/flowers/bouquet.glb",
+          "kind": "model",
+          "thumbnail": "shrine/flowers/bouquet.png"
+        }
+      ]
+    },
+    {
+      "id": "lamp",
+      "label_en": "Oil lamp",
+      "label_hi": "दीपक",
+      "options": [
+        {
+          "id": "original",
+          "label_en": "Golden lamp",
+          "label_hi": "सुनहरा दीपक",
+          "path": "shrine/lamps/golden_oil.glb",
+          "kind": "model",
+          "thumbnail": "shrine/lamps/golden_oil.png"
+        },
+        {
+          "id": "brass",
+          "label_en": "Brass diya",
+          "label_hi": "पीतल का दीया",
+          "path": "shrine/lamps/brass_diya.glb",
+          "kind": "model",
+          "thumbnail": "shrine/lamps/brass_diya.png"
+        }
+      ]
+    },
+    {
+      "id": "shankh",
+      "label_en": "Shankh",
+      "label_hi": "शंख",
+      "options": [
+        {
+          "id": "original",
+          "label_en": "Classic shankh",
+          "label_hi": "पारंपरिक शंख",
+          "path": "shrine/shankh/classic.glb",
+          "kind": "model",
+          "thumbnail": "shrine/shankh/classic.png"
+        },
+        {
+          "id": "ivory",
+          "label_en": "Ivory shankh",
+          "label_hi": "श्वेत शंख",
+          "path": "shrine/shankh/ivory.glb",
+          "kind": "model",
+          "thumbnail": "shrine/shankh/ivory.png"
+        }
+      ]
+    },
+    {
+      "id": "aarti",
+      "label_en": "Aarti lamp",
+      "label_hi": "आरती दीप",
+      "options": [
+        {
+          "id": "original",
+          "label_en": "Golden aarti",
+          "label_hi": "सुनहरी आरती",
+          "path": "shrine/aarti/golden.glb",
+          "kind": "model",
+          "thumbnail": "shrine/aarti/golden.png"
+        },
+        {
+          "id": "traditional",
+          "label_en": "Traditional aarti",
+          "label_hi": "पारंपरिक आरती",
+          "path": "shrine/aarti/traditional.glb",
+          "kind": "model",
+          "thumbnail": "shrine/aarti/traditional.png"
+        }
+      ]
+    },
+    {
+      "id": "prasad",
+      "label_en": "Prasad",
+      "label_hi": "प्रसाद",
+      "options": [
+        {
+          "id": "original",
+          "label_en": "Laddu bowl",
+          "label_hi": "लड्डू का कटोरा",
+          "path": "shrine/prasad/laddu_bowl.png",
+          "kind": "image",
+          "thumbnail": "shrine/prasad/laddu_bowl.png"
+        },
+        {
+          "id": "halwa",
+          "label_en": "Halwa",
+          "label_hi": "हलवा",
+          "path": "shrine/prasad/halwa.png",
+          "kind": "image",
+          "thumbnail": "shrine/prasad/halwa.png"
+        },
+        {
+          "id": "laddu",
+          "label_en": "Tirupati laddu",
+          "label_hi": "तिरुपति लड्डू",
+          "path": "shrine/prasad/laddu.glb",
+          "kind": "model",
+          "thumbnail": "shrine/prasad/laddu.png"
+        }
+      ]
+    }
+  ]
+}

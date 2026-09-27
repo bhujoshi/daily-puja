@@ -39,3 +39,6 @@ venv/
 !.env.example
 *.log
 play_store/
+
+# Account pilot data contains private user information
+backend/data/

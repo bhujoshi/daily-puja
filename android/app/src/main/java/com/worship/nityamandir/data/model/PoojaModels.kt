@@ -33,7 +33,8 @@ data class AgingState(
     val flowerWitherFactor: Float, // 0.0f to 1.0f
     val needsCleaning: Boolean,
     val statusHi: String,
-    val statusEn: String
+    val statusEn: String,
+    val cobwebLevel: Float = 0f
 )
 
 data class AartiLyric(

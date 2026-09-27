@@ -1,0 +1,114 @@
+[
+  {
+    "original": "temple_models/sunflower.glb",
+    "source": "temple_models/source/flowers/sunflower.glb"
+  },
+  {
+    "original": "temple_models/single_peony_flower.glb",
+    "source": "temple_models/source/flowers/peony.glb"
+  },
+  {
+    "original": "temple_models/flowers/orchid.glb",
+    "source": "temple_models/source/flowers/orchid.glb"
+  },
+  {
+    "original": "temple_models/flowers/rose_flower_realistic_high-poly.glb",
+    "source": "temple_models/source/flowers/rose.glb"
+  },
+  {
+    "original": "temple_models/flowers/cc0_rip_my_friend.glb",
+    "source": "temple_models/source/flowers/bouquet.glb"
+  },
+  {
+    "original": "temple_models/golden_oil_lamp.glb",
+    "source": "temple_models/source/lamps/golden_oil.glb"
+  },
+  {
+    "original": "temple_models/oil_lamp/diya__divli__lamp.glb",
+    "source": "temple_models/source/lamps/brass_diya.glb"
+  },
+  {
+    "original": "temple_models/golden_aarti_lamp.glb",
+    "source": "temple_models/source/aarti/golden.glb"
+  },
+  {
+    "original": "temple_models/oil_lamp/aarti.glb",
+    "source": "temple_models/source/aarti/traditional.glb"
+  },
+  {
+    "original": "temple_models/sankh.glb",
+    "source": "temple_models/source/shankh/classic.glb"
+  },
+  {
+    "original": "temple_models/sankh/hindu_god_conch_shell.glb",
+    "source": "temple_models/source/shankh/ivory.glb"
+  },
+  {
+    "original": "temple_models/tirupathi_laddu.glb",
+    "source": "temple_models/source/prasad/laddu.glb"
+  },
+  {
+    "original": "temple_models/royal_side_plate.glb",
+    "source": "temple_models/source/accessories/plate.glb"
+  },
+  {
+    "original": "temple_models/hindu_temple_bell.glb",
+    "source": "temple_models/source/accessories/bell.glb"
+  },
+  {
+    "original": "temple_models/glass_water_jug_high_poly.glb",
+    "source": "temple_models/source/accessories/water_jug.glb"
+  },
+  {
+    "original": "temple_models/flowers/cc0__satsuki_azalea_rhododendron_indicum.glb",
+    "source": "temple_models/source/flowers/azalea.glb"
+  },
+  {
+    "original": "temple_models/idols/images.jpeg",
+    "source": "temple_models/source/idols/ganesh_hanuman.jpeg"
+  },
+  {
+    "original": "temple_models/idols/images (1).jpeg",
+    "source": "temple_models/source/idols/shiva.jpeg"
+  },
+  {
+    "original": "temple_models/idols/images (2).jpeg",
+    "source": "temple_models/source/idols/lakshmi.jpeg"
+  },
+  {
+    "original": "temple_models/idols/images (3).jpeg",
+    "source": "temple_models/source/idols/durga.jpeg"
+  },
+  {
+    "original": "temple_models/idols/images (4).jpeg",
+    "source": "temple_models/source/idols/ram_darbar.jpeg"
+  },
+  {
+    "original": "temple_models/shrine/images.jpeg",
+    "source": "temple_models/source/backgrounds/marble.jpeg"
+  },
+  {
+    "original": "temple_models/shrine/images1.jpeg",
+    "source": "temple_models/source/backgrounds/ivory.jpeg"
+  },
+  {
+    "original": "temple_models/shrine/images2.jpeg",
+    "source": "temple_models/source/backgrounds/carved.jpeg"
+  },
+  {
+    "original": "temple_models/prashad/images (5).jpeg",
+    "source": "temple_models/source/prasad/halwa.jpeg"
+  },
+  {
+    "original": "temple_models/laddu_bowl.jpeg",
+    "source": "temple_models/source/prasad/laddu_bowl.jpeg"
+  },
+  {
+    "original": "temple_models/laddu_bowl.png",
+    "source": "temple_models/source/prasad/laddu_bowl.png"
+  },
+  {
+    "original": "temple_models/idols/imgres.html",
+    "source": "temple_models/source/references/idol_search.html"
+  }
+]

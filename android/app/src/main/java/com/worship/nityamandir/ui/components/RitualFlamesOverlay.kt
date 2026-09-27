@@ -11,7 +11,7 @@ import kotlin.math.sin
 
 /** Screen-space flames stay attached to the moving wick, with independent, smooth flicker. */
 @Composable
-fun RitualFlamesOverlay(oilLit: Boolean, aartiLit: Boolean, lamp: TemplePoint) {
+fun RitualFlamesOverlay(oilLit: Boolean, aartiLit: Boolean, lamp: TemplePoint, oilPoint:TemplePoint=TempleSceneLayout.oil, traditional:Boolean=false, brass:Boolean=false) {
     if(!oilLit && !aartiLit) return
     var seconds by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(Unit) {
@@ -41,7 +41,11 @@ fun RitualFlamesOverlay(oilLit: Boolean, aartiLit: Boolean, lamp: TemplePoint) {
             drawOval(Color(0xAA689AF0),base-Offset(width*.35f,height*.10f),androidx.compose.ui.geometry.Size(width*.7f,height*.12f))
             drawLine(Color(0xFF482819),base+Offset(0f,unit*.004f),base-Offset(0f,unit*.004f),unit*.0025f,StrokeCap.Round)
         }
-        if(oilLit) flame(TemplePoint(.505f,TempleSceneLayout.oil.y-.06f*1.6f*TempleSceneLayout.LAMP_SCALE),0f,1.5f)
-        if(aartiLit) flame(TempleSceneLayout.aartiWick(lamp),1.71f,flicker=.25f)
+        if(oilLit) flame(TemplePoint(oilPoint.x,oilPoint.y-(if(brass) .125f else .06f*1.6f*TempleSceneLayout.LAMP_SCALE)),0f,1.5f)
+        if(aartiLit) {
+            if(traditional) {
+                listOf(-.028f,0f,.028f).forEachIndexed {index,x -> flame(TemplePoint(lamp.x+x,lamp.y-.035f),1.71f+index,scale=.65f,flicker=.25f)}
+            } else flame(TempleSceneLayout.aartiWick(lamp),1.71f,flicker=.25f)
+        }
     }
 }

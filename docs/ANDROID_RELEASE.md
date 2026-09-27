@@ -1,7 +1,7 @@
 # Android release builds
 
 Application ID: `com.pavitramandir.app`  
-Version: `1.0.2` (version code `3`)
+Version: `1.0.3` (version code `4`)
 
 ## Build from the command line
 

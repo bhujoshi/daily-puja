@@ -25,18 +25,18 @@ class WorshipSessionTest {
             assertTrue(positions.all {kotlin.math.abs(it.x-TempleSceneLayout.oil.x)>.045f})
         }
     }
-    @Test fun allFourLaddusTravelFromPlateToRightOfLamp() {
-        val destinations=(0 until TempleSceneLayout.LADDU_COUNT).map { i ->
-            val start=TempleSceneLayout.plateLaddu(i)
-            val end=TempleSceneLayout.offeredLaddu(i)
-            assertEquals(start,TempleSceneLayout.flowerFlight(start,end,0f))
-            val landed=TempleSceneLayout.flowerFlight(start,end,1f)
-            assertEquals(end.x,landed.x,.00001f)
-            assertEquals(end.y,landed.y,.00001f)
-            assertTrue(end.x>TempleSceneLayout.oil.x)
-            end
+    @Test fun prasadMakesOneClockwiseCircleAndLandsBelowShrine() {
+        assertEquals(TempleSceneLayout.prasadRest,TempleSceneLayout.prasadPosition(0f))
+        val landed=TempleSceneLayout.prasadPosition(1f)
+        assertEquals(TempleSceneLayout.prasadFloor.x,landed.x,.00001f)
+        assertEquals(TempleSceneLayout.prasadFloor.y,landed.y,.00001f)
+        assertTrue(landed.y>TempleSceneLayout.oil.y)
+        val points=listOf(.22f,.36f,.50f,.64f,.78f).map {TempleSceneLayout.prasadPosition(it)}
+        val expected=listOf(TemplePoint(.65f,.56f),TemplePoint(.51f,.66f),TemplePoint(.37f,.56f),TemplePoint(.51f,.46f),TemplePoint(.65f,.56f))
+        points.zip(expected).forEach {(actual,target) ->
+            assertEquals(target.x,actual.x,.00001f)
+            assertEquals(target.y,actual.y,.00001f)
         }
-        assertEquals(4,destinations.toSet().size)
         assertFalse(WorshipSession(step=WorshipStep.PRASAD).canContinue)
     }
 

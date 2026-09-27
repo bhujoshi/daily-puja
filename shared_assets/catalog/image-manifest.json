@@ -1,0 +1,50 @@
+[
+  {
+    "runtime": "android/app/src/main/assets/shrine/backgrounds/carved.png",
+    "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
+  },
+  {
+    "runtime": "android/app/src/main/assets/shrine/backgrounds/ivory.png",
+    "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
+  },
+  {
+    "runtime": "android/app/src/main/assets/shrine/backgrounds/marble.png",
+    "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
+  },
+  {
+    "runtime": "android/app/src/main/assets/shrine/backgrounds/wood.png",
+    "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
+  },
+  {
+    "runtime": "android/app/src/main/assets/shrine/idols/durga.png",
+    "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
+  },
+  {
+    "runtime": "android/app/src/main/assets/shrine/idols/ganesh_hanuman.png",
+    "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
+  },
+  {
+    "runtime": "android/app/src/main/assets/shrine/idols/lakshmi.png",
+    "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
+  },
+  {
+    "runtime": "android/app/src/main/assets/shrine/idols/original.png",
+    "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
+  },
+  {
+    "runtime": "android/app/src/main/assets/shrine/idols/ram_darbar.png",
+    "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
+  },
+  {
+    "runtime": "android/app/src/main/assets/shrine/idols/shiva.png",
+    "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
+  },
+  {
+    "runtime": "android/app/src/main/assets/shrine/prasad/halwa.png",
+    "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
+  },
+  {
+    "runtime": "android/app/src/main/assets/shrine/prasad/laddu_bowl.png",
+    "preparation": "existing cutout"
+  }
+]

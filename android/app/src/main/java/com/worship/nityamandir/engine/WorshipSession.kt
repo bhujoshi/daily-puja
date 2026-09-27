@@ -12,10 +12,11 @@ enum class WorshipStep(val hi: String, val en: String) {
     AARTI("दीप से आरती", "Aarti with the diya")
 }
 
-data class FlowerOffering(val flowerIndex: Int, val deity: Int, val position: TemplePoint)
+data class FlowerOffering(val flowerIndex: Int, val deity: Int, val position: TemplePoint, val rotation: Float = kotlin.random.Random.nextFloat()*360f)
 
 data class WorshipSession(
     val step: WorshipStep = WorshipStep.LIGHT,
+    val deityCount: Int = 2,
     val lit: Boolean = false,
     val bathed: Set<Int> = emptySet(),
     val tilak: Set<Int> = emptySet(),
@@ -28,16 +29,16 @@ data class WorshipSession(
     val aartiComplete: Boolean = false,
     val complete: Boolean = false
 ) {
-    fun offerFlower(index: Int, deity: Int, position: TemplePoint) = copy(
+    fun offerFlower(index: Int, deity: Int, position: TemplePoint, rotation: Float = kotlin.random.Random.nextFloat()*360f) = copy(
         flowers=flowers+deity,
-        offeredFlowers=offeredFlowers+FlowerOffering(index,deity,position)
+        offeredFlowers=offeredFlowers+FlowerOffering(index,deity,position,rotation)
     )
 
     val canContinue: Boolean get() = when(step) {
         WorshipStep.LIGHT -> lit
-        WorshipStep.BATH -> bathed.containsAll(listOf(0,1))
-        WorshipStep.TILAK -> tilak.containsAll(listOf(0,1))
-        WorshipStep.FLOWERS -> flowers.containsAll(listOf(0,1))
+        WorshipStep.BATH -> bathed.containsAll((0 until deityCount).toList())
+        WorshipStep.TILAK -> tilak.containsAll((0 until deityCount).toList())
+        WorshipStep.FLOWERS -> flowers.containsAll((0 until deityCount).toList())
         WorshipStep.BELL -> bellRung
         WorshipStep.CONCH -> conchBlown
         WorshipStep.PRASAD -> prasadOffered
