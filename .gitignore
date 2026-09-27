@@ -42,3 +42,5 @@ play_store/
 
 # Account pilot data contains private user information
 backend/data/
+backend/deploy/.env
+backend/deploy/alertmanager.local.yml

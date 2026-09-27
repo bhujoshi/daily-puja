@@ -8,6 +8,13 @@ data class ShrineCategory(val id:String,val en:String,val hi:String,val options:
 data class ShrineSelection(val values:Map<String,String> = emptyMap()) {
     operator fun get(category:String)=values[category] ?: "original"
     fun with(category:String,id:String)=copy(values=values+(category to id))
+    // Comma-separated IDs preserve the existing string-valued account wire format.
+    val flowerIds get()=this["flowers"].split(',').filter {it.isNotBlank()}.distinct().ifEmpty {listOf("original")}
+    fun toggleFlower(id:String):ShrineSelection {
+        val ids=flowerIds
+        val next=if(id in ids) ids-id else ids+id
+        return if(next.isEmpty()) this else with("flowers",next.joinToString(","))
+    }
     val original get()=values.values.all {it=="original"}
     // Measured altar surfaces in the prepared portrait backgrounds, in image-width units.
     val altarOffset get()=when(this["shrine"]) {"marble" -> -.040f; "ivory" -> -.080f; "carved" -> -.055f; else -> 0f}
@@ -35,5 +42,16 @@ class ShrineCatalog(context:Context) {
         val c=categories.first {it.id==category}
         return c.options.firstOrNull {it.id==selection[category]} ?: c.options.first()
     }
-    fun normalize(selection:ShrineSelection)=ShrineSelection(categories.associate {it.id to option(it.id,selection).id})
+    fun flowerPaths(selection:ShrineSelection):List<String> {
+        val options=categories.first {it.id=="flowers"}.options
+        return selection.flowerIds.flatMap {id ->
+            if(id=="original") listOf("shrine/flowers/sunflower.glb","shrine/flowers/peony.glb")
+            else options.firstOrNull {it.id==id}?.let {listOf(it.path)} ?: emptyList()
+        }.distinct()
+    }
+    fun normalize(selection:ShrineSelection)=ShrineSelection(categories.associate {category ->
+        category.id to if(category.id=="flowers") {
+            selection.flowerIds.filter {id -> category.options.any {it.id==id}}.ifEmpty {listOf("original")}.joinToString(",")
+        } else option(category.id,selection).id
+    })
 }

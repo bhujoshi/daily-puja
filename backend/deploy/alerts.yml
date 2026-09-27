@@ -1,0 +1,25 @@
+groups:
+  - name: worship-api
+    rules:
+      - alert: WorshipAPIHTTP500
+        expr: sum(increase(worship_http_requests_total{status="500"}[5m])) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "Worship API returned HTTP 500"
+          description: "At least one HTTP 500 occurred in the past five minutes. Inspect API logs and the request dashboard."
+      - alert: WorshipAPIDown
+        expr: up{job="worship-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Worship API metrics are unavailable"
+          description: "Prometheus cannot scrape the API metrics endpoint."
+      - alert: WorshipAPIUnavailableErrors
+        expr: sum(increase(worship_http_requests_total{status=~"502|503|504"}[5m])) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "Worship API returned a 502, 503 or 504"
+          description: "A dependency or persistence problem may have interrupted API requests. Inspect API logs."

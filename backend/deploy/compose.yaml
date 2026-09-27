@@ -1,0 +1,62 @@
+services:
+  api:
+    build: ..
+    restart: unless-stopped
+    environment:
+      ACCOUNT_DATA_PATH: /data/accounts.json
+      MOCK_MODE: ${MOCK_MODE:-false}
+      ENABLE_LEGACY_DEMO: "false"
+    volumes:
+      - account_data:/data
+    ports:
+      - "127.0.0.1:${API_PORT:-8080}:8080"
+    networks: [app, telemetry]
+
+  prometheus:
+    image: prom/prometheus:v3.14.0
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    depends_on: [api, alertmanager]
+    networks: [telemetry]
+
+  alertmanager:
+    image: prom/alertmanager:v0.34.1
+    restart: unless-stopped
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml", "--storage.path=/alertmanager"]
+    volumes:
+      - ${ALERTMANAGER_CONFIG:-./alertmanager.yml}:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    networks: [telemetry]
+
+  grafana:
+    image: grafana/grafana:13.2.2
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    depends_on: [prometheus]
+    networks: [telemetry]
+
+networks:
+  app:
+  telemetry:
+
+volumes:
+  account_data:
+  prometheus_data:
+  alertmanager_data:
+  grafana_data:

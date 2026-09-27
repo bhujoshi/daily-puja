@@ -49,10 +49,11 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                     }
                 }
                 val category=catalog.categories.first {it.id==categoryId}
+                if(categoryId=="flowers") Text(tr("जितनी चाहें फूलों की किस्में चुनें (कम से कम एक)।","Choose as many flower varieties as you like (at least one)."))
                 Column(Modifier.weight(1f).verticalScroll(optionsScroll),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     category.options.forEach {option ->
-                        val selected=draft[category.id]==option.id
-                        Surface(onClick={draft=draft.with(category.id,option.id)},shape=RoundedCornerShape(16.dp),color=if(selected) Color(0xFFF1DFC1) else Color.White,border=BorderStroke(if(selected) 2.dp else 1.dp,if(selected) RitualGold else Color(0xFFE4D7C6)),modifier=Modifier.fillMaxWidth().semantics {this.selected=selected}) {
+                        val selected=if(category.id=="flowers") option.id in draft.flowerIds else draft[category.id]==option.id
+                        Surface(onClick={draft=if(category.id=="flowers") draft.toggleFlower(option.id) else draft.with(category.id,option.id)},shape=RoundedCornerShape(16.dp),color=if(selected) Color(0xFFF1DFC1) else Color.White,border=BorderStroke(if(selected) 2.dp else 1.dp,if(selected) RitualGold else Color(0xFFE4D7C6)),modifier=Modifier.fillMaxWidth().semantics {this.selected=selected}) {
                             Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
                                 val bitmap=remember(option.thumbnail) {context.assets.open(option.thumbnail).use {BitmapFactory.decodeStream(it)}.asImageBitmap()}
                                 Image(bitmap,null,Modifier.size(84.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFF6EBDD)),contentScale=ContentScale.Fit)
@@ -60,7 +61,8 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                                     Text(if(hindi) option.hi else option.en,fontSize=18.sp)
                                     Text(if(selected) tr("चुना हुआ","Selected") else tr("चुनने के लिए छुएँ","Tap to choose"),fontSize=14.sp)
                                 }
-                                RadioButton(selected=selected,onClick=null)
+                                if(category.id=="flowers") Checkbox(checked=selected,onCheckedChange=null)
+                                else RadioButton(selected=selected,onClick=null)
                             }
                         }
                     }

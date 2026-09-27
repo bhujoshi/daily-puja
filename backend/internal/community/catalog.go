@@ -3,6 +3,7 @@ package community
 import (
 	_ "embed"
 	"encoding/json"
+	"strings"
 )
 
 //go:embed catalog.json
@@ -24,15 +25,23 @@ func validSelections(selections map[string]string) bool {
 		return false
 	}
 	for _, category := range catalog.Categories {
-		found := false
-		for _, option := range category.Options {
-			if selections[category.ID] == option.ID {
-				found = true
-				break
-			}
+		ids := []string{selections[category.ID]}
+		if category.ID == "flowers" {
+			ids = strings.Split(selections[category.ID], ",")
 		}
-		if !found {
-			return false
+		seen := map[string]bool{}
+		for _, id := range ids {
+			found := false
+			for _, option := range category.Options {
+				if id == option.ID {
+					found = true
+					break
+				}
+			}
+			if !found || seen[id] {
+				return false
+			}
+			seen[id] = true
 		}
 	}
 	return true

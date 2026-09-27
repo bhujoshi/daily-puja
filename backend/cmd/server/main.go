@@ -12,6 +12,7 @@ import (
 
 	"github.com/worship/nityamandir/backend/internal/api"
 	"github.com/worship/nityamandir/backend/internal/community"
+	"github.com/worship/nityamandir/backend/internal/observability"
 	"github.com/worship/nityamandir/backend/internal/repository"
 	"github.com/worship/nityamandir/backend/internal/service"
 )
@@ -46,14 +47,26 @@ func main() {
 		router.Handle("/api/v1/", legacy)
 	}
 	router.Handle("/healthz", legacy)
+	monitor := observability.New()
+	bind := os.Getenv("APP_BIND")
+	if bind == "" {
+		bind = "127.0.0.1"
+	}
+	metricsAddr := os.Getenv("METRICS_ADDR")
+	if metricsAddr == "" {
+		metricsAddr = "127.0.0.1:9091"
+	}
 
 	server := &http.Server{
-		Addr:         "127.0.0.1:" + port,
-		Handler:      router,
+		Addr:         bind + ":" + port,
+		Handler:      monitor.Wrap(router),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
+	metricsMux := http.NewServeMux()
+	metricsMux.Handle("GET /metrics", monitor.Metrics())
+	metricsServer := &http.Server{Addr: metricsAddr, Handler: metricsMux, ReadHeaderTimeout: 5 * time.Second}
 
 	// Graceful shutdown channel
 	stop := make(chan os.Signal, 1)
@@ -67,6 +80,12 @@ func main() {
 			log.Fatalf("Server listen failed: %v", err)
 		}
 	}()
+	go func() {
+		log.Printf("Private metrics listening on %s", metricsAddr)
+		if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Metrics listen failed: %v", err)
+		}
+	}()
 
 	<-stop
 	log.Println("Shutting down Pavitra Mandir server gracefully...")
@@ -76,6 +95,9 @@ func main() {
 
 	if err := server.Shutdown(ctx); err != nil {
 		log.Fatalf("Server forced to shutdown: %v", err)
+	}
+	if err := metricsServer.Shutdown(ctx); err != nil {
+		log.Fatalf("Metrics server forced to shutdown: %v", err)
 	}
 
 	fmt.Println("Server exited cleanly. शुभम् अस्तु।")
