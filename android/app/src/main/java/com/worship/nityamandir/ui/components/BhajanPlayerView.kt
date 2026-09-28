@@ -75,7 +75,7 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
     var collection by remember { mutableStateOf("") }
     LaunchedEffect(Unit) { player.fetchCatalog() }
     val visible = remember(player.catalog, collection) {
-        player.catalog.filter { collection.isEmpty() || it.collection == collection }
+        player.catalog.filter { collection.isEmpty() || it.collection == collection }.distinctBy { it.url }
     }
     MaterialTheme(colorScheme = lightColorScheme(primary = MusicOrange, onPrimary = MusicCream,
         secondaryContainer = Color(0xFFEACBA7), onSecondaryContainer = MusicInk,
@@ -107,6 +107,7 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
                             FilterChip(selected = collection == id, onClick = { collection = id }, label = { Text(label) })
                         }
                     }
+                    if (player.catalog.isNotEmpty()) Text("${visible.size} " + tr("भजन", "bhajans"), Modifier.padding(horizontal = 20.dp), fontSize = 12.sp)
                     if (player.catalogLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
                     if (player.catalogError) Row(Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(tr("संग्रह लोड नहीं हुआ", "Couldn’t load music"), Modifier.weight(1f))
@@ -129,7 +130,7 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
                                 }
                                 Text(track.title, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.padding(top = 8.dp), fontSize = 14.sp)
-                                if (track.url.isBlank()) Text(tr("जल्द उपलब्ध", "Coming soon"), fontSize = 11.sp, color = MusicInk.copy(alpha = 0.65f))
+                                if (track.artist.isNotBlank()) Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 11.sp, color = MusicInk.copy(alpha = 0.65f))
                             }
                         }
                     }
@@ -147,6 +148,7 @@ private fun PlayerControls(player: BhajanPlayer, hindi: Boolean) {
         Column(Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
             Text(player.title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
             if (player.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
+            if (player.notice.isNotBlank()) Text(if (hindi) "अनुपलब्ध भजन छोड़कर अगला चला रहे हैं" else player.notice, fontSize = 12.sp)
             if (player.failed) Text(if (hindi) "संगीत नहीं चला। फिर प्रयास करें।" else "Couldn’t play. Tap retry.", fontSize = 12.sp)
             Slider(value = drag ?: player.position.toFloat(), onValueChange = { drag = it },
                 onValueChangeFinished = { drag?.let { player.seek(it.toLong()) }; drag = null },

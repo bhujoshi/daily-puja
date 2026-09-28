@@ -1,0 +1,1059 @@
+{
+  "tracks": [
+    {
+      "id": "31",
+      "order": 31,
+      "title": "Om Namah Shivay",
+      "collection": "shiva",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Om Namah Shivaya",
+        "ॐ नमः शिवाय"
+      ]
+    },
+    {
+      "id": "32",
+      "order": 32,
+      "title": "Har Har Mahadev",
+      "collection": "shiva",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Har Har Mahadev",
+        "हर हर महादेव"
+      ]
+    },
+    {
+      "id": "33",
+      "order": 33,
+      "title": "Shiv Shankar Ko Jisne Puja",
+      "collection": "shiva",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Shiv Shankar Ko Jisne Pooja",
+        "शिव शंकर को जिसने पूजा"
+      ]
+    },
+    {
+      "id": "34",
+      "order": 34,
+      "title": "Shiv Kailash Ke Vasi",
+      "collection": "shiva",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Shiv Kailashon Ke Wasi",
+        "Shiv Kailasho Ke Vasi",
+        "शिव कैलाशों के वासी"
+      ]
+    },
+    {
+      "id": "35",
+      "order": 35,
+      "title": "Shankar Teri Jata Mein",
+      "collection": "shiva",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Shankar Teri Jata Mein",
+        "शंकर तेरी जटा में"
+      ]
+    },
+    {
+      "id": "36",
+      "order": 36,
+      "title": "Shiv Tandav Stotram",
+      "collection": "shiva",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Shiva Tandava Stotram",
+        "शिव तांडव स्तोत्र"
+      ]
+    },
+    {
+      "id": "37",
+      "order": 37,
+      "title": "Mahamrityunjaya Mantra",
+      "collection": "shiva",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Maha Mrityunjaya Mantra",
+        "महामृत्युंजय मंत्र"
+      ]
+    },
+    {
+      "id": "38",
+      "order": 38,
+      "title": "Parvati Boli Shankar Se",
+      "collection": "shiva",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Parvati Boli Shankar Se",
+        "पार्वती बोली शंकर से"
+      ]
+    },
+    {
+      "id": "39",
+      "order": 39,
+      "title": "Hey Shiv Shankar Hey Karunakar",
+      "collection": "shiva",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Hey Shiv Shankar Hey Karunakar",
+        "हे शिव शंकर हे करुणाकर"
+      ]
+    },
+    {
+      "id": "40",
+      "order": 40,
+      "title": "Main Shiv Ka Shiv Mere",
+      "collection": "shiva",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Main Shiv Ka Shiv Mere",
+        "मैं शिव का शिव मेरे"
+      ]
+    },
+    {
+      "id": "41",
+      "order": 41,
+      "title": "Shiv Chalisa",
+      "collection": "shiva",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Shiv Chalisa",
+        "शिव चालीसा"
+      ]
+    },
+    {
+      "id": "42",
+      "order": 42,
+      "title": "Karpur Gauram",
+      "collection": "shiva",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Karpoora Gauram",
+        "Karpur Gauram",
+        "कर्पूर गौरम"
+      ]
+    },
+    {
+      "id": "43",
+      "order": 43,
+      "title": "Damru Wale Baba Tumko Aana Hoga",
+      "collection": "shiva",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Damru Wale Baba Tumko Aana Hoga",
+        "डमरू वाले बाबा तुमको आना होगा"
+      ]
+    },
+    {
+      "id": "44",
+      "order": 44,
+      "title": "Bhole Tere Charanon Ki Dhool Jo Mil Jaye",
+      "collection": "shiva",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Bhole Tere Charno Ki Dhool",
+        "भोले तेरे चरणों की धूल"
+      ]
+    },
+    {
+      "id": "45",
+      "order": 45,
+      "title": "O Mera Bhola Hai Bhandari",
+      "collection": "shiva",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Mera Bhola Hai Bhandari",
+        "मेरा भोला है भंडारी"
+      ]
+    },
+    {
+      "id": "46",
+      "order": 46,
+      "title": "Hanuman Chalisa",
+      "collection": "hanuman",
+      "deity": "hanuman",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Hanuman Chalisa",
+        "हनुमान चालीसा"
+      ]
+    },
+    {
+      "id": "47",
+      "order": 47,
+      "title": "Sankat Mochan Hanuman Ashtak",
+      "collection": "hanuman",
+      "deity": "hanuman",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Sankatmochan Hanuman Ashtak",
+        "संकटमोचन हनुमान अष्टक"
+      ]
+    },
+    {
+      "id": "48",
+      "order": 48,
+      "title": "Hey Dukh Bhanjan",
+      "collection": "hanuman",
+      "deity": "hanuman",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Hey Dukh Bhanjan Maruti Nandan",
+        "हे दुख भंजन मारुति नंदन"
+      ]
+    },
+    {
+      "id": "49",
+      "order": 49,
+      "title": "Bajrang Baan",
+      "collection": "hanuman",
+      "deity": "hanuman",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Bajrang Baan",
+        "बजरंग बाण"
+      ]
+    },
+    {
+      "id": "50",
+      "order": 50,
+      "title": "Mere Sankat Ke Kataya Hanuman",
+      "collection": "hanuman",
+      "deity": "hanuman",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Mere Sankat Ke Kataya Hanuman",
+        "मेरे संकट के कटैया हनुमान"
+      ]
+    },
+    {
+      "id": "51",
+      "order": 51,
+      "title": "Mangal Murti Maruti Nandan",
+      "collection": "hanuman",
+      "deity": "hanuman",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Mangal Murti Maruti Nandan",
+        "मंगल मूर्ति मारुति नंदन"
+      ]
+    },
+    {
+      "id": "52",
+      "order": 52,
+      "title": "Mere Tan Mein Ram Mere Mann Mein Ram",
+      "collection": "hanuman",
+      "deity": "hanuman",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Mere Tan Mein Ram",
+        "मेरे तन में राम"
+      ]
+    },
+    {
+      "id": "53",
+      "order": 53,
+      "title": "Veer Hanumana Ati Balwana",
+      "collection": "hanuman",
+      "deity": "hanuman",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Veer Hanumana Ati Balwana",
+        "वीर हनुमाना अति बलवाना"
+      ]
+    },
+    {
+      "id": "54",
+      "order": 54,
+      "title": "Sankat Harne Wale Ko Hanuman Kehte Hain",
+      "collection": "hanuman",
+      "deity": "hanuman",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Sankat Harne Wale Ko Hanuman",
+        "संकट हरने वाले को हनुमान"
+      ]
+    },
+    {
+      "id": "55",
+      "order": 55,
+      "title": "Kijo Kesari Ke Laal",
+      "collection": "hanuman",
+      "deity": "hanuman",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Keejo Kesari Ke Laal",
+        "कीजो केसरी के लाल"
+      ]
+    },
+    {
+      "id": "56",
+      "order": 56,
+      "title": "Bhor Bhai Din Chadh Gaya Meri Ambe",
+      "collection": "durga",
+      "deity": "durga",
+      "thumbnail": "shrine/idols/durga.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Bhor Bhai Din Chadh Gaya",
+        "भोर भई दिन चढ़ गया"
+      ]
+    },
+    {
+      "id": "57",
+      "order": 57,
+      "title": "Ambe Tu Hai Jagdambe Kali",
+      "collection": "durga",
+      "deity": "durga",
+      "thumbnail": "shrine/idols/durga.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Ambe Tu Hai Jagdambe Kali",
+        "अम्बे तू है जगदम्बे काली"
+      ]
+    },
+    {
+      "id": "58",
+      "order": 58,
+      "title": "Pyara Saja Tera Dwar Bhawani",
+      "collection": "durga",
+      "deity": "durga",
+      "thumbnail": "shrine/idols/durga.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Pyara Saja Tera Dwar Bhawani",
+        "प्यारा सजा तेरा द्वार भवानी"
+      ]
+    },
+    {
+      "id": "59",
+      "order": 59,
+      "title": "Meri Maa Ke Barabar Koi Nahi",
+      "collection": "durga",
+      "deity": "durga",
+      "thumbnail": "shrine/idols/durga.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Meri Maa Ke Barabar Koi Nahi",
+        "मेरी मां के बराबर कोई नहीं"
+      ]
+    },
+    {
+      "id": "60",
+      "order": 60,
+      "title": "Tune Mujhe Bulaya Sherawaliye",
+      "collection": "durga",
+      "deity": "durga",
+      "thumbnail": "shrine/idols/durga.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Tune Mujhe Bulaya Sherawaliye",
+        "तूने मुझे बुलाया शेरावालिये"
+      ]
+    },
+    {
+      "id": "61",
+      "order": 61,
+      "title": "Main Pardesi Hoon Pehli Baar Aaya Hoon",
+      "collection": "durga",
+      "deity": "durga",
+      "thumbnail": "shrine/idols/durga.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Main Pardesi Hoon",
+        "मैं परदेसी हूँ"
+      ]
+    },
+    {
+      "id": "62",
+      "order": 62,
+      "title": "Meri Maa Ke Barabar Koi Nahi",
+      "collection": "durga",
+      "deity": "durga",
+      "thumbnail": "shrine/idols/durga.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Meri Maa Ke Barabar Koi Nahi",
+        "मेरी मां के बराबर कोई नहीं"
+      ]
+    },
+    {
+      "id": "63",
+      "order": 63,
+      "title": "Dharti Gagan Mein Hoti Hai",
+      "collection": "durga",
+      "deity": "durga",
+      "thumbnail": "shrine/idols/durga.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Dharti Gagan Mein Hoti Hai",
+        "धरती गगन में होती है"
+      ]
+    },
+    {
+      "id": "64",
+      "order": 64,
+      "title": "Bheja Hai Bulawa Tune Sherawaliye",
+      "collection": "durga",
+      "deity": "durga",
+      "thumbnail": "shrine/idols/durga.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Bheja Hai Bulawa Tune Sherawaliye",
+        "भेजा है बुलावा तूने शेरावालिये"
+      ]
+    },
+    {
+      "id": "65",
+      "order": 65,
+      "title": "Aaj Maiya Ke Bhawan Mein",
+      "collection": "durga",
+      "deity": "durga",
+      "thumbnail": "shrine/idols/durga.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Aaj Maiya Ke Bhawan Mein",
+        "आज मैया के भवन में"
+      ]
+    },
+    {
+      "id": "66",
+      "order": 66,
+      "title": "O Aaye Tere Bhawan",
+      "collection": "durga",
+      "deity": "durga",
+      "thumbnail": "shrine/idols/durga.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "O Aaye Tere Bhawan",
+        "ओ आए तेरे भवन"
+      ]
+    },
+    {
+      "id": "67",
+      "order": 67,
+      "title": "Bigdi Meri Bana De",
+      "collection": "durga",
+      "deity": "durga",
+      "thumbnail": "shrine/idols/durga.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Bigdi Meri Bana De",
+        "बिगड़ी मेरी बना दे"
+      ]
+    },
+    {
+      "id": "68",
+      "order": 68,
+      "title": "Durga Chalisa",
+      "collection": "durga",
+      "deity": "durga",
+      "thumbnail": "shrine/idols/durga.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Durga Chalisa",
+        "दुर्गा चालीसा"
+      ]
+    },
+    {
+      "id": "69",
+      "order": 69,
+      "title": "Maiya Teri Jai Jaikaar",
+      "collection": "durga",
+      "deity": "durga",
+      "thumbnail": "shrine/idols/durga.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Maiya Teri Jai Jaikar",
+        "मैया तेरी जय जयकार"
+      ]
+    },
+    {
+      "id": "70",
+      "order": 70,
+      "title": "Main Balak Tu Mata",
+      "collection": "durga",
+      "deity": "durga",
+      "thumbnail": "shrine/idols/durga.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Main Balak Tu Mata",
+        "मैं बालक तू माता"
+      ]
+    },
+    {
+      "id": "71",
+      "order": 71,
+      "title": "Ghar Mein Padharo Gajanan Ji",
+      "collection": "ganesh",
+      "deity": "ganesh",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Ghar Mein Padharo Gajanan",
+        "घर में पधारो गजानन"
+      ]
+    },
+    {
+      "id": "72",
+      "order": 72,
+      "title": "Ganpati Bappa Morya",
+      "collection": "ganesh",
+      "deity": "ganesh",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Ganpati Bappa Morya",
+        "गणपति बप्पा मोरया"
+      ]
+    },
+    {
+      "id": "73",
+      "order": 73,
+      "title": "Sukh Karta Dukh Harta",
+      "collection": "ganesh",
+      "deity": "ganesh",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Sukhkarta Dukhharta",
+        "Sukh Karta Dukh Harta",
+        "सुखकर्ता दुखहर्ता"
+      ]
+    },
+    {
+      "id": "74",
+      "order": 74,
+      "title": "Ganesh Atharvashirsha",
+      "collection": "ganesh",
+      "deity": "ganesh",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Ganapati Atharvashirsha",
+        "Ganesh Atharvashirsh",
+        "गणपति अथर्वशीर्ष"
+      ]
+    },
+    {
+      "id": "75",
+      "order": 75,
+      "title": "Vakratunda Mahakaya",
+      "collection": "ganesh",
+      "deity": "ganesh",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Vakratunda Mahakaya",
+        "वक्रतुण्ड महाकाय"
+      ]
+    },
+    {
+      "id": "76",
+      "order": 76,
+      "title": "Ganpati Bappa Moriya",
+      "collection": "ganesh",
+      "deity": "ganesh",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Ganpati Bappa Morya",
+        "गणपति बप्पा मोरया"
+      ]
+    },
+    {
+      "id": "77",
+      "order": 77,
+      "title": "Gaiye Ganpati Jagvandan",
+      "collection": "ganesh",
+      "deity": "ganesh",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Gaiye Ganpati Jagvandan",
+        "गाइये गणपति जगवंदन"
+      ]
+    },
+    {
+      "id": "78",
+      "order": 78,
+      "title": "Ganesh Chalisa",
+      "collection": "ganesh",
+      "deity": "ganesh",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Ganesh Chalisa",
+        "गणेश चालीसा"
+      ]
+    },
+    {
+      "id": "79",
+      "order": 79,
+      "title": "Ganesh Vandana",
+      "collection": "ganesh",
+      "deity": "ganesh",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Ganesh Vandana",
+        "गणेश वंदना"
+      ]
+    },
+    {
+      "id": "80",
+      "order": 80,
+      "title": "Om Gan Ganpataye Namah",
+      "collection": "ganesh",
+      "deity": "ganesh",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Om Gam Ganapataye Namaha",
+        "Om Gan Ganpataye Namah",
+        "ॐ गं गणपतये नमः"
+      ]
+    },
+    {
+      "id": "81",
+      "order": 81,
+      "title": "Mere Banke Bihari Laal",
+      "collection": "mixed",
+      "deity": "krishna",
+      "thumbnail": "shrine/idols/original.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Mere Banke Bihari Lal",
+        "मेरे बांके बिहारी लाल"
+      ]
+    },
+    {
+      "id": "82",
+      "order": 82,
+      "title": "Shyama Aan Baso Vrindavan Mein",
+      "collection": "mixed",
+      "deity": "krishna",
+      "thumbnail": "shrine/idols/original.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Shyama Aan Baso Vrindavan",
+        "श्यामा आन बसो वृंदावन"
+      ]
+    },
+    {
+      "id": "83",
+      "order": 83,
+      "title": "O Kanha Ab To Murli Ki",
+      "collection": "mixed",
+      "deity": "krishna",
+      "thumbnail": "shrine/idols/original.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "O Kanha Ab To Murli",
+        "ओ कान्हा अब तो मुरली"
+      ]
+    },
+    {
+      "id": "84",
+      "order": 84,
+      "title": "Ram Naam Ladoo Gopal Naam Ghee",
+      "collection": "mixed",
+      "deity": "krishna",
+      "thumbnail": "shrine/idols/original.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Ram Naam Laddu Gopal Naam Ghee",
+        "राम नाम लड्डू गोपाल नाम घी"
+      ]
+    },
+    {
+      "id": "85",
+      "order": 85,
+      "title": "Shyam Chudi Bechane Aaya",
+      "collection": "mixed",
+      "deity": "krishna",
+      "thumbnail": "shrine/idols/original.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Shyam Chudi Bechne Aaya",
+        "श्याम चूड़ी बेचने आया"
+      ]
+    },
+    {
+      "id": "86",
+      "order": 86,
+      "title": "Sita Ram Ji Ki Pyari Rajdhani Lage",
+      "collection": "mixed",
+      "deity": "rama",
+      "thumbnail": "shrine/idols/ram_darbar.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Sita Ram Ji Ki Pyari Rajdhani",
+        "सीताराम जी की प्यारी राजधानी"
+      ]
+    },
+    {
+      "id": "87",
+      "order": 87,
+      "title": "Arji Hamari Marzi Tumhari",
+      "collection": "mixed",
+      "deity": "mixed",
+      "thumbnail": "shrine/idols/original.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Arzi Hamari Marzi Tumhari",
+        "अर्जी हमारी मर्जी तुम्हारी"
+      ]
+    },
+    {
+      "id": "88",
+      "order": 88,
+      "title": "Nagri Ho Ayodhya Si",
+      "collection": "mixed",
+      "deity": "rama",
+      "thumbnail": "shrine/idols/ram_darbar.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Nagri Ho Ayodhya Si",
+        "नगरी हो अयोध्या सी"
+      ]
+    },
+    {
+      "id": "89",
+      "order": 89,
+      "title": "Teri Mand Mand Muskaniya Pe",
+      "collection": "mixed",
+      "deity": "krishna",
+      "thumbnail": "shrine/idols/original.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Teri Mand Mand Muskaniya",
+        "तेरी मंद मंद मुस्कनिया"
+      ]
+    },
+    {
+      "id": "90",
+      "order": 90,
+      "title": "Zara Der Thahro Ram Tamanna Yahi",
+      "collection": "mixed",
+      "deity": "rama",
+      "thumbnail": "shrine/idols/ram_darbar.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Zara Der Thahro Ram",
+        "जरा देर ठहरो राम"
+      ]
+    },
+    {
+      "id": "91",
+      "order": 91,
+      "title": "Ram Aayenge To Angana Sajaungi",
+      "collection": "mixed",
+      "deity": "rama",
+      "thumbnail": "shrine/idols/ram_darbar.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Ram Aayenge",
+        "राम आएंगे"
+      ]
+    },
+    {
+      "id": "92",
+      "order": 92,
+      "title": "Phoolon Mein Saj Rahe Hain",
+      "collection": "mixed",
+      "deity": "krishna",
+      "thumbnail": "shrine/idols/original.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Phoolon Mein Saj Rahe Hain",
+        "फूलों में सज रहे हैं"
+      ]
+    },
+    {
+      "id": "93",
+      "order": 93,
+      "title": "Pata Nahi Kis Roop Mein Aakar Narayan Mil Jayenge",
+      "collection": "mixed",
+      "deity": "vishnu",
+      "thumbnail": "shrine/idols/original.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Pata Nahi Kis Roop Mein Aakar Narayan",
+        "पता नहीं किस रूप में आकर नारायण"
+      ]
+    },
+    {
+      "id": "94",
+      "order": 94,
+      "title": "Shriman Narayan Narayan Hari Hari",
+      "collection": "mixed",
+      "deity": "vishnu",
+      "thumbnail": "shrine/idols/original.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Shriman Narayan Narayan Hari Hari",
+        "श्रीमन नारायण नारायण हरि हरि"
+      ]
+    },
+    {
+      "id": "95",
+      "order": 95,
+      "title": "Ram Naam Ke Heere Moti Main Bikhraun",
+      "collection": "mixed",
+      "deity": "rama",
+      "thumbnail": "shrine/idols/ram_darbar.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Ram Naam Ke Heere Moti",
+        "राम नाम के हीरे मोती"
+      ]
+    },
+    {
+      "id": "96",
+      "order": 96,
+      "title": "Ganga Ke Kinare",
+      "collection": "mixed",
+      "deity": "mixed",
+      "thumbnail": "shrine/idols/original.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Ganga Ke Kinare",
+        "गंगा के किनारे"
+      ]
+    },
+    {
+      "id": "97",
+      "order": 97,
+      "title": "Mera Bhola Hai Bhandari",
+      "collection": "mixed",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Mera Bhola Hai Bhandari",
+        "मेरा भोला है भंडारी"
+      ]
+    },
+    {
+      "id": "98",
+      "order": 98,
+      "title": "Aisa Damru Bajaya Bholenath Ne",
+      "collection": "mixed",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Aisa Damru Bajaya Bholenath Ne",
+        "ऐसा डमरू बजाया भोलेनाथ ने"
+      ]
+    },
+    {
+      "id": "99",
+      "order": 99,
+      "title": "Kya Mangu Main Bhole Tumse",
+      "collection": "mixed",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Kya Mangu Main Bhole Tumse",
+        "क्या मांगू मैं भोले तुमसे"
+      ]
+    },
+    {
+      "id": "100",
+      "order": 100,
+      "title": "Kya Woh Karega Leke Chadhawa",
+      "collection": "mixed",
+      "deity": "mixed",
+      "thumbnail": "shrine/idols/original.png",
+      "audioUrl": "",
+      "artist": "",
+      "sourceUrl": "",
+      "aliases": [
+        "Kya Woh Karega Leke Chadhawa",
+        "क्या वो करेगा लेके चढ़ावा"
+      ]
+    }
+  ]
+}

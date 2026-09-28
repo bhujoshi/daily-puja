@@ -15,15 +15,22 @@ import (
 var bundled []byte
 
 type Track struct {
-	ID         string `json:"id"`
-	Order      int    `json:"order"`
-	Title      string `json:"title"`
-	Collection string `json:"collection"`
-	Deity      string `json:"deity"`
-	Thumbnail  string `json:"thumbnail"`
-	AudioURL   string `json:"audioUrl"`
-	Artist     string `json:"artist"`
-	SourceURL  string `json:"sourceUrl"`
+	SourceCreator   string  `json:"sourceCreator,omitempty"`
+	DurationSeconds int     `json:"durationSeconds,omitempty"`
+	BitrateKbps     int     `json:"bitrateKbps,omitempty"`
+	SampleRateHz    int     `json:"sampleRateHz,omitempty"`
+	VolumeGainDb    float64 `json:"volumeGainDb,omitempty"`
+	QualityCheck    string  `json:"qualityCheck,omitempty"`
+	LicenseURL      string  `json:"licenseUrl,omitempty"`
+	ID              string  `json:"id"`
+	Order           int     `json:"order"`
+	Title           string  `json:"title"`
+	Collection      string  `json:"collection"`
+	Deity           string  `json:"deity"`
+	Thumbnail       string  `json:"thumbnail"`
+	AudioURL        string  `json:"audioUrl"`
+	Artist          string  `json:"artist"`
+	SourceURL       string  `json:"sourceUrl"`
 }
 type Catalog struct {
 	Tracks []Track `json:"tracks"`
@@ -47,6 +54,9 @@ func New(path string) (http.Handler, error) {
 	for _, t := range catalog.Tracks {
 		if t.ID == "" || seen[t.ID] || t.Title == "" || t.Deity == "" {
 			return nil, fmt.Errorf("invalid or duplicate music track %q", t.ID)
+		}
+		if t.BitrateKbps < 0 || t.DurationSeconds < 0 || t.VolumeGainDb > 0 || t.VolumeGainDb < -12 {
+			return nil, fmt.Errorf("invalid quality metadata for music track %q", t.ID)
 		}
 		seen[t.ID] = true
 		if t.AudioURL != "" {

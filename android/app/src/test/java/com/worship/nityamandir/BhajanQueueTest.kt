@@ -16,6 +16,11 @@ class BhajanQueueTest {
         assertEquals("Ganesh", BhajanQueue.order(songs, false, "ganesh_hanuman").first().title)
         assertEquals(songs, BhajanQueue.order(songs.reversed(), false, "lakshmi"))
     }
+    @Test fun repeatedRecordingsAndUnavailableEntriesDoNotRepeatInQueue() {
+        val repeated = songs + songs.first().copy(id = "97", order = 97) + Track("Missing", "")
+        assertEquals(songs, BhajanQueue.order(repeated, false, "shiva"))
+        assertEquals(songs.size, BhajanQueue.order(repeated, true, "shiva").size)
+    }
     @Test fun shuffleKeepsEverySongExactlyOnce() {
         repeat(20) { assertEquals(songs.toSet(), BhajanQueue.order(songs, true, "shiva").toSet()) }
         assertTrue(BhajanQueue.order(emptyList(), false, "shiva").isEmpty())

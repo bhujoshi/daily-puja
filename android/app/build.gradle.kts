@@ -20,8 +20,8 @@ android {
         applicationId = "com.pavitramandir.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.0.4"
+        versionCode = 6
+        versionName = "1.0.5"
         buildConfigField("String", "ACCOUNT_API_URL", "\"${providers.gradleProperty("accountApiUrl").getOrElse("")}\"")
 
         buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${providers.gradleProperty("googleClientId").getOrElse("")}\"")
@@ -44,6 +44,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Keep verification installs separate from the user's signed release app/data.
+            if (providers.gradleProperty("isolatedVerification").orNull == "true") {
+                applicationIdSuffix = ".verification"
+            }
+        }
         release {
             buildConfigField(
                 "String",
@@ -110,6 +116,11 @@ dependencies {
     implementation("androidx.credentials:credentials:1.3.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+
+    // Media3 1.5.1 is compatible with the project's Kotlin 1.9 toolchain.
+    implementation("androidx.media3:media3-exoplayer:1.5.1")
+    implementation("androidx.media3:media3-datasource:1.5.1")
+    implementation("androidx.media3:media3-database:1.5.1")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")

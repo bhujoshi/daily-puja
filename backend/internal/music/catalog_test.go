@@ -22,6 +22,12 @@ func TestCatalogAndConditionalGet(t *testing.T) {
 		t.Fatal("empty catalog")
 	}
 	for _, track := range c.Tracks {
+		if track.AudioURL == "" || track.BitrateKbps < 112 || track.SampleRateHz < 32000 || track.DurationSeconds < 60 {
+			t.Fatal("unverified recording", track.ID)
+		}
+		if track.VolumeGainDb > 0 || track.VolumeGainDb < -12 {
+			t.Fatal("unsafe amplification", track.ID)
+		}
 		if track.Order >= 81 && track.Order <= 100 && track.Collection != "mixed" {
 			t.Fatal("mixed collection lost", track.ID)
 		}

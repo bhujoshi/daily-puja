@@ -1,70 +1,57 @@
 package com.worship.nityamandir.engine
 
 import android.content.Context
-import android.media.AudioAttributes
-import android.media.AudioFocusRequest
-import android.media.AudioManager
-import android.media.MediaPlayer
+import android.os.SystemClock
+import android.util.Log
 import androidx.compose.runtime.*
+import androidx.media3.common.*
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.datasource.cache.CacheWriter
+import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import com.worship.nityamandir.BuildConfig
 import kotlinx.coroutines.*
 import org.json.JSONObject
+import java.io.File
+import java.net.HttpURLConnection
 import java.net.URL
+import kotlin.math.pow
 
-/** One player survives mini-player/sheet transitions; the screen owns its lifetime. */
+/** The screen owns one player; both player views share the same native playlist. */
+@android.annotation.SuppressLint("UnsafeOptInUsageError")
 class BhajanPlayer(context: Context) {
     data class Track(val title: String, val url: String, val id: String = url,
         val order: Int = 0, val collection: String = "", val deity: String = "",
-        val thumbnail: String = "shrine/idols/original.png")
+        val thumbnail: String = "shrine/idols/original.png", val artist: String = "",
+        val bitrateKbps: Int = 0, val durationSeconds: Long = 0, val volumeGainDb: Float = 0f)
+
+    private val app = context.applicationContext
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val preferences = app.getSharedPreferences("music", Context.MODE_PRIVATE)
+    private val base = BuildConfig.ACCOUNT_API_URL.trimEnd('/')
+    private val catalogFile = File(app.filesDir, "bhajan-catalog-${base.hashCode()}.json")
+    private val ready = CompletableDeferred<ExoPlayer>()
+    private var player: ExoPlayer? = null
+    private var cacheSource: CacheDataSource.Factory? = null
+    private var catalogJob: Job? = null
+    private var startJob: Job? = null
+    private var prefetchJob: Job? = null
+    @Volatile private var prefetchWriter: CacheWriter? = null
+    private var released = false
+    private var failedIDs = mutableSetOf<String>()
+    private var requestedAt = 0L
+    private var bufferingAt = 0L
+    private var firstFrameReported = false
+    private var catalogFetched = false
+
     var catalog by mutableStateOf<List<Track>>(emptyList()); private set
     var catalogLoading by mutableStateOf(false); private set
     var catalogError by mutableStateOf(false); private set
-    private val preferences = context.getSharedPreferences("music", Context.MODE_PRIVATE)
     var shuffle by mutableStateOf(preferences.getBoolean("shuffle", true)); private set
     var idol = "original"; private set
-    private var catalogJob: Job? = null
-    private var startJob: Job? = null
-    fun changeIdol(value: String) { idol = value }
-    fun fetchCatalog() {
-        if (catalogJob?.isActive == true || catalog.isNotEmpty()) return
-        catalogJob = scope.launch {
-            catalogLoading = true; catalogError = false
-            try {
-                catalog = withContext(Dispatchers.IO) {
-                    val base = com.worship.nityamandir.BuildConfig.ACCOUNT_API_URL.trimEnd('/')
-                    require(base.isNotBlank())
-                    val rows = json("$base/api/v2/music").getJSONArray("tracks")
-                    List(rows.length()) { i -> rows.getJSONObject(i).let {
-                        Track(it.getString("title"), it.optString("audioUrl"), it.getString("id"),
-                            it.getInt("order"), it.getString("collection"), it.getString("deity"), it.getString("thumbnail"))
-                    } }
-                }
-            } catch (e: CancellationException) { throw e }
-            catch (_: Exception) { catalogError = true }
-            finally { catalogLoading = false }
-        }
-    }
-    fun changeShuffle(value: Boolean) {
-        if (shuffle == value) return
-        shuffle = value
-        preferences.edit().putBoolean("shuffle", value).apply()
-        if (current != null) playCatalog()
-    }
-    fun playCatalog(selected: Track? = null) {
-        val available = catalog.filter { it.url.isNotBlank() }
-        if (available.isEmpty()) return
-        val ordered = BhajanQueue.order(available, shuffle, idol)
-        tracks = if (selected != null && selected in ordered) listOf(selected) + (ordered - selected) else ordered
-        load(tracks.first())
-    }
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val manager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-    private val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
-        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build()
-    private val focus = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-        .setAudioAttributes(attributes).setOnAudioFocusChangeListener { if (it < 0) pause() }.build()
-    private var player: MediaPlayer? = null
-    private var prepared = false
-    private var wantsPlay = false
     var title by mutableStateOf("Choose a bhajan"); private set
     var playing by mutableStateOf(false); private set
     var loading by mutableStateOf(false); private set
@@ -73,69 +60,235 @@ class BhajanPlayer(context: Context) {
     var duration by mutableLongStateOf(0L); private set
     var repeat by mutableStateOf(false); private set
     var tracks by mutableStateOf<List<Track>>(emptyList()); private set
-    private var current: Track? = null
+    var current by mutableStateOf<Track?>(null); private set
+    var notice by mutableStateOf(""); private set
+
+    private val listener = object : Player.Listener {
+        override fun onEvents(native: Player, events: Player.Events) {
+            playing = native.isPlaying
+            loading = native.playbackState == Player.STATE_BUFFERING
+            syncProgress()
+            if (loading && bufferingAt == 0L) bufferingAt = SystemClock.elapsedRealtime()
+            if (!loading && bufferingAt != 0L) {
+                Log.d("BhajanPlayback", "buffer_ms=${SystemClock.elapsedRealtime() - bufferingAt}")
+                bufferingAt = 0L
+            }
+            if (playing && !firstFrameReported) {
+                firstFrameReported = true
+                Log.d("BhajanPlayback", "track=${current?.id} startup_ms=${SystemClock.elapsedRealtime() - requestedAt}")
+                prefetchNext()
+            }
+        }
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            cancelPrefetch()
+            current = tracks.firstOrNull { it.id == mediaItem?.mediaId }
+            title = current?.title ?: "Choose a bhajan"
+            position = 0; failed = false; firstFrameReported = false
+            requestedAt = SystemClock.elapsedRealtime()
+            player?.volume = 10.0.pow((current?.volumeGainDb ?: 0f).coerceIn(-12f, 0f) / 20.0).toFloat()
+        }
+        override fun onPlayerError(error: PlaybackException) {
+            Log.w("BhajanPlayback", "track=${current?.id} error=${error.errorCodeName}")
+            loading = false; playing = false; failed = true
+            current?.let { failedIDs.add(it.id) }
+            // Bound recovery to one pass through the queue; never loop on broken sources.
+            if (failedIDs.size < tracks.size && player?.playWhenReady == true) {
+                val native = player ?: return
+                val next = (1..tracks.size).map { (native.currentMediaItemIndex + it) % tracks.size }
+                    .firstOrNull { tracks[it].id !in failedIDs } ?: return
+                notice = "Skipped an unavailable recording"
+                native.seekTo(next, 0); native.prepare()
+            }
+        }
+    }
+
     init {
-        scope.launch { while (isActive) { if (prepared) position = player?.currentPosition?.toLong() ?: 0L; delay(500) } }
+        scope.launch {
+            try {
+                cacheSource = withContext(Dispatchers.IO) {
+                    runCatching { BhajanAudioCache.source(app) }.getOrNull()
+                }
+                val source = cacheSource ?: BhajanAudioCache.httpSource()
+                val native = ExoPlayer.Builder(app)
+                    .setMediaSourceFactory(DefaultMediaSourceFactory(source))
+                    .setLoadControl(DefaultLoadControl.Builder()
+                        .setBufferDurationsMs(15_000, 45_000, 1_000, 2_500).build())
+                    .build().apply {
+                        setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA)
+                            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), true)
+                        setHandleAudioBecomingNoisy(true)
+                        repeatMode = Player.REPEAT_MODE_ALL
+                        addListener(listener)
+                    }
+                player = native; ready.complete(native)
+            } catch (e: Exception) {
+                ready.completeExceptionally(e); failed = true; loading = false
+            }
+        }
+        scope.launch {
+            while (isActive) {
+                if (playing) syncProgress()
+                delay(500)
+            }
+        }
+    }
+
+
+    fun changeIdol(value: String) { idol = value }
+    fun fetchCatalog() {
+        if (catalogJob?.isActive == true || catalogFetched || released) return
+        catalogJob = scope.launch {
+            catalogLoading = catalog.isEmpty(); catalogError = false
+            try {
+                withContext(Dispatchers.IO) { runCatching { parseCatalog(catalogFile.readText()) }.getOrNull() }
+                    ?.let { catalog = it; catalogLoading = false }
+                val refreshed = withContext(Dispatchers.IO) {
+                    require(base.isNotBlank())
+                    val connection = URL("$base/api/v2/music").openConnection() as HttpURLConnection
+                    connection.connectTimeout = 8_000; connection.readTimeout = 8_000
+                    if (catalog.isNotEmpty()) {
+                        preferences.getString("etag-$base", null)?.let { connection.setRequestProperty("If-None-Match", it) }
+                    }
+                    try {
+                        if (connection.responseCode == 304) return@withContext null
+                        check(connection.responseCode == 200)
+                        val json = connection.inputStream.bufferedReader().use { it.readText() }
+                        val result = parseCatalog(json)
+                        val temp = File(catalogFile.path + ".tmp")
+                        temp.writeText(json)
+                        check(temp.renameTo(catalogFile))
+                        preferences.edit().putString("etag-$base", connection.getHeaderField("ETag")).apply()
+                        result
+                    } finally { connection.disconnect() }
+                }
+                refreshed?.let { catalog = it }
+                catalogFetched = true
+            } catch (e: CancellationException) { throw e }
+            catch (_: Exception) { catalogError = catalog.isEmpty() }
+            finally { catalogLoading = false }
+        }
+    }
+
+    private fun parseCatalog(json: String): List<Track> {
+        val rows = JSONObject(json).getJSONArray("tracks")
+        return List(rows.length()) { i -> rows.getJSONObject(i).let {
+            Track(it.getString("title"), it.getString("audioUrl"), it.getString("id"),
+                it.getInt("order"), it.getString("collection"), it.getString("deity"), it.getString("thumbnail"),
+                it.optString("artist"), it.optInt("bitrateKbps"), it.optLong("durationSeconds"),
+                it.optDouble("volumeGainDb", 0.0).toFloat())
+        } }.filter { it.url.startsWith("https://") || BuildConfig.DEBUG && it.url.startsWith("http://") }
+    }
+
+    fun changeShuffle(value: Boolean) {
+        if (shuffle == value) return
+        shuffle = value; preferences.edit().putBoolean("shuffle", value).apply()
+        // Reorder while keeping a paused player paused.
+        if (current != null) playCatalog(autoplay = player?.playWhenReady == true)
+    }
+    fun playCatalog(selected: Track? = null, autoplay: Boolean = true) {
+        val ordered = BhajanQueue.order(catalog, shuffle, idol)
+        if (ordered.isEmpty()) return
+        val chosen = selected?.let { song -> ordered.firstOrNull { it.url == song.url } }
+        tracks = if (chosen != null) listOf(chosen) + (ordered - chosen) else ordered
+        failedIDs.clear(); notice = ""
+        launchPlayback(autoplay) { native ->
+            native.setMediaItems(tracks.map { it.mediaItem() })
+        }
+    }
+    private fun Track.mediaItem() = MediaItem.Builder().setMediaId(id).setUri(url)
+        .setCustomCacheKey(url).setMediaMetadata(MediaMetadata.Builder().setTitle(title).setArtist(artist).build()).build()
+
+    private fun launchPlayback(autoplay: Boolean, change: (ExoPlayer) -> Unit) {
+        startJob?.cancel(); cancelPrefetch()
+        loading = true; failed = false; requestedAt = SystemClock.elapsedRealtime(); firstFrameReported = false
+        startJob = scope.launch {
+            try {
+                val native = ready.await()
+                change(native); native.prepare(); native.playWhenReady = autoplay
+            } catch (e: CancellationException) { throw e }
+            catch (_: Exception) { failed = true; loading = false }
+        }
     }
     fun preload() { fetchCatalog() }
     fun startAarti() {
         fetchCatalog()
         startJob?.cancel()
-        startJob = scope.launch {
-            catalogJob?.join()
+        val request = scope.launch(start = CoroutineStart.LAZY) {
+            if (catalog.isEmpty()) catalogJob?.join()
+            if (catalog.isEmpty()) { loading = false; return@launch }
             playCatalog()
         }
+        startJob = request
+        request.start()
     }
     fun load(track: Track, autoplay: Boolean = true) {
         if (track.url.isBlank()) return
-        if (current == track && !failed && player != null) {
-            if (autoplay) resume() else pause()
-            return
-        }
-        player?.release(); prepared = false
-        current = track; title = track.title; wantsPlay = autoplay
-        loading = true; failed = false; playing = false; position = 0; duration = 0
-        player = MediaPlayer().apply {
-            setAudioAttributes(attributes)
-            setOnPreparedListener {
-                prepared = true; loading = false; this@BhajanPlayer.duration = it.duration.toLong().coerceAtLeast(0)
-                it.isLooping = repeat
-                if (wantsPlay) resume()
-            }
-            setOnCompletionListener {
-                val next = tracks.indexOf(current) + 1
-                if (next > 0 && next < tracks.size) load(tracks[next])
-                else if (tracks.isNotEmpty()) playCatalog()
-                else pause()
-            }
-            setOnErrorListener { _, _, _ ->
-                prepared = false; loading = false; playing = false; failed = true
-                manager.abandonAudioFocusRequest(focus); true
-            }
-            try { setDataSource(track.url); prepareAsync() }
-            catch (_: Exception) { loading = false; failed = true }
-        }
+        if (track in tracks) launchPlayback(autoplay) { it.seekTo(tracks.indexOf(track), 0) }
+        else playCatalog(track, autoplay)
     }
-    fun toggle() { if (current == null) { startAarti(); return }; if (failed) current?.let { load(it) } else if (wantsPlay || playing) pause() else resume() }
-    private fun resume() {
-        wantsPlay = true
-        if (!prepared) return
-        if (manager.requestAudioFocus(focus) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-            if (position >= duration && duration > 0) seek(0)
-            player?.start(); playing = true
-        } else wantsPlay = false
+    fun toggle() {
+        if (loading && player?.playWhenReady != true) { pause(); return }
+        if (current == null) { startAarti(); return }
+        val native = player ?: return
+        if (failed) {
+            failedIDs.clear(); notice = ""; failed = false
+            requestedAt = SystemClock.elapsedRealtime(); firstFrameReported = false
+            native.prepare(); native.play()
+        } else if (native.playWhenReady) pause() else { firstFrameReported = false; requestedAt = SystemClock.elapsedRealtime(); native.play() }
     }
-    fun pause() { startJob?.cancel(); wantsPlay = false; if (prepared) player?.pause(); playing = false; manager.abandonAudioFocusRequest(focus) }
-    fun seek(ms: Long) { if (prepared) { position = ms.coerceIn(0, duration); player?.seekTo(position.toInt()) } }
-    fun toggleRepeat() { repeat = !repeat; if (prepared) player?.isLooping = repeat }
+    fun pause() {
+        startJob?.cancel(); cancelPrefetch(); player?.pause(); playing = false
+        if (player == null || player?.mediaItemCount == 0) loading = false
+    }
+    fun seek(ms: Long) { player?.seekTo(ms.coerceIn(0, duration)); syncProgress() }
+    fun toggleRepeat() {
+        repeat = !repeat; cancelPrefetch(); player?.repeatMode = if (repeat) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_ALL
+        if (!repeat && playing) prefetchNext()
+    }
     fun skip(delta: Int) {
+        val native = player ?: return
         if (tracks.isEmpty()) return
-        val index = tracks.indexOf(current).coerceAtLeast(0)
-        load(tracks[(index + delta + tracks.size) % tracks.size])
+        failedIDs.clear(); notice = ""
+        val index = (native.currentMediaItemIndex.coerceAtLeast(0) + delta + tracks.size) % tracks.size
+        launchPlayback(true) { it.seekTo(index, 0) }
     }
-    private fun json(url: String): JSONObject {
-        val connection = URL(url).openConnection().apply { connectTimeout = 15000; readTimeout = 15000 }
-        return connection.getInputStream().bufferedReader().use { JSONObject(it.readText()) }
+    private fun syncProgress() {
+        val native = player ?: return
+        position = native.currentPosition.coerceAtLeast(0)
+        duration = native.duration.takeIf { it != C.TIME_UNSET && it >= 0 } ?: ((current?.durationSeconds ?: 0) * 1000)
     }
-    fun release() { pause(); scope.cancel(); player?.release(); player = null; prepared = false }
+    private fun prefetchNext() {
+        val source = cacheSource ?: return
+        val native = player ?: return
+        if (tracks.size < 2 || repeat) return
+        val next = tracks[(native.currentMediaItemIndex + 1) % tracks.size]
+        cancelPrefetch()
+        prefetchJob = scope.launch {
+            delay(3_000) // Give current audio priority on slow connections.
+            if (!playing || !isActive) return@launch
+            // Avoid competing with current playback on a weak connection.
+            var waits = 0
+            while (native.bufferedPosition - native.currentPosition < 15_000 &&
+                native.duration != C.TIME_UNSET && native.duration - native.currentPosition > 15_000 && waits++ < 6) {
+                delay(2_000)
+                if (!playing) return@launch
+            }
+            if (native.bufferedPosition - native.currentPosition < 10_000 &&
+                native.duration != C.TIME_UNSET && native.duration - native.currentPosition > 15_000) return@launch
+            withContext(Dispatchers.IO) {
+                val spec = DataSpec.Builder().setUri(next.url).setKey(next.url).setLength(512L * 1024).build()
+                ensureActive()
+                val writer = CacheWriter(source.createDataSource(), spec, null, null)
+                prefetchWriter = writer
+                if (!isActive) { writer.cancel(); return@withContext }
+                try { writer.cache() } catch (_: Exception) { /* Opportunistic, never blocks playback. */ }
+                finally { if (prefetchWriter === writer) prefetchWriter = null }
+            }
+        }
+    }
+    private fun cancelPrefetch() { prefetchWriter?.cancel(); prefetchJob?.cancel(); prefetchJob = null }
+    fun release() {
+        released = true; pause(); scope.cancel(); player?.release(); player = null
+        ready.cancel()
+    }
 }
