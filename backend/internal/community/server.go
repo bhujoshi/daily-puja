@@ -18,21 +18,25 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/worship/nityamandir/backend/internal/googleauth"
+	"github.com/worship/nityamandir/backend/internal/otp"
 )
 
 type Account struct {
-	Phone      string            `json:"phone"`
-	History    []Event           `json:"history"`
-	ID         string            `json:"id"`
-	Email      string            `json:"email"`
-	Salt       string            `json:"salt"`
-	Hash       string            `json:"hash"`
-	Invite     string            `json:"invite_code"`
-	Referrer   string            `json:"referrer"`
-	Days       []string          `json:"days"`
-	Selections map[string]string `json:"selections"`
-	Unlocked   bool              `json:"unlocked"`
-	Referrals  int               `json:"referrals"`
+	GoogleSubject string            `json:"google_subject,omitempty"`
+	Phone         string            `json:"phone"`
+	History       []Event           `json:"history"`
+	ID            string            `json:"id"`
+	Email         string            `json:"email"`
+	Salt          string            `json:"salt"`
+	Hash          string            `json:"hash"`
+	Invite        string            `json:"invite_code"`
+	Referrer      string            `json:"referrer"`
+	Days          []string          `json:"days"`
+	Selections    map[string]string `json:"selections"`
+	Unlocked      bool              `json:"unlocked"`
+	Referrals     int               `json:"referrals"`
 }
 type Event struct {
 	ID     string    `json:"id"`
@@ -54,11 +58,15 @@ type database struct {
 	Sessions map[string]Session
 }
 type Server struct {
-	MockMode bool
-	mu       sync.Mutex
-	path     string
-	db       database
-	now      func() time.Time
+	MockMode     bool
+	Google       googleauth.Verifier
+	googleNonces map[string]time.Time
+	googleLimit  *otp.Service
+	OTP          *otp.Service
+	mu           sync.Mutex
+	path         string
+	db           database
+	now          func() time.Time
 }
 
 var india = time.FixedZone("Asia/Kolkata", 19800)
@@ -140,21 +148,10 @@ func (s *Server) profile(a *Account) any {
 	return map[string]any{"id": a.ID, "phone": a.Phone, "history": a.History, "mock_payments": s.MockMode, "email": a.Email, "invite_code": a.Invite, "days": a.Days, "streak": streak(a, s.now()), "unlocked": a.Unlocked, "referrals": a.Referrals, "selections": a.Selections, "streak_target": 7, "referral_target": 1}
 }
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	// Roll back memory as well as disk on persistence failure.
-	before, _ := json.Marshal(s.db)
-	commit := func() bool {
-		if err := s.save(); err != nil {
-			s.db = database{}
-			_ = json.Unmarshal(before, &s.db)
-			fail(w, 503, "Could not save. Please retry.")
-			return false
-		}
-		return true
-	}
 	path := strings.TrimPrefix(r.URL.Path, "/api/v2/")
 	var body struct {
+		IDToken    string            `json:"id_token"`
+		Nonce      string            `json:"nonce"`
 		Phone      string            `json:"phone"`
 		OTP        string            `json:"otp"`
 		RequestID  string            `json:"request_id"`
@@ -176,29 +173,83 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if path == "auth/google/challenge" && r.Method == "POST" {
+		s.googleChallenge(w, r)
+		return
+	}
+	var googleIdentity googleauth.Identity
+	if path == "auth/google" && r.Method == "POST" {
+		var ok bool
+		googleIdentity, ok = s.verifyGoogle(w, r, body.IDToken, body.Nonce)
+		if !ok {
+			return
+		}
+	}
+	if (path == "auth/otp/request" || path == "auth/otp/verify") && r.Method == "POST" {
+		if !s.authorizeOTP(w, r, body.Phone, body.OTP, path == "auth/otp/request") {
+			return
+		}
+		if path == "auth/otp/request" {
+			return
+		}
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	// Roll back memory as well as disk on persistence failure.
+	before, _ := json.Marshal(s.db)
+	commit := func() bool {
+		if err := s.save(); err != nil {
+			s.db = database{}
+			_ = json.Unmarshal(before, &s.db)
+			fail(w, 503, "Could not save. Please retry.")
+			return false
+		}
+		return true
+	}
 	if path == "catalog" && r.Method == "GET" {
 		reply(w, 200, json.RawMessage(catalogJSON))
 		return
 	}
+	if path == "auth/google" && r.Method == "POST" {
+		key := "google:" + googleIdentity.Subject
+		a := s.db.Accounts[key]
+		if a == nil {
+			ref := ""
+			if body.Invite != "" {
+				for _, other := range s.db.Accounts {
+					if other.Invite == body.Invite {
+						ref = other.ID
+						break
+					}
+				}
+				if ref == "" {
+					fail(w, 400, "Invitation code not found")
+					return
+				}
+			}
+			a = &Account{ID: random(), GoogleSubject: googleIdentity.Subject, Email: googleIdentity.Email, Invite: random()[:12], Referrer: ref, Days: []string{}, Selections: map[string]string{}}
+			s.db.Accounts[key] = a
+			s.event(a, "account_created", "Google account created")
+		}
+		a.Email = googleIdentity.Email
+		if strings.EqualFold(a.Email, "bhuwanchandra.it@gmail.com") && !a.Unlocked {
+			a.Unlocked = true
+			s.event(a, "package_granted", "Temple package enabled for owner account")
+		}
+		token := random()
+		for k, v := range s.db.Sessions {
+			if !v.Expires.After(s.now()) {
+				delete(s.db.Sessions, k)
+			}
+		}
+		s.db.Sessions[digest(token)] = Session{key, s.now().Add(30 * 24 * time.Hour)}
+		if commit() {
+			reply(w, 200, map[string]any{"token": token, "profile": s.profile(a)})
+		}
+		return
+	}
 	if (path == "auth/otp/request" || path == "auth/otp/verify") && r.Method == "POST" {
-		if !s.MockMode {
-			fail(w, 503, "Mobile login is not configured. Demo mode is disabled.")
-			return
-		}
-		phone := strings.TrimSpace(body.Phone)
-		phone = strings.TrimPrefix(phone, "+91")
-		if len(phone) != 10 || phone[0] < '6' || phone[0] > '9' || strings.Trim(phone, "0123456789") != "" {
-			fail(w, 400, "Enter a valid 10-digit Indian mobile number")
-			return
-		}
-		if path == "auth/otp/request" {
-			reply(w, 200, map[string]any{"mock": true, "message": "Demo only: use OTP 1234. No SMS sent."})
-			return
-		}
-		if body.OTP != "1234" {
-			fail(w, 401, "Incorrect demo OTP. Use 1234.")
-			return
-		}
+		phone := strings.TrimPrefix(strings.TrimSpace(body.Phone), "+91")
 		key := "phone:" + phone
 		a := s.db.Accounts[key]
 		if a == nil {
@@ -216,7 +267,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			a = &Account{ID: random(), Phone: phone, Invite: random()[:12], Referrer: ref, Days: []string{}, Selections: map[string]string{}}
 			s.db.Accounts[key] = a
-			s.event(a, "account_created", "Mobile demo account created")
+			s.event(a, "account_created", "Mobile account created")
 		}
 		token := random()
 		s.db.Sessions[digest(token)] = Session{key, s.now().Add(30 * 24 * time.Hour)}

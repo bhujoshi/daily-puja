@@ -21,15 +21,15 @@ fun WaterFlowOverlay(deity:Int?,progress:Float,placement:IdolPlacement,modifier:
         val crown=placement.crowns[deity];val source=at(placement.bathSource(deity));val impact=at(crown)
         val pour=(min((progress-.12f)/.14f,(.86f-progress)/.15f)).coerceIn(0f,1f)
         val settle=min(progress/.12f,(1-progress)/.15f).coerceIn(0f,1f)
-        val stream=Path().apply {moveTo(source.x,source.y);cubicTo(source.x+u*.023f,source.y+u*.008f,impact.x,impact.y-u*.04f,impact.x,impact.y)}
+        val stream=Path().apply {moveTo(source.x,source.y);cubicTo(source.x,source.y+u*.025f,impact.x,impact.y-u*.025f,impact.x,impact.y)}
         drawPath(stream,Color(0xFF98D4DF).copy(alpha=.40f*pour),style=Stroke(u*.008f,cap=StrokeCap.Round))
         drawPath(stream,Color.White.copy(alpha=.80f*pour),style=Stroke(u*.0022f,cap=StrokeCap.Round))
         repeat(18) {i ->
             val t=(progress*3.5f+i/18f)%1f
             // Cubic Bezier samples keep moving droplets attached to the curved stream.
             val q=1-t
-            val x=q*q*q*source.x+3*q*q*t*(source.x+u*.023f)+3*q*t*t*impact.x+t*t*t*impact.x
-            val y=q*q*q*source.y+3*q*q*t*(source.y+u*.008f)+3*q*t*t*(impact.y-u*.04f)+t*t*t*impact.y
+            val x=q*q*q*source.x+3*q*q*t*source.x+3*q*t*t*impact.x+t*t*t*impact.x
+            val y=q*q*q*source.y+3*q*q*t*(source.y+u*.025f)+3*q*t*t*(impact.y-u*.025f)+t*t*t*impact.y
             drawCircle(Color.White.copy(alpha=pour*.8f),u*.0014f,Offset(x,y))
         }
         val feet=at(TemplePoint(crown.x,placement.bottom))

@@ -32,6 +32,7 @@ class ShrineSelectionTest {
                     assertEquals(head.x,placement.offering(i,0).x,.0001f)
                     assertTrue(placement.crowns[i].y < head.y)
                     assertTrue(placement.bathSource(i).y < placement.crowns[i].y)
+                    assertEquals(placement.crowns[i].x,placement.bathSource(i).x,.0001f)
                     assertTrue(placement.space.lamp.y > placement.bottom)
                     assertTrue(placement.space.lamp.x > placement.left+placement.width)
                     assertEquals(placement.bottom+.008f,placement.offering(i,0).y,.0001f)

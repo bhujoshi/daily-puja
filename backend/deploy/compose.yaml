@@ -4,6 +4,14 @@ services:
     restart: unless-stopped
     environment:
       ACCOUNT_DATA_PATH: /data/accounts.json
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-653836355193-vvbqtr7f50p3ct29c3id30pt8doak8is.apps.googleusercontent.com}
+      OTP_PROVIDER: ${OTP_PROVIDER:-}
+      FAST2SMS_API_KEY: ${FAST2SMS_API_KEY:-}
+      FAST2SMS_OTP_ID: ${FAST2SMS_OTP_ID:-}
+      OTP_CHANNEL: ${OTP_CHANNEL:-whatsapp}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_VERIFY_SERVICE_SID: ${TWILIO_VERIFY_SERVICE_SID:-}
       MOCK_MODE: ${MOCK_MODE:-false}
       ENABLE_LEGACY_DEMO: "false"
     volumes:

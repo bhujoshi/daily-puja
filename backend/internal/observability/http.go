@@ -22,6 +22,7 @@ type Monitor struct {
 
 var knownRoutes = map[string]string{
 	"/healthz": "GET", "/api/v2/catalog": "GET", "/api/v2/register": "POST",
+	"/api/v2/auth/google": "POST", "/api/v2/auth/google/challenge": "POST",
 	"/api/v2/login": "POST", "/api/v2/auth/otp/request": "POST",
 	"/api/v2/auth/otp/verify": "POST", "/api/v2/me": "GET",
 	"/api/v2/logout": "POST", "/api/v2/activity/puja": "POST",

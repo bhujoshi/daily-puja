@@ -1,0 +1,257 @@
+{
+  "tracks": [
+    {
+      "id": "31",
+      "order": 31,
+      "title": "Om Namah Shivay",
+      "collection": "shiva",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "https://archive.org/download/om-namah-shivay-dhoon/Om%20Namah%20Shivay%20Dhoon.mp3",
+      "artist": "bhojpurigeetmala",
+      "sourceUrl": "https://archive.org/details/om-namah-shivay-dhoon"
+    },
+    {
+      "id": "32",
+      "order": 32,
+      "title": "Har Har Mahadev",
+      "collection": "shiva",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "https://archive.org/download/har-har-mahadev/Har%20Har%20Mahadev.mp3",
+      "artist": "bhojpurigeetmala",
+      "sourceUrl": "https://archive.org/details/har-har-mahadev"
+    },
+    {
+      "id": "36",
+      "order": 36,
+      "title": "Shiv Tandav Stotram",
+      "collection": "shiva",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "https://archive.org/download/ShivTandavStotram/02ShivTandavStotram.mp3",
+      "artist": "",
+      "sourceUrl": "https://archive.org/details/ShivTandavStotram"
+    },
+    {
+      "id": "37",
+      "order": 37,
+      "title": "Mahamrityunjaya Mantra",
+      "collection": "shiva",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "https://archive.org/download/MahamrityunjayaMantraPart4/Mahamrityunjaya%20mantra%20part%201.mp3",
+      "artist": "",
+      "sourceUrl": "https://archive.org/details/MahamrityunjayaMantraPart4"
+    },
+    {
+      "id": "41",
+      "order": 41,
+      "title": "Shiv Chalisa",
+      "collection": "shiva",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "https://archive.org/download/tiiu_shiv-chalisa-super-fast-shiv-chalisa-shivratri-2020/Shiv%20Chalisa%20Super%20Fast%20%20%20%E0%A4%B6%E0%A4%BF%E0%A4%B5%20%E0%A4%9A%E0%A4%BE%E0%A4%B2%E0%A5%80%E0%A4%B8%E0%A4%BE%20%20%20Shiv%20Chalisa%20%20%20Shivratri%202020.mp3",
+      "artist": "Granth-Nidhi",
+      "sourceUrl": "https://archive.org/details/tiiu_shiv-chalisa-super-fast-shiv-chalisa-shivratri-2020"
+    },
+    {
+      "id": "45",
+      "order": 45,
+      "title": "O Mera Bhola Hai Bhandari",
+      "collection": "shiva",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "https://archive.org/download/mera-bhola-hai-bhandari-pagal-world.com.se/Mera%20Bhola%20Hai%20Bhandari%28PagalWorld.com.se%29.mp3",
+      "artist": "",
+      "sourceUrl": "https://archive.org/details/mera-bhola-hai-bhandari-pagal-world.com.se"
+    },
+    {
+      "id": "46",
+      "order": 46,
+      "title": "Hanuman Chalisa",
+      "collection": "hanuman",
+      "deity": "hanuman",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "https://archive.org/download/ShriHanumanChalisa_404/Shri-Hanuman-Chalisa.mp3",
+      "artist": "",
+      "sourceUrl": "https://archive.org/details/ShriHanumanChalisa_404"
+    },
+    {
+      "id": "47",
+      "order": 47,
+      "title": "Sankat Mochan Hanuman Ashtak",
+      "collection": "hanuman",
+      "deity": "hanuman",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "https://archive.org/download/sankat-mochan-hanuman-ashtak-hariharan-hindi-english-lyrics-hanuman-chalisa/%E0%A4%B8%E0%A4%95%E0%A4%9F%E0%A4%AE%E0%A4%9A%E0%A4%A8%20%E0%A4%B9%E0%A4%A8%E0%A4%AE%E0%A4%A8%20%E0%A4%85%E0%A4%B7%E0%A4%9F%E0%A4%95%2C%20Sankat%20Mochan%20Hanuman%20Ashtak%2CHARIHARAN%2CHindi%2C%20English%20Lyrics%2C%20Hanuman%20Chalisa.mp3",
+      "artist": "",
+      "sourceUrl": "https://archive.org/details/sankat-mochan-hanuman-ashtak-hariharan-hindi-english-lyrics-hanuman-chalisa"
+    },
+    {
+      "id": "49",
+      "order": 49,
+      "title": "Bajrang Baan",
+      "collection": "hanuman",
+      "deity": "hanuman",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "https://archive.org/download/spge_7-times-bajrang-baan/%E0%A4%AC%E0%A4%9C%E0%A4%B0%E0%A4%82%E0%A4%97%20%E0%A4%AC%E0%A4%BE%E0%A4%A3%207%20times%20bajrang%20baan.mp3",
+      "artist": "Granth-Nidhi",
+      "sourceUrl": "https://archive.org/details/spge_7-times-bajrang-baan"
+    },
+    {
+      "id": "59",
+      "order": 59,
+      "title": "Meri Maa Ke Barabar Koi Nahi",
+      "collection": "durga",
+      "deity": "durga",
+      "thumbnail": "shrine/idols/durga.png",
+      "audioUrl": "https://archive.org/download/meri-maa-ke-barabar-koi-nahi/Meri%20Maa%20Ke%20Barabar%20Koi%20Nahi%20By%20Raj%20Karmakar%20.mp3",
+      "artist": "Raj Karmakar",
+      "sourceUrl": "https://archive.org/details/meri-maa-ke-barabar-koi-nahi"
+    },
+    {
+      "id": "62",
+      "order": 62,
+      "title": "Meri Maa Ke Barabar Koi Nahi",
+      "collection": "durga",
+      "deity": "durga",
+      "thumbnail": "shrine/idols/durga.png",
+      "audioUrl": "https://archive.org/download/meri-maa-ke-barabar-koi-nahi/Meri%20Maa%20Ke%20Barabar%20Koi%20Nahi%20By%20Raj%20Karmakar%20.mp3",
+      "artist": "Raj Karmakar",
+      "sourceUrl": "https://archive.org/details/meri-maa-ke-barabar-koi-nahi"
+    },
+    {
+      "id": "66",
+      "order": 66,
+      "title": "O Aaye Tere Bhawan",
+      "collection": "durga",
+      "deity": "durga",
+      "thumbnail": "shrine/idols/durga.png",
+      "audioUrl": "https://archive.org/download/o-aaye-tere-bhawan/O%20Aaye%20Tere%20Bhawan.mp3",
+      "artist": "bhojpurigeetmala",
+      "sourceUrl": "https://archive.org/details/o-aaye-tere-bhawan"
+    },
+    {
+      "id": "68",
+      "order": 68,
+      "title": "Durga Chalisa",
+      "collection": "durga",
+      "deity": "durga",
+      "thumbnail": "shrine/idols/durga.png",
+      "audioUrl": "https://archive.org/download/DurgaChalisa_201709/Durga%20Chalisa.mp3",
+      "artist": "",
+      "sourceUrl": "https://archive.org/details/DurgaChalisa_201709"
+    },
+    {
+      "id": "70",
+      "order": 70,
+      "title": "Main Balak Tu Mata",
+      "collection": "durga",
+      "deity": "durga",
+      "thumbnail": "shrine/idols/durga.png",
+      "audioUrl": "https://archive.org/download/main-balak-tu-mata-sheranwaliy/Main%20Balak%20Tu%20Mata%20Sheranwaliy.mp3",
+      "artist": "bhojpurigeetmala",
+      "sourceUrl": "https://archive.org/details/main-balak-tu-mata-sheranwaliy"
+    },
+    {
+      "id": "71",
+      "order": 71,
+      "title": "Ghar Mein Padharo Gajanan Ji",
+      "collection": "ganesh",
+      "deity": "ganesh",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "https://archive.org/download/ghar-mein-padharo-gajanan-ji_202409/Ghar-Mein-Padharo-Gajanan-Ji.mp3",
+      "artist": "Shree Siddhivinayak Mantra And Aarti",
+      "sourceUrl": "https://archive.org/details/ghar-mein-padharo-gajanan-ji_202409"
+    },
+    {
+      "id": "72",
+      "order": 72,
+      "title": "Ganpati Bappa Morya",
+      "collection": "ganesh",
+      "deity": "ganesh",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "https://archive.org/download/Bhajans_101/NB2%2F384_Ganpati%20Bappa%20Morya%20Hail%20to%20Lord%20Ganesha%20Ganesha%20Chaturthi%20Special%204K%20Video%20DJJS%20Bhajan%20%28128%20kbps%29.mp3",
+      "artist": "For_GOD",
+      "sourceUrl": "https://archive.org/details/Bhajans_101"
+    },
+    {
+      "id": "73",
+      "order": 73,
+      "title": "Sukh Karta Dukh Harta",
+      "collection": "ganesh",
+      "deity": "ganesh",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "https://archive.org/download/ganesh-ji-ki-aarti-sukh-karta-dukh-harta-bhajanindia-mp-3-160-k/Ganesh%20Ji%20Ki%20Aarti%20_%20Sukh%20Karta%20Dukh%20Harta%20_%20_bhajanindia%28MP3_160K%29.mp3",
+      "artist": "",
+      "sourceUrl": "https://archive.org/details/ganesh-ji-ki-aarti-sukh-karta-dukh-harta-bhajanindia-mp-3-160-k"
+    },
+    {
+      "id": "75",
+      "order": 75,
+      "title": "Vakratunda Mahakaya",
+      "collection": "ganesh",
+      "deity": "ganesh",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "https://archive.org/download/VakratundaMahakaya/30VakratundaMahakayaprarthana.mp3",
+      "artist": "Hinduonline.co",
+      "sourceUrl": "https://archive.org/details/VakratundaMahakaya"
+    },
+    {
+      "id": "76",
+      "order": 76,
+      "title": "Ganpati Bappa Moriya",
+      "collection": "ganesh",
+      "deity": "ganesh",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "https://archive.org/download/GanpatiBappaMoriya/Ganpati%20Bappa%20Morya1.mp3",
+      "artist": "",
+      "sourceUrl": "https://archive.org/details/GanpatiBappaMoriya"
+    },
+    {
+      "id": "78",
+      "order": 78,
+      "title": "Ganesh Chalisa",
+      "collection": "ganesh",
+      "deity": "ganesh",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "https://archive.org/download/shree-ganesh-chalisa-shankar-mahadevan-ajay-atul-times-music-spiritual/Shree%20Ganesh%20Chalisa%20%20Shankar%20Mahadevan%20%20Ajay%20-%20Atul%20%20Times%20Music%20Spiritual.mp3",
+      "artist": "",
+      "sourceUrl": "https://archive.org/details/shree-ganesh-chalisa-shankar-mahadevan-ajay-atul-times-music-spiritual"
+    },
+    {
+      "id": "79",
+      "order": 79,
+      "title": "Ganesh Vandana",
+      "collection": "ganesh",
+      "deity": "ganesh",
+      "thumbnail": "shrine/idols/ganesh_hanuman.png",
+      "audioUrl": "https://archive.org/download/Bhajans_101/NB2%2F385_Ganpati%20Bappa%20Morya%20Shri%20Ganesh%20Vandana%20Ganesh%20Chaturthi%202021%20Special%20DJJS%20Bhajan%20%5BHindi%5D%20%28128%20kbps%29.mp3",
+      "artist": "For_GOD",
+      "sourceUrl": "https://archive.org/details/Bhajans_101"
+    },
+    {
+      "id": "94",
+      "order": 94,
+      "title": "Shriman Narayan Narayan Hari Hari",
+      "collection": "mixed",
+      "deity": "vishnu",
+      "thumbnail": "shrine/idols/original.png",
+      "audioUrl": "https://archive.org/download/20260130_20260130_1448/Shriman%20Narayan%20Hari%20Hari-Narayan%20Dhun%20by%20Anuradha%20Paudwal.mp3",
+      "artist": "Anonymous Literature Media",
+      "sourceUrl": "https://archive.org/details/20260130_20260130_1448"
+    },
+    {
+      "id": "97",
+      "order": 97,
+      "title": "Mera Bhola Hai Bhandari",
+      "collection": "mixed",
+      "deity": "shiva",
+      "thumbnail": "shrine/idols/shiva.png",
+      "audioUrl": "https://archive.org/download/mera-bhola-hai-bhandari-8-d-audio-damru-wala-8-d-audio-hansraj-raghuwanshi-suresh-verma/Mera%20Bhola%20Hai%20Bhandari%20%28%208D%20AUDIO%20%29%20_%20Damru%20Wala%208D%20AUDIO%20_%20Hansraj%20Raghuwanshi%20_%20Suresh%20Verma%20%28%20240%20X%20426%20%29%5BExtAudio%5D.mp3",
+      "artist": "\u0939\u0902\u0938\u0930\u093e\u091c \u0930\u0918\u0941\u0935\u0902\u0936\u0940",
+      "sourceUrl": "https://archive.org/details/mera-bhola-hai-bhandari-8-d-audio-damru-wala-8-d-audio-hansraj-raghuwanshi-suresh-verma"
+    }
+  ]
+}

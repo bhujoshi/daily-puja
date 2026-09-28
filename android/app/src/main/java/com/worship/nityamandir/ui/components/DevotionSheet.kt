@@ -1,13 +1,16 @@
 package com.worship.nityamandir.ui.components
 
 import android.content.Intent
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.res.painterResource
+import com.worship.nityamandir.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -17,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.worship.nityamandir.data.DevotionAccount
@@ -57,8 +59,7 @@ fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCus
     fun tr(hi:String,en:String)=if(hindi) hi else en
     val scope=rememberCoroutineScope();val context=LocalContext.current
     var destination by remember(page) {mutableStateOf(page)}
-    var phone by remember {mutableStateOf("")};var otp by remember {mutableStateOf("")}
-    var invite by remember {mutableStateOf("")};var otpRequested by remember {mutableStateOf(false)}
+    var invite by remember {mutableStateOf("")}
     var busy by remember {mutableStateOf(false)};var message by remember {mutableStateOf("")}
     var deleteConfirm by remember {mutableStateOf(false)}
     val profile=account.profile
@@ -135,13 +136,19 @@ fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCus
                 Text(tr("अपनी पूजा श्रृंखला और मंदिर के रूप सहेजें।","Save your puja streak and your temple designs."))
                 if(!account.configured) Text(tr("खाता सेवा अभी जुड़ी नहीं है। पूजा जारी रख सकते हैं।","Account service is not connected yet. You can continue your puja."))
                 else {
-                    Text(tr("डेमो लॉगिन: OTP 1234। कोई SMS नहीं भेजा जाएगा।","Demo login: OTP 1234. No SMS is sent."),fontSize=14.sp)
-                    OutlinedTextField(phone,{phone=it.filter(Char::isDigit).take(10);otpRequested=false},label={Text(tr("मोबाइल नंबर","Mobile number"))},prefix={Text("+91 ")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Phone),singleLine=true,enabled=!busy,modifier=Modifier.fillMaxWidth())
-                    if(otpRequested) {
-                        OutlinedTextField(otp,{otp=it.filter(Char::isDigit).take(4)},label={Text("OTP")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.NumberPassword),singleLine=true,enabled=!busy,modifier=Modifier.fillMaxWidth())
+                    if (!account.googleConfigured) {
+                        Text(tr("Google लॉगिन अभी जुड़ा नहीं है। पूजा जारी रख सकते हैं।", "Google sign-in is not connected yet. You can continue your puja."))
+                    } else {
                         OutlinedTextField(invite,{invite=it},label={Text(tr("निमंत्रण कोड (वैकल्पिक)","Invitation code (optional)"))},singleLine=true,enabled=!busy,modifier=Modifier.fillMaxWidth())
+                        OutlinedButton(onClick={run {
+                            account.signInWithGoogle(context,invite)
+                            if (account.signedIn) { destination=DevotionPage.PROFILE;account.sync() }
+                        }},enabled=!busy,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),border=BorderStroke(1.dp,Color(0xFF747775)),colors=ButtonDefaults.outlinedButtonColors(containerColor=Color.White,contentColor=Color(0xFF1F1F1F))) {
+                            Image(painterResource(R.drawable.google_sign_in_logo),contentDescription=null,modifier=Modifier.size(20.dp))
+                            Spacer(Modifier.width(10.dp))
+                            Text(tr("Google से साइन इन करें","Sign in with Google"))
+                        }
                     }
-                    Button(onClick={run {if(otpRequested) {account.authenticate(phone,otp,invite);otp="";destination=DevotionPage.PROFILE;account.sync()} else {account.requestOtp(phone);otpRequested=true}}},enabled=!busy && phone.length==10 && (!otpRequested || otp.length==4),modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)) {Icon(Icons.Outlined.Login,null);Spacer(Modifier.width(8.dp));Text(if(otpRequested) tr("लॉग इन","Log in") else tr("OTP प्राप्त करें","Get OTP"))}
                 }
             }
             if(account.signedIn) {

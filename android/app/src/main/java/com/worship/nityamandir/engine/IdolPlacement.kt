@@ -38,7 +38,7 @@ class IdolPlacement(selection:ShrineSelection) {
         "shiva" -> .039f
         else -> .022f
     }))}
-    fun bathSource(deity:Int)=crowns[deity].let {TemplePoint(it.x-.055f,it.y-.080f)}
+    fun bathSource(deity:Int)=crowns[deity].let {TemplePoint(it.x,it.y-.080f)}
     fun aartiPosition(progress:Float):TemplePoint {
         val base=TempleSceneLayout.aartiPosition(progress)
         val shift=(top+height*.60f)-.58f

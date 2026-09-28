@@ -54,6 +54,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
     val audio=remember {RitualAudio(context)}
     val bhajan=remember {BhajanPlayer(context.applicationContext)}
     var musicSheet by remember {mutableStateOf(false)}
+    LaunchedEffect(selection["idols"]) { bhajan.changeIdol(selection["idols"]) }
     DisposableEffect(bhajan) {onDispose {bhajan.release()}}
     DisposableEffect(Unit) {onDispose {audio.release()}}
     val lifecycle=androidx.compose.ui.platform.LocalLifecycleOwner.current.lifecycle
@@ -310,16 +311,6 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
             ) {
                 Row(horizontalArrangement=Arrangement.End,verticalAlignment=Alignment.CenterVertically) {
                     if(aartiRunning) BhajanMiniPlayer(bhajan,hindi,{musicSheet=true},Modifier.weight(1f))
-                    else {
-                        TextButton(onClick={devotionPage=if(account.signedIn) DevotionPage.PROFILE else DevotionPage.LOGIN;devotionSheet=true},modifier=Modifier.background(cream,RoundedCornerShape(18.dp))) {
-                            Icon(if(account.signedIn) Icons.Outlined.LocalFireDepartment else Icons.Outlined.Login,null,tint=RitualGold)
-                            Spacer(Modifier.width(6.dp))
-                            val streak=account.profile?.optInt("streak") ?: 0
-                            Text(if(account.signedIn) tr("$streak दिन","$streak ${if(streak==1) "day" else "days"}") else tr("लॉग इन","Log in"),color=RitualInk)
-                        }
-                        Spacer(Modifier.weight(1f))
-                    }
-                    TextButton(onClick={hindi=!hindi;prefs.edit().putBoolean("hindi",hindi).apply()},colors=ButtonDefaults.textButtonColors(contentColor=RitualInk),modifier=Modifier.background(cream,RoundedCornerShape(16.dp))) {Text(if(hindi) "English" else "हिंदी")}
                     Box {
                         FilledIconButton(
                             onClick={menu=true},
@@ -354,28 +345,6 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TempleCurtains(openProgress:Float,saffron:Boolean) {
-    val fabric=if(saffron) Color(0xFFAD6629) else Color(0xFF81313C)
-    Box(Modifier.fillMaxSize().clipToBounds()) {
-        listOf(-1f,1f).forEach {direction ->
-            Box(Modifier.fillMaxWidth(0.5f).fillMaxHeight()
-                .align(if(direction<0) Alignment.CenterStart else Alignment.CenterEnd)
-                .graphicsLayer {translationX=direction*size.width*openProgress}
-                .background(Brush.horizontalGradient(listOf(Color(0xFF39101B),fabric,Color(0xFF40131C))))) {
-                Row(Modifier.fillMaxSize()) {
-                    repeat(9) {
-                        Box(Modifier.weight(1f).fillMaxHeight().background(Brush.horizontalGradient(
-                            listOf(Color.Transparent,Color(0x44000000),Color.Transparent))))
-                    }
-                }
-                Box(Modifier.align(if(direction<0) Alignment.CenterEnd else Alignment.CenterStart)
-                    .fillMaxHeight().width(2.dp).background(Color(0xFFE5BE7B)))
             }
         }
     }

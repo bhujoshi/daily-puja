@@ -1,7 +1,7 @@
 # Android release builds
 
 Application ID: `com.pavitramandir.app`  
-Version: `1.0.3` (version code `4`)
+Version: `1.0.4` (version code `5`)
 
 ## Build from the command line
 
@@ -24,6 +24,17 @@ Outputs, relative to the `android` directory:
 To build only the APK, run `./gradlew :app:assembleRelease`. To build only the
 bundle, run `./gradlew :app:bundleRelease`. A clean build is normally unnecessary;
 prepend `clean` to the Gradle tasks if needed.
+
+Release builds use `https://mcp-daily-puja-backend-staging-b3mqb.sprites.app`
+as the account API base URL. The app adds `/api/v2/` to request paths.
+To override the URL, pass `-PaccountApiUrl=https://your-backend.example` to
+Gradle. Debug builds require an explicit `accountApiUrl` property to connect.
+
+Google login requires `-PgoogleClientId=YOUR_WEB_CLIENT_ID.apps.googleusercontent.com`
+and the same `GOOGLE_CLIENT_ID` on the backend. Register the installed build's
+signing certificate SHA-1 with Google's Android OAuth client. See
+[GOOGLE_LOGIN_SETUP.md](GOOGLE_LOGIN_SETUP.md). Live Google login remains unavailable
+until OAuth configuration is completed. Real payments still require a payment provider.
 
 ## Signing key
 

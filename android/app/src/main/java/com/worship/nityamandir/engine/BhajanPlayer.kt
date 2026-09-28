@@ -5,7 +5,6 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaPlayer
-import android.net.Uri
 import androidx.compose.runtime.*
 import kotlinx.coroutines.*
 import org.json.JSONObject
@@ -13,10 +12,50 @@ import java.net.URL
 
 /** One player survives mini-player/sheet transitions; the screen owns its lifetime. */
 class BhajanPlayer(context: Context) {
-    data class Album(val id: String, val title: String, val downloads: Long = 0)
-    data class Track(val title: String, val url: String)
-    private val searchCache = BhajanCache<String, List<Album>>()
-    private val albumCache = BhajanCache<String, List<Track>>()
+    data class Track(val title: String, val url: String, val id: String = url,
+        val order: Int = 0, val collection: String = "", val deity: String = "",
+        val thumbnail: String = "shrine/idols/original.png")
+    var catalog by mutableStateOf<List<Track>>(emptyList()); private set
+    var catalogLoading by mutableStateOf(false); private set
+    var catalogError by mutableStateOf(false); private set
+    private val preferences = context.getSharedPreferences("music", Context.MODE_PRIVATE)
+    var shuffle by mutableStateOf(preferences.getBoolean("shuffle", true)); private set
+    var idol = "original"; private set
+    private var catalogJob: Job? = null
+    private var startJob: Job? = null
+    fun changeIdol(value: String) { idol = value }
+    fun fetchCatalog() {
+        if (catalogJob?.isActive == true || catalog.isNotEmpty()) return
+        catalogJob = scope.launch {
+            catalogLoading = true; catalogError = false
+            try {
+                catalog = withContext(Dispatchers.IO) {
+                    val base = com.worship.nityamandir.BuildConfig.ACCOUNT_API_URL.trimEnd('/')
+                    require(base.isNotBlank())
+                    val rows = json("$base/api/v2/music").getJSONArray("tracks")
+                    List(rows.length()) { i -> rows.getJSONObject(i).let {
+                        Track(it.getString("title"), it.optString("audioUrl"), it.getString("id"),
+                            it.getInt("order"), it.getString("collection"), it.getString("deity"), it.getString("thumbnail"))
+                    } }
+                }
+            } catch (e: CancellationException) { throw e }
+            catch (_: Exception) { catalogError = true }
+            finally { catalogLoading = false }
+        }
+    }
+    fun changeShuffle(value: Boolean) {
+        if (shuffle == value) return
+        shuffle = value
+        preferences.edit().putBoolean("shuffle", value).apply()
+        if (current != null) playCatalog()
+    }
+    fun playCatalog(selected: Track? = null) {
+        val available = catalog.filter { it.url.isNotBlank() }
+        if (available.isEmpty()) return
+        val ordered = BhajanQueue.order(available, shuffle, idol)
+        tracks = if (selected != null && selected in ordered) listOf(selected) + (ordered - selected) else ordered
+        load(tracks.first())
+    }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val manager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
@@ -26,7 +65,7 @@ class BhajanPlayer(context: Context) {
     private var player: MediaPlayer? = null
     private var prepared = false
     private var wantsPlay = false
-    var title by mutableStateOf("Jai Ganesh Jai Ganesh Deva"); private set
+    var title by mutableStateOf("Choose a bhajan"); private set
     var playing by mutableStateOf(false); private set
     var loading by mutableStateOf(false); private set
     var failed by mutableStateOf(false); private set
@@ -35,16 +74,20 @@ class BhajanPlayer(context: Context) {
     var repeat by mutableStateOf(false); private set
     var tracks by mutableStateOf<List<Track>>(emptyList()); private set
     private var current: Track? = null
-    val defaultTrack = Track("Jai Ganesh Jai Ganesh Deva", "https://archive.org/download/JaiGaneshJaiGaneshJaiGaneshDevaLordGaneshAarti/" + Uri.encode("Jai Ganesh Jai Ganesh Jai Ganesh Deva - Lord Ganesh Aarti.mp3"))
     init {
         scope.launch { while (isActive) { if (prepared) position = player?.currentPosition?.toLong() ?: 0L; delay(500) } }
     }
-    fun preload() { if (current == null) load(defaultTrack, false) }
+    fun preload() { fetchCatalog() }
     fun startAarti() {
-        if (current == defaultTrack && !failed) { seek(0L); resume() }
-        else load(defaultTrack)
+        fetchCatalog()
+        startJob?.cancel()
+        startJob = scope.launch {
+            catalogJob?.join()
+            playCatalog()
+        }
     }
     fun load(track: Track, autoplay: Boolean = true) {
+        if (track.url.isBlank()) return
         if (current == track && !failed && player != null) {
             if (autoplay) resume() else pause()
             return
@@ -62,7 +105,8 @@ class BhajanPlayer(context: Context) {
             setOnCompletionListener {
                 val next = tracks.indexOf(current) + 1
                 if (next > 0 && next < tracks.size) load(tracks[next])
-                else { playing = false; wantsPlay = false; position = this@BhajanPlayer.duration; manager.abandonAudioFocusRequest(focus) }
+                else if (tracks.isNotEmpty()) playCatalog()
+                else pause()
             }
             setOnErrorListener { _, _, _ ->
                 prepared = false; loading = false; playing = false; failed = true
@@ -72,11 +116,7 @@ class BhajanPlayer(context: Context) {
             catch (_: Exception) { loading = false; failed = true }
         }
     }
-    fun playCollection(collection: List<Track>, track: Track = collection.first()) {
-        tracks = collection
-        load(track)
-    }
-    fun toggle() { if (failed) load(current ?: defaultTrack) else if (wantsPlay || playing) pause() else resume() }
+    fun toggle() { if (current == null) { startAarti(); return }; if (failed) current?.let { load(it) } else if (wantsPlay || playing) pause() else resume() }
     private fun resume() {
         wantsPlay = true
         if (!prepared) return
@@ -85,34 +125,13 @@ class BhajanPlayer(context: Context) {
             player?.start(); playing = true
         } else wantsPlay = false
     }
-    fun pause() { wantsPlay = false; if (prepared) player?.pause(); playing = false; manager.abandonAudioFocusRequest(focus) }
+    fun pause() { startJob?.cancel(); wantsPlay = false; if (prepared) player?.pause(); playing = false; manager.abandonAudioFocusRequest(focus) }
     fun seek(ms: Long) { if (prepared) { position = ms.coerceIn(0, duration); player?.seekTo(position.toInt()) } }
     fun toggleRepeat() { repeat = !repeat; if (prepared) player?.isLooping = repeat }
     fun skip(delta: Int) {
         if (tracks.isEmpty()) return
         val index = tracks.indexOf(current).coerceAtLeast(0)
         load(tracks[(index + delta + tracks.size) % tracks.size])
-    }
-    suspend fun search(query: String, deity: String = "", popular: Boolean = true): List<Album> = withContext(Dispatchers.IO) {
-        val q = BhajanSearch.query(query, deity)
-        val cacheKey = "$q|$popular"
-        searchCache.get(cacheKey)?.let { return@withContext it }
-        val docs = json("https://archive.org/advancedsearch.php?q=${Uri.encode(q)}&output=json&rows=20&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=downloads${if (popular) "&sort%5B%5D=downloads%20desc" else ""}").getJSONObject("response").getJSONArray("docs")
-        val result = List(docs.length()) { docs.getJSONObject(it).let { Album(it.getString("identifier"), it.optString("title"), it.optLong("downloads")) } }
-        currentCoroutineContext().ensureActive()
-        searchCache.put(cacheKey, result)
-        result
-    }
-    suspend fun openAlbum(album: Album): List<Track> {
-        albumCache.get(album.id)?.let { return it }
-        val result = withContext(Dispatchers.IO) {
-            val files = json("https://archive.org/metadata/${Uri.encode(album.id)}").getJSONArray("files")
-            (0 until files.length()).map { files.getJSONObject(it) }.filter { it.optString("name").endsWith(".mp3", true) }
-                .map { Track(it.optString("title").ifBlank { it.getString("name").removeSuffix(".mp3") }, "https://archive.org/download/${Uri.encode(album.id)}/${Uri.encode(it.getString("name"))}") }
-        }
-        currentCoroutineContext().ensureActive()
-        albumCache.put(album.id, result)
-        return result
     }
     private fun json(url: String): JSONObject {
         val connection = URL(url).openConnection().apply { connectTimeout = 15000; readTimeout = 15000 }

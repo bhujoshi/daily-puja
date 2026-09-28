@@ -24,7 +24,7 @@ fun TilakOverlay(applied:Set<Int>,placement:IdolPlacement) {
                 val t=reveal.value
                 val mark=(placement.height*.018f).coerceIn(.003f,.006f)*u
                 drawCircle(Color(0xFFEAC57C).copy(alpha=(1-t)*.5f),mark*(2f+4f*t),center,style=Stroke(u*.001f))
-                drawLine(Color(0xFFB8271F),center-Offset(0f,mark),center-Offset(0f,mark*(1-2*t)),mark*.8f,StrokeCap.Round)
+                drawLine(Color(0xFFB8271F),center+Offset(0f,mark),center+Offset(0f,mark*(1-2*t)),mark*.8f,StrokeCap.Round)
                 drawCircle(Color(0xFFC73A21),mark*.5f*t,center+Offset(0f,mark*.9f))
             }
         }

@@ -20,7 +20,7 @@ Use **Temple options â†’ Customize temple**, or **My progress & temple package â
 | `shared_assets/catalog/` | Shared catalog, source migration manifest and optimization report |
 | `backend/internal/community/catalog.json` | Generated catalog embedded in the Go server |
 
-The original `imgres.html` is preserved under `source/references/`; it is not treated as an image or bundled in the app. Unused flame model is preserved under `source/legacy/`. Original full-resolution GLBs no longer duplicate optimized assets inside the APK. The water jug derivative is prepared for future use but is not a selectable category.
+The original `imgres.html` is preserved under `source/references/`; it is not treated as an image or bundled in the app. Unused flame model is preserved under `source/legacy/`. Original full-resolution GLBs no longer duplicate optimized assets inside the APK. The original water jug derivative remains in the source inventory, but Abhishek now uses a procedural copper lota based on the supplied visual reference. Regenerate it with `python3 scripts/generate_copper_lota.py`. The lota is a ritual animation asset, not a selectable category.
 
 ## Model preparation
 

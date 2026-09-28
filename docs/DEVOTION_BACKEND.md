@@ -6,7 +6,7 @@ Implemented for Android and the Go backend; iOS and web remain unchanged. This i
 
 From `backend`, run `MOCK_MODE=true go run ./cmd/server` for the local demo. Accounts persist at `data/accounts.json` (override with `ACCOUNT_DATA_PATH`). The server binds loopback on port 8080; use a TLS reverse proxy for a device connection. Build Android with `./gradlew assembleDebug -PaccountApiUrl=https://YOUR_API_HOST`. Without a URL the app explicitly says accounts are not connected, while puja continues offline.
 
-Storage is an atomic, owner-only JSON file for **one server process**. Back up securely. Migrate to transactional SQL, add monitoring, request throttling at the proxy, verified identity, account recovery and backup deletion policy before public deployment. Mobile login accepts a 10-digit Indian number (or +91 prefix) and fixed OTP **1234** only when `MOCK_MODE=true`. No SMS is sent. This is unverified demo identity, not production authentication. Sessions expire after 30 days, are hashed on the server and encrypted with Android Keystore on the device. Reopening restores the session and cached profile, including shrine selections, credited days, streak and activity/payment history. Android backup is disabled for this account cache. Refresh fetches server state; a rejected/expired session clears the local login. Do not enable cleartext HTTP for release. Debug builds can connect to `http://10.0.2.2:8080` using the debug-only local network configuration.
+Storage is an atomic, owner-only JSON file for **one server process**. Back up securely. Migrate to transactional SQL, add monitoring, request throttling at the proxy, verified identity, account recovery and backup deletion policy before public deployment. Android login uses Google Credential Manager; the backend validates signed ID tokens and a single-use challenge. Configure the Web OAuth client ID and Android signing certificates following [GOOGLE_LOGIN_SETUP.md](GOOGLE_LOGIN_SETUP.md). Optional backend OTP routes are documented in [OTP_SETUP.md](OTP_SETUP.md). Sessions expire after 30 days, are hashed on the server and encrypted with Android Keystore on the device. Reopening restores the session and cached profile, including shrine selections, credited days, streak and activity/payment history. Android backup is disabled for this account cache. Refresh fetches server state; a rejected/expired session clears the local login. Do not enable cleartext HTTP for release. Debug builds can connect to `http://10.0.2.2:8080` using the debug-only local network configuration.
 
 Legacy `/api/v1` prototype endpoints trust supplied user IDs and dates. They are disabled by default; `ENABLE_LEGACY_DEMO=true` explicitly enables them for development only. Their old streak state is separate from the account service.
 
@@ -16,8 +16,10 @@ All paths below start `/api/v2`. JSON errors use `error`. Authenticated requests
 
 | Method/path | Body / behavior |
 | --- | --- |
-| POST /auth/otp/request | `phone`; validates mobile number, demo notice, sends no SMS |
-| POST /auth/otp/verify | `phone`, `otp: "1234"`, optional `invite_code`; creates or signs into the same mobile account |
+| POST /auth/google/challenge | `{}`; returns a short-lived sign-in nonce |
+| POST /auth/google | `id_token`, `nonce`, optional `invite_code`; verified Google login returns token/profile |
+| POST /auth/otp/request | `phone`; sends WhatsApp/SMS via configured provider (demo notice in mock mode) |
+| POST /auth/otp/verify | `phone`, `otp`, optional `invite_code` (`1234` in mock mode); creates or signs into the same mobile account |
 | POST /register | `email`, `password` (10–128 chars), optional `invite_code`; returns token/profile |
 | POST /login | email/password; returns token/profile |
 | GET /catalog | Seven categories, reward thresholds and availability flags |
@@ -57,4 +59,4 @@ Asset delivery and preparation are now implemented; the original checklist below
 3. **Offerings:** independent flower, shankh, lamp/aarti and prasad assets; transparent images or GLB matching the existing renderer. Include small preview thumbnails and usage rights.
 4. **Audio and language:** licensed aarti/shankh recordings, lyrics and time markers; reviewed Hindi/English copy and priority regional languages. A ritual reviewer should approve deity-specific sequences and combinations.
 5. **Commerce:** package name, one-time price, which variants it includes, reward thresholds, Play Console product ID and provider/backend credentials through secure configuration. Do not commit secrets.
-6. **Operations:** HTTPS host, identity provider preference (phone OTP recommended for evaluation), support contact, retention/deletion policy and updated privacy/store disclosures before enabling accounts publicly.
+6. **Operations:** HTTPS host, Google OAuth project/client configuration, support contact, retention/deletion policy and updated privacy/store disclosures before enabling accounts publicly.

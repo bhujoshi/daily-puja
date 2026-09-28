@@ -12,7 +12,10 @@ import (
 
 	"github.com/worship/nityamandir/backend/internal/api"
 	"github.com/worship/nityamandir/backend/internal/community"
+	"github.com/worship/nityamandir/backend/internal/googleauth"
+	"github.com/worship/nityamandir/backend/internal/music"
 	"github.com/worship/nityamandir/backend/internal/observability"
+	"github.com/worship/nityamandir/backend/internal/otp"
 	"github.com/worship/nityamandir/backend/internal/repository"
 	"github.com/worship/nityamandir/backend/internal/service"
 )
@@ -40,7 +43,25 @@ func main() {
 		log.Fatal(err)
 	}
 	accounts.MockMode = os.Getenv("MOCK_MODE") == "true"
+	accounts.OTP, err = otp.FromEnv()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if accounts.OTP != nil && accounts.MockMode {
+		log.Fatal("Disable MOCK_MODE when configuring live OTP")
+	}
+	if clientID := os.Getenv("GOOGLE_CLIENT_ID"); clientID != "" {
+		accounts.Google, err = googleauth.New(clientID)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 	router := http.NewServeMux()
+	musicHandler, err := music.New(os.Getenv("MUSIC_CATALOG_PATH"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	router.Handle("/api/v2/music", musicHandler)
 	router.Handle("/api/v2/", accounts)
 	// Legacy prototype routes are opt-in: they trust arbitrary user headers.
 	if os.Getenv("ENABLE_LEGACY_DEMO") == "true" {

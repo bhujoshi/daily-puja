@@ -1,0 +1,6 @@
+ cd /Users/bhuwanjoshi/work/worship/backend
+MOCK_MODE=true go run ./cmd/server
+
+
+cd /Users/bhuwanjoshi/work/worship/android
+./gradlew :app:installDebug -PaccountApiUrl=http://10.0.2.2:8080

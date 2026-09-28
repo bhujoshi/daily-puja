@@ -26,3 +26,11 @@ If you prefer Slack or PagerDuty, replace the email receiver with a supported Al
 This stack is for private staging. Public release needs a verified SMS login provider, real payment verification, abuse protection, TLS termination, a transactional database, a backup/restore drill, and a privacy review. Avoid publishing either API port 8080 or metrics port 9091 directly to the internet. When those dependencies are ready, place a TLS reverse proxy in front of the API and give Android the HTTPS URL.
 
 The API container listens internally on `0.0.0.0:8080`; Docker publishes it only on `127.0.0.1:8080` of the host. This lets an SSH tunnel reach it while keeping public traffic out. The backend itself defaults to loopback when run without Docker. The metrics listener defaults to `127.0.0.1:9091` outside Docker and is separate from the API.
+
+## Phone verification
+
+WhatsApp OTP supports Fast2SMS Smart OTP (`OTP_PROVIDER=fast2sms`) and Twilio Verify. Configure the credentials and sender following [OTP_SETUP.md](../../docs/OTP_SETUP.md), keeping `MOCK_MODE=false`. For Fast2SMS, choose the channel in its Smart OTP dashboard. For Twilio, set `OTP_CHANNEL=sms` for SMS delivery.
+
+## Google login
+
+Android uses Google sign-in. Set `GOOGLE_CLIENT_ID` to the Web OAuth client ID, keep `MOCK_MODE=false`, and leave `OTP_PROVIDER` empty. Configure Android OAuth signing certificates and the matching Gradle property using [GOOGLE_LOGIN_SETUP.md](../../docs/GOOGLE_LOGIN_SETUP.md).

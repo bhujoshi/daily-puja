@@ -95,7 +95,7 @@ fun MandirAltarView(
     val conchYaw=if(selection["shankh"]=="original") -90f else 0f
     val bathTargetNow by rememberUpdatedState(bathTarget)
     val bathTime by rememberUpdatedState(bathProgress)
-    var jugNode by remember {mutableStateOf<ModelNode?>(null)}
+    var lotaNode by remember {mutableStateOf<ModelNode?>(null)}
     var prasadNode by remember { mutableStateOf<Node?>(null) }
     var loadError by remember {mutableStateOf(false)}
     val prasadActive by rememberUpdatedState(prasadRunning)
@@ -143,7 +143,7 @@ fun MandirAltarView(
             alignBounds()
             oilWick=oilPoint.copy(y=oilPoint.y-projectedHalfHeight())
         }
-        jugNode=model("shrine/accessories/water_jug.glb",TemplePoint(.2f,1.0f),.16f,0f,.8f).apply {isVisible=false}
+        lotaNode=model("shrine/accessories/copper_lota.glb",TemplePoint(.2f,1.0f),.21f,0f,.8f).apply {isVisible=false}
         model("shrine/accessories/plate.glb",TempleSceneLayout.plate,TempleSceneLayout.PLATE_SIZE,32f)
         aartiNode=model(catalog.option("aarti",selection).path,TempleSceneLayout.aartiRest,TempleSceneLayout.AARTI_MODEL_SIZE,20f,TempleSceneLayout.AARTI_DEPTH).apply {
             // Apply yaw before the viewing tilt so the broad bowl points up toward
@@ -282,15 +282,16 @@ fun MandirAltarView(
                         node.rotation=Rotation(x=55f,z=startAngle+(flight.offering.rotation-startAngle)*progress)
                     }
                 }
-                jugNode?.apply {
+                lotaNode?.apply {
                     val target=bathTargetNow
                     isVisible=target!=null
                     if(target!=null) {
                         val t=bathTime
                         val lift=kotlin.math.min(t/.12f,(1f-t)/.14f).coerceIn(0f,1f)
                         val source=idolPlacement.bathSource(target)
-                        val point=TemplePoint(source.x+.018f,source.y-.032f+.10f*(1-lift))
-                        rotation=Rotation(z=125f*lift)
+                        val point=TemplePoint(source.x,source.y-.055f+.10f*(1-lift))
+                        // Tip away from the viewer while keeping the pour above the crown.
+                        rotation=Rotation(x=-105f*lift)
                         placePosition(Position(2*point.x-1,1-2*point.y,.8f))
                     }
                 }

@@ -11,8 +11,10 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-/** Demo identity with a Keystore-protected session and durable profile snapshot. */
+/** Account identity with a Keystore-protected session and durable profile snapshot. */
 class DevotionAccount(context: Context) {
+    private val credentialManager = androidx.credentials.CredentialManager.create(context)
+    val googleConfigured get() = configured && BuildConfig.GOOGLE_CLIENT_ID.isNotBlank()
     private val prefs = context.getSharedPreferences("devotion", Context.MODE_PRIVATE)
     private val vault = SessionVault()
     private var token = runCatching { vault.decrypt(prefs.getString("session", "") ?: "") }.getOrDefault("")
@@ -49,14 +51,59 @@ class DevotionAccount(context: Context) {
             result
         } finally { connection.disconnect() }
     }
-    suspend fun requestOtp(phone: String) { request("auth/otp/request","POST",JSONObject().put("phone",phone)) }
-    suspend fun authenticate(phone: String, otp: String, invite: String) {
-        val result=request("auth/otp/verify","POST",JSONObject().put("phone",phone).put("otp",otp).put("invite_code",invite))
-        val session=result.getString("token")
-        val encrypted=vault.encrypt(session)
-        token=session
-        prefs.edit().putString("session",encrypted).apply()
+    suspend fun signInWithGoogle(activityContext: Context, invite: String) {
+        check(googleConfigured) { "Google sign-in is not configured yet." }
+        val challenge = request("auth/google/challenge", "POST", JSONObject())
+        val nonce = challenge.getString("nonce")
+        val option = com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+            .Builder(BuildConfig.GOOGLE_CLIENT_ID).setNonce(nonce).build()
+        val credentialRequest = androidx.credentials.GetCredentialRequest.Builder()
+            .addCredentialOption(option).build()
+        suspend fun getGoogleCredential(): androidx.credentials.Credential {
+            try {
+                return credentialManager.getCredential(android.content.MutableContextWrapper(activityContext), credentialRequest).credential
+            } catch (e: androidx.credentials.exceptions.GetCredentialCancellationException) {
+                throw e
+            } catch (_: androidx.credentials.exceptions.GetCredentialException) {
+                // Older Play services cannot parse the dedicated button option.
+                // The account-picker request supports new and returning Google accounts.
+                val fallbackOption = com.google.android.libraries.identity.googleid.GetGoogleIdOption.Builder()
+                    .setServerClientId(BuildConfig.GOOGLE_CLIENT_ID)
+                    .setFilterByAuthorizedAccounts(false)
+                    .setAutoSelectEnabled(false)
+                    .setNonce(nonce).build()
+                val fallbackRequest = androidx.credentials.GetCredentialRequest.Builder()
+                    .addCredentialOption(fallbackOption).build()
+                return credentialManager.getCredential(android.content.MutableContextWrapper(activityContext), fallbackRequest).credential
+            }
+        }
+        val credential = try {
+            getGoogleCredential()
+        } catch (e: androidx.credentials.exceptions.GetCredentialCancellationException) {
+            return
+        } catch (e: androidx.credentials.exceptions.NoCredentialException) {
+            throw IllegalStateException("No Google account is available. Add an account on this device and update Google Play services.")
+        } catch (e: androidx.credentials.exceptions.GetCredentialException) {
+            // Record only the exception type; never log credentials or account data.
+            android.util.Log.w("GoogleSignIn", "Credential request failed: ${e.type}")
+            throw IllegalStateException("Google sign-in could not start. Update Google Play services and check this app's Google OAuth configuration.")
+        }
+        check(credential is androidx.credentials.CustomCredential &&
+            credential.type == com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+            "Google sign-in returned an unsupported credential."
+        }
+        val googleToken = com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.createFrom(credential.data)
+        val result = request("auth/google", "POST", JSONObject()
+            .put("id_token", googleToken.idToken).put("nonce", nonce).put("invite_code", invite.trim()))
+        val session = result.getString("token")
+        val encrypted = vault.encrypt(session)
+        token = session
+        prefs.edit().putString("session", encrypted).apply()
         cache(result.getJSONObject("profile"))
+    }
+    private suspend fun clearGoogleState() {
+        try { credentialManager.clearCredentialState(androidx.credentials.ClearCredentialStateRequest()) }
+        catch (_: androidx.credentials.exceptions.ClearCredentialException) { /* Local/server logout has completed. */ }
     }
     suspend fun purchase() {
         val key="purchase_"+profile?.optString("id")
@@ -78,8 +125,8 @@ class DevotionAccount(context: Context) {
         cache(request("shrine","PUT",JSONObject().put("selections",JSONObject(selection.values))))
     }
     private fun clearLocal() { token="";profile=null;prefs.edit().remove("session").remove("profile").remove("pending_day").remove("pending_owner").apply() }
-    suspend fun signOut() { request("logout","POST",JSONObject()); clearLocal() }
-    suspend fun delete() { request("me","DELETE");clearLocal() }
+    suspend fun signOut() { request("logout","POST",JSONObject()); clearLocal(); clearGoogleState() }
+    suspend fun delete() { request("me","DELETE");clearLocal();clearGoogleState() }
 }
 
 
