@@ -81,8 +81,6 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
         curtain.animateTo(if(entered) 1f else 0f,tween(1600,easing=FastOutSlowInEasing))
     }
     var session by remember {mutableStateOf(WorshipSession(deityCount=selection.deityCount))}
-    var streakVisible by remember(session.aartiComplete) { mutableStateOf(session.aartiComplete) }
-    LaunchedEffect(streakVisible) { if(streakVisible) { delay(10_000); streakVisible=false } }
     var last by remember {mutableLongStateOf(prefs.getLong("last",System.currentTimeMillis()))}
     var clean by remember {mutableLongStateOf(prefs.getLong("clean",last))}
     var timeOffset by remember {mutableLongStateOf(if(BuildConfig.DEBUG) prefs.getLong("agingOffset",0L) else 0L)}
@@ -267,7 +265,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                 }
             })
             // Show the ritual dock only after the entrance has fully opened.
-            if(entered && !curtainMoving && !musicSheet && !devotionSheet && !customizer && (!session.aartiComplete || streakVisible)) Popup(alignment=Alignment.BottomCenter) { RitualGlassPanel(Modifier.navigationBarsPadding().padding(horizontal=14.dp,vertical=10.dp)
+            if(entered && !curtainMoving && !musicSheet && !devotionSheet && !customizer) Popup(alignment=Alignment.BottomCenter) { RitualGlassPanel(Modifier.navigationBarsPadding().padding(horizontal=14.dp,vertical=10.dp)
                 .fillMaxWidth().heightIn(max=270.dp).verticalScroll(rememberScrollState()),sceneSize,sceneOrigin,backgroundPath=if(selection["shrine"]=="original") null else "shrine/backgrounds/${selection["shrine"]}.png") {
                 val buttonColors=ButtonDefaults.buttonColors(containerColor=RitualInk,contentColor=cream,disabledContainerColor=Color(0xCFE2D9CF),disabledContentColor=Color(0xFF81766C))
                 if(aging.needsCleaning) {
@@ -279,7 +277,6 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                     Text(tr("आरती चल रही है …","Offering aarti …"),color=RitualInk,fontSize=16.sp)
                     LinearProgressIndicator(progress={aarti.value},modifier=Modifier.fillMaxWidth().height(2.dp),color=RitualGold)
                 } else if(session.aartiComplete) {
-                    IconButton(onClick={streakVisible=false},modifier=Modifier.align(Alignment.End)) { Icon(Icons.Outlined.Close,tr("बंद करें","Close streak card")) }
                     Text(tr("पूजा संपन्न हुई। आपका दिन मंगलमय हो।","Puja complete. May your day be peaceful."),color=RitualInk,fontSize=18.sp)
                     DevotionStreak(account.streakDays,hindi,account.profile?.optBoolean("unlocked")==true)
                     Button(onClick={devotionPage=DevotionPage.PROFILE;devotionSheet=true},modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),colors=buttonColors) {Text(tr("मेरी प्रोफ़ाइल","My profile"))}
