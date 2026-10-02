@@ -3,144 +3,204 @@
     "id": "flowers/sunflower",
     "source": "temple_models/source/flowers/sunflower.glb",
     "runtime": "android/app/src/main/assets/shrine/flowers/sunflower.glb",
+    "source_kind": "glb",
     "source_bytes": 3151692,
-    "runtime_bytes": 2257512,
+    "runtime_bytes": 712460,
     "source_faces": 40114,
-    "runtime_faces": 29586
-  },
-  {
-    "id": "flowers/peony",
-    "source": "temple_models/source/flowers/peony.glb",
-    "runtime": "android/app/src/main/assets/shrine/flowers/peony.glb",
-    "source_bytes": 50079148,
-    "runtime_bytes": 3042008,
-    "source_faces": 999950,
-    "runtime_faces": 29965
+    "runtime_faces": 11824,
+    "target_faces": 12000,
+    "texture_limit": 512
   },
   {
     "id": "flowers/orchid",
     "source": "temple_models/source/flowers/orchid.glb",
     "runtime": "android/app/src/main/assets/shrine/flowers/orchid.glb",
+    "source_kind": "glb",
     "source_bytes": 5090400,
-    "runtime_bytes": 4232548,
+    "runtime_bytes": 1531448,
     "source_faces": 40304,
-    "runtime_faces": 30000
+    "runtime_faces": 12000,
+    "target_faces": 12000,
+    "texture_limit": 512
   },
   {
     "id": "flowers/rose",
     "source": "temple_models/source/flowers/rose.glb",
     "runtime": "android/app/src/main/assets/shrine/flowers/rose.glb",
+    "source_kind": "glb",
     "source_bytes": 18573244,
-    "runtime_bytes": 2884156,
+    "runtime_bytes": 1022396,
     "source_faces": 446091,
-    "runtime_faces": 29999
-  },
-  {
-    "id": "flowers/bouquet",
-    "source": "temple_models/source/flowers/bouquet.glb",
-    "runtime": "android/app/src/main/assets/shrine/flowers/bouquet.glb",
-    "source_bytes": 32862108,
-    "runtime_bytes": 2384812,
-    "source_faces": 782949,
-    "runtime_faces": 29622
+    "runtime_faces": 12000,
+    "target_faces": 12000,
+    "texture_limit": 512
   },
   {
     "id": "lamps/golden_oil",
     "source": "temple_models/source/lamps/golden_oil.glb",
     "runtime": "android/app/src/main/assets/shrine/lamps/golden_oil.glb",
+    "source_kind": "glb",
     "source_bytes": 16119144,
-    "runtime_bytes": 3054508,
+    "runtime_bytes": 891224,
     "source_faces": 262366,
-    "runtime_faces": 17996
+    "runtime_faces": 7996,
+    "target_faces": 8000,
+    "texture_limit": 512
   },
   {
     "id": "lamps/brass_diya",
     "source": "temple_models/source/lamps/brass_diya.glb",
     "runtime": "android/app/src/main/assets/shrine/lamps/brass_diya.glb",
+    "source_kind": "glb",
     "source_bytes": 16452340,
-    "runtime_bytes": 2384428,
+    "runtime_bytes": 1014876,
     "source_faces": 375244,
-    "runtime_faces": 17980
+    "runtime_faces": 7989,
+    "target_faces": 8000,
+    "texture_limit": 512
   },
   {
     "id": "aarti/golden",
     "source": "temple_models/source/aarti/golden.glb",
     "runtime": "android/app/src/main/assets/shrine/aarti/golden.glb",
+    "source_kind": "glb",
     "source_bytes": 3265940,
-    "runtime_bytes": 2868724,
+    "runtime_bytes": 775924,
     "source_faces": 19226,
-    "runtime_faces": 18000
+    "runtime_faces": 8000,
+    "target_faces": 8000,
+    "texture_limit": 512
   },
   {
     "id": "aarti/traditional",
     "source": "temple_models/source/aarti/traditional.glb",
     "runtime": "android/app/src/main/assets/shrine/aarti/traditional.glb",
+    "source_kind": "glb",
     "source_bytes": 10929260,
-    "runtime_bytes": 6120088,
+    "runtime_bytes": 2238436,
     "source_faces": 133272,
-    "runtime_faces": 17999
+    "runtime_faces": 7999,
+    "target_faces": 8000,
+    "texture_limit": 512
   },
   {
     "id": "shankh/classic",
     "source": "temple_models/source/shankh/classic.glb",
     "runtime": "android/app/src/main/assets/shrine/shankh/classic.glb",
+    "source_kind": "glb",
     "source_bytes": 2751668,
-    "runtime_bytes": 1913852,
+    "runtime_bytes": 754828,
     "source_faces": 35380,
-    "runtime_faces": 18000
+    "runtime_faces": 8000,
+    "target_faces": 8000,
+    "texture_limit": 512
   },
   {
     "id": "shankh/ivory",
     "source": "temple_models/source/shankh/ivory.glb",
     "runtime": "android/app/src/main/assets/shrine/shankh/ivory.glb",
+    "source_kind": "glb",
     "source_bytes": 624532,
-    "runtime_bytes": 325440,
+    "runtime_bytes": 145436,
     "source_faces": 25942,
-    "runtime_faces": 18000
+    "runtime_faces": 8000,
+    "target_faces": 8000,
+    "texture_limit": 512
   },
   {
     "id": "prasad/laddu",
     "source": "temple_models/source/prasad/laddu.glb",
     "runtime": "android/app/src/main/assets/shrine/prasad/laddu.glb",
+    "source_kind": "glb",
     "source_bytes": 1765640,
-    "runtime_bytes": 1198684,
+    "runtime_bytes": 253284,
     "source_faces": 31360,
-    "runtime_faces": 18000
+    "runtime_faces": 8000,
+    "target_faces": 8000,
+    "texture_limit": 512
   },
   {
     "id": "accessories/plate",
     "source": "temple_models/source/accessories/plate.glb",
     "runtime": "android/app/src/main/assets/shrine/accessories/plate.glb",
+    "source_kind": "glb",
     "source_bytes": 2548572,
-    "runtime_bytes": 2494484,
+    "runtime_bytes": 832844,
     "source_faces": 3648,
-    "runtime_faces": 3648
+    "runtime_faces": 3648,
+    "target_faces": 8000,
+    "texture_limit": 512
   },
   {
     "id": "accessories/bell",
     "source": "temple_models/source/accessories/bell.glb",
     "runtime": "android/app/src/main/assets/shrine/accessories/bell.glb",
+    "source_kind": "glb",
     "source_bytes": 107424,
-    "runtime_bytes": 88160,
+    "runtime_bytes": 66524,
     "source_faces": 3458,
-    "runtime_faces": 3458
+    "runtime_faces": 2498,
+    "target_faces": 2500,
+    "texture_limit": 512
   },
   {
     "id": "accessories/water_jug",
     "source": "temple_models/source/accessories/water_jug.glb",
     "runtime": "android/app/src/main/assets/shrine/accessories/water_jug.glb",
+    "source_kind": "glb",
     "source_bytes": 866360,
-    "runtime_bytes": 400552,
+    "runtime_bytes": 180452,
     "source_faces": 30816,
-    "runtime_faces": 18000
+    "runtime_faces": 8000,
+    "target_faces": 8000,
+    "texture_limit": 512
   },
   {
     "id": "flowers/azalea",
     "source": "temple_models/source/flowers/azalea.glb",
     "runtime": "android/app/src/main/assets/shrine/flowers/azalea.glb",
+    "source_kind": "glb",
     "source_bytes": 39697644,
-    "runtime_bytes": 5182376,
+    "runtime_bytes": 1078276,
     "source_faces": 852850,
-    "runtime_faces": 29711
+    "runtime_faces": 11711,
+    "target_faces": 12000,
+    "texture_limit": 512
+  },
+  {
+    "id": "accessories/copper_lota",
+    "source": "scripts/generate_copper_lota.py",
+    "runtime": "android/app/src/main/assets/shrine/accessories/copper_lota.glb",
+    "source_kind": "procedural",
+    "source_bytes": 6586,
+    "runtime_bytes": 65260,
+    "source_faces": 2976,
+    "runtime_faces": 2976,
+    "target_faces": 4000,
+    "texture_limit": 512
+  },
+  {
+    "id": "flowers/peony",
+    "source": "temple_models/source/flowers/peony.glb",
+    "runtime": "android/app/src/main/assets/shrine/flowers/peony.glb",
+    "source_kind": "glb",
+    "source_bytes": 50079148,
+    "runtime_bytes": 1299156,
+    "source_faces": 999950,
+    "runtime_faces": 17963,
+    "target_faces": 18000,
+    "texture_limit": 768
+  },
+  {
+    "id": "flowers/bouquet",
+    "source": "temple_models/source/flowers/bouquet.glb",
+    "runtime": "android/app/src/main/assets/shrine/flowers/bouquet.glb",
+    "source_kind": "glb",
+    "source_bytes": 32862108,
+    "runtime_bytes": 1034508,
+    "source_faces": 782949,
+    "runtime_faces": 17621,
+    "target_faces": 18000,
+    "texture_limit": 768
   }
 ]

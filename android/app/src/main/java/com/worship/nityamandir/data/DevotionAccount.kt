@@ -30,7 +30,22 @@ class DevotionAccount(context: Context) {
     val pending get() = prefs.getString("pending_day", "") == today() &&
         (prefs.getString("pending_owner", "") == "" || prefs.getString("pending_owner", "") == profile?.optString("id"))
     private fun cache(value: JSONObject) { profile=value; prefs.edit().putString("profile",value.toString()).apply() }
-    fun recordCompletion() { prefs.edit().putString("pending_day", today()).putString("pending_owner",profile?.optString("id") ?: "").apply() }
+    private fun localKey() = "completed_days_" + (profile?.optString("id") ?: "guest")
+    private var completionRevision by mutableStateOf(0)
+    val streakDays: Int get() {
+        completionRevision // Observe locally recorded completions before network sync finishes.
+        val days = prefs.getStringSet(localKey(), emptySet()).orEmpty().toMutableSet()
+        profile?.optJSONArray("days")?.let { values ->
+            repeat(values.length()) { days.add(values.getString(it)) }
+        }
+        return DevotionStreakCounter.count(days, java.time.LocalDate.parse(today()))
+    }
+    fun recordCompletion() {
+        val days = prefs.getStringSet(localKey(), emptySet()).orEmpty() + today()
+        prefs.edit().putStringSet(localKey(), days).putString("pending_day", today())
+            .putString("pending_owner",profile?.optString("id") ?: "").apply()
+        completionRevision++
+    }
     private suspend fun request(path: String, method: String = "GET", body: JSONObject? = null): JSONObject = withContext(Dispatchers.IO) {
         check(configured) { "Account service is not connected yet." }
         val connection = URL(BuildConfig.ACCOUNT_API_URL.trimEnd('/') + "/api/v2/" + path).openConnection() as HttpURLConnection

@@ -24,9 +24,31 @@ The original `imgres.html` is preserved under `source/references/`; it is not tr
 
 ## Model preparation
 
-Run Blender with `--background --python scripts/prepare_models.py`. The script reads the independent source inventory in `model-sources.json`, welds disconnected scan triangles before decimation, targets 30,000 flower faces / 18,000 other faces, limits embedded textures to 1024px, exports self-contained GLB and renders thumbnails. Original UV/material data is retained. The azalea source's detached colour calibration cube is removed. Node transforms and model normalization remain compatible with SceneView.
+Run Blender with `--background --python scripts/prepare_models.py`. The script reads the independent source inventory in `model-sources.json`, welds disconnected scan triangles before decimation, targets 12,000 flower triangles (18,000 for the peony and lily scans), 8,000 other triangles, and 2,500 bell triangles; limits embedded textures to 512px (768px for peony and lily), exports self-contained GLB and renders thumbnails. Original UV/material data is retained. The azalea source's detached colour calibration cube is removed. Node transforms and model normalization remain compatible with SceneView.
 
-The 16 source GLBs total approximately **195 MiB**; mobile derivatives total approximately **39 MiB** (about 80% smaller). Exact sizes and polygon counts are in `shared_assets/catalog/model-report.json`. Thumbnails are previews, not extra scene geometry. Re-run visual checks after changing budgets or materials.
+All **17 bundled GLBs**, including the procedural copper lota and legacy water jug,
+are covered by the phone profile. Their combined size decreased from **39.06 MiB
+to 13.25 MiB**; catalogue triangles decreased from **335,916 to 156,225**. These are
+catalogue totals, not simultaneously visible triangles. The plate was already
+lightweight at 3,648 triangles; its textures were reduced instead. The procedural
+lota uses 48 radial segments rather than 96 (2,976 versus 5,952 triangles).
+Original source files are unchanged. Object sizes in the scene are unchanged.
+
+Exact budgets and current counts are in `shared_assets/catalog/model-report.json`;
+before/after measurements are in `shared_assets/catalog/phone-model-report.json`.
+The preparation script includes the procedural lota, and `MODEL_ONLY=category/id`
+can regenerate one asset. Run `python3 scripts/audit_models.py` for a current
+inventory; add `--baseline /path/to/saved/shrine --output report.json` to compare
+runtime trees. Thumbnails are previews, not extra scene geometry. Re-run visual
+checks after changing budgets or materials.
+
+The phone profile uses ordinary embedded PNG/JPEG textures and uncompressed glTF
+geometry, requiring no new decoder. Smaller texture dimensions reduce potential
+texture memory; this is not ASTC/KTX GPU compression. Some fine detail is softer
+in enlarged close-ups. Matching-camera before/after renders of all 17 exports
+were reviewed, with higher budgets retained for the two sensitive flower scans.
+An Android instrumentation test (`ModelAssetsTest`) loads every GLB through
+SceneView/Filament and checks that its bounds are finite and nonempty.
 
 Run `python3 scripts/build_catalog.py` after changing catalog definitions. It emits byte-identical Android, Go and shared copies. Run `python3 scripts/verify_assets.py` to check catalog synchronization, file existence, and GLB structure/embedded dependencies. The server rejects unknown asset IDs and mismatched category selections.
 

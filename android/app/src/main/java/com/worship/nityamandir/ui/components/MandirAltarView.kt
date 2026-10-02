@@ -1,7 +1,6 @@
 package com.worship.nityamandir.ui.components
 
 import android.graphics.BitmapFactory
-import androidx.compose.ui.graphics.asImageBitmap
 import com.worship.nityamandir.data.ShrineSelection
 import com.worship.nityamandir.data.ShrineCatalog
 import io.github.sceneview.node.Node
@@ -10,7 +9,6 @@ import io.github.sceneview.node.ImageNode
 import io.github.sceneview.utils.destroy
 import io.github.sceneview.math.Size
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
@@ -22,9 +20,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size as CanvasSize
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.google.android.filament.Camera
@@ -122,6 +117,13 @@ fun MandirAltarView(
     val conchTime by rememberUpdatedState(conchProgress)
     val flightsNow by rememberUpdatedState(flowerFlights)
     val flyingNodes = remember { mutableMapOf<Long, ModelNode>() }
+    // Update static transforms once after input changes, and once when motion ends.
+    val plateDepths=remember {TempleSceneLayout.flowerDepths(
+        (0 until TempleSceneLayout.FLOWER_COUNT).map(TempleSceneLayout::plateFlower),
+        (0 until TempleSceneLayout.FLOWER_COUNT).map(TempleSceneLayout::flowerSize),.15f)}
+    val flightDepths=remember {mutableMapOf<Long,Float>()}
+    val frameDirty = remember { booleanArrayOf(true) }
+    SideEffect { frameDirty[0] = true }
 
     LaunchedEffect(loader) {
         // Instances share geometry and textures; replenishing the plate must not reload GLBs.
@@ -172,7 +174,7 @@ fun MandirAltarView(
         }
         yield()
         repeat(TempleSceneLayout.FLOWER_COUNT) { i ->
-            flowers.add(model(flowerPaths[i%flowerPaths.size],TempleSceneLayout.plateFlower(i),TempleSceneLayout.flowerSize(i),45f+(i%4)*8f,.15f+i*.001f).apply {
+            flowers.add(model(flowerPaths[i%flowerPaths.size],TempleSceneLayout.plateFlower(i),TempleSceneLayout.flowerSize(i),45f+(i%4)*8f,plateDepths[i]).apply {
                 rotation=Rotation(x=45f+(i%4)*8f,z=plateFlowerAngles[i])
             })
             yield()
@@ -191,31 +193,42 @@ fun MandirAltarView(
         val visibleOfferings=(0 until selection.deityCount).flatMap { deity ->
             session.offeredFlowers.filter {it.deity==deity}.takeLast(TempleSceneLayout.OFFERED_FLOWER_SLOTS)
         }
+        val depths=TempleSceneLayout.flowerDepths(visibleOfferings.map {it.position},
+            visibleOfferings.map {TempleSceneLayout.offeredFlowerSize(it.flowerIndex)},.20f)
         while(offerings.size<visibleOfferings.size) {
             val offering=visibleOfferings[offerings.size]
             val instance=checkNotNull(loader.createInstance(flowers[offering.flowerIndex].model))
-            val node=ShrineModelNode(instance,TempleSceneLayout.flowerSize(offering.flowerIndex)).apply {
-                placePosition(Position(2*offering.position.x-1,1-2*offering.position.y,.20f))
+            val node=ShrineModelNode(instance,TempleSceneLayout.offeredFlowerSize(offering.flowerIndex)).apply {
+                placePosition(Position(2*offering.position.x-1,1-2*offering.position.y,depths[offerings.size]))
                 rotation=Rotation(x=55f,z=offering.rotation)
                 isTouchable=false
             }
+            node.alignBounds()
             nodes.add(node);offerings.add(node);offeringScales.add(node.scale);offeringAngles.add(offering.rotation)
         }
+        frameDirty[0]=true
     }
 
-    LaunchedEffect(flowerFlights.map {it.id},modelsReady) {
+    LaunchedEffect(flowerFlights.map {it.id},session.offeredFlowers.size,modelsReady) {
         if(!modelsReady) return@LaunchedEffect
         val activeIds=flowerFlights.map {it.id}.toSet()
         flyingNodes.keys.filter {it !in activeIds}.forEach { id ->
+            flightDepths.remove(id)
             flyingNodes.remove(id)?.let {nodes.remove(it);it.destroy()}
         }
         flowerFlights.forEach { flight ->
             if(flight.id !in flyingNodes) {
+                val future=(0 until selection.deityCount).flatMap {deity ->
+                    (session.offeredFlowers+flight.offering).filter {it.deity==deity}
+                        .takeLast(TempleSceneLayout.OFFERED_FLOWER_SLOTS)
+                }
+                flightDepths[flight.id]=TempleSceneLayout.flowerDepths(future.map {it.position},
+                    future.map {TempleSceneLayout.offeredFlowerSize(it.flowerIndex)},.20f)[future.indexOf(flight.offering)]
                 val index=flight.offering.flowerIndex
                 val instance=checkNotNull(loader.createInstance(flowers[index].model))
                 val point=TempleSceneLayout.plateFlower(index)
                 val node=ShrineModelNode(instance,TempleSceneLayout.flowerSize(index)).apply {
-                    placePosition(Position(2*point.x-1,1-2*point.y,.35f))
+                    placePosition(Position(2*point.x-1,1-2*point.y,plateDepths[index]))
                     isTouchable=false
                 }
                 nodes.add(node);flyingNodes[flight.id]=node
@@ -226,24 +239,46 @@ fun MandirAltarView(
     BoxWithConstraints(modifier.fillMaxSize()) {
         val density=LocalDensity.current
         val viewport=remember(maxWidth,maxHeight,density) { with(density) { TempleViewport(maxWidth.toPx(),maxHeight.toPx()) } }
-        run {
-            val background=remember(selection["shrine"]) {context.assets.open(catalog.option("shrine",selection).path).use {BitmapFactory.decodeStream(it)}.asImageBitmap()}
-            Image(background,null,Modifier.fillMaxSize().graphicsLayer {scaleX=TempleViewport.ZOOM;scaleY=TempleViewport.ZOOM;transformOrigin=TransformOrigin(.5f,0f)},alignment=Alignment.TopCenter,contentScale=ContentScale.Crop)
-            val idol=remember(selection["idols"]) {
-                val bitmap=context.assets.open(catalog.option("idols",selection).path).use {BitmapFactory.decodeStream(it)}
-                var left=bitmap.width;var top=bitmap.height;var right=0;var bottom=0
-                val pixels=IntArray(bitmap.width*bitmap.height)
-                bitmap.getPixels(pixels,0,bitmap.width,0,0,bitmap.width,bitmap.height)
-                pixels.forEachIndexed {i,color -> if((color ushr 24)>0) {
-                    val x=i%bitmap.width;val y=i/bitmap.width
-                    left=minOf(left,x);right=maxOf(right,x);top=minOf(top,y);bottom=maxOf(bottom,y)
-                }}
-                android.graphics.Bitmap.createBitmap(bitmap,left,top,right-left+1,bottom-top+1).asImageBitmap()
+        // Keep the backdrop, idols and ritual models on the same surface. A transparent
+        // SurfaceView below Compose punches through Compose backgrounds as well as models.
+        val background=remember(selection["shrine"]) {
+            context.assets.open(catalog.option("shrine",selection).path).use {BitmapFactory.decodeStream(it)}
+        }
+        val idol=remember(selection["idols"]) {
+            val bitmap=context.assets.open(catalog.option("idols",selection).path).use {BitmapFactory.decodeStream(it)}
+            var left=bitmap.width;var top=bitmap.height;var right=0;var bottom=0
+            val pixels=IntArray(bitmap.width*bitmap.height)
+            bitmap.getPixels(pixels,0,bitmap.width,0,0,bitmap.width,bitmap.height)
+            pixels.forEachIndexed {i,color -> if((color ushr 24)>0) {
+                val x=i%bitmap.width;val y=i/bitmap.width
+                left=minOf(left,x);right=maxOf(right,x);top=minOf(top,y);bottom=maxOf(bottom,y)
+            }}
+            android.graphics.Bitmap.createBitmap(bitmap,left,top,right-left+1,bottom-top+1)
+        }
+        DisposableEffect(materialLoader,background,idol,viewport) {
+            val cropScale=maxOf(viewport.width/background.width,viewport.height/background.height)*TempleViewport.ZOOM
+            val bgWidth=2f*background.width*cropScale/viewport.imageWidth
+            val bgHeight=2f*background.height*cropScale/viewport.imageWidth
+            val backdrop=ImageNode(materialLoader=materialLoader,bitmap=background,
+                size=Size(bgWidth,bgHeight,0f),normal=Position(0f,0f,1f)).apply {
+                position=Position(0f,1f-bgHeight/2f,-2f)
+                isTouchable=false
             }
-            val idolWidth=idolPlacement.width
-            val idolHeight=idolPlacement.height
-            val p=viewport.pixel(TemplePoint(idolPlacement.left,idolPlacement.top))
-            Image(idol,selection.deityNames(false).joinToString(),with(density) {Modifier.offset(p.x.toDp(),p.y.toDp()).size((viewport.imageWidth*idolWidth).toDp(),(viewport.imageWidth*idolHeight).toDp())},contentScale=ContentScale.Fit,alignment=Alignment.BottomCenter)
+            val fit=minOf(idolPlacement.width/idol.width,idolPlacement.height/idol.height)
+            val idolWidth=idol.width*fit
+            val idolHeight=idol.height*fit
+            val deity=ImageNode(materialLoader=materialLoader,bitmap=idol,
+                size=Size(idolWidth*2f,idolHeight*2f,0f),normal=Position(0f,0f,1f)).apply {
+                position=Position(2f*(idolPlacement.left+idolPlacement.width/2f)-1f,
+                    1f-2f*(idolPlacement.top+idolPlacement.height-idolHeight/2f),-1f)
+                isTouchable=false
+            }
+            nodes.add(backdrop);nodes.add(deity)
+            frameDirty[0]=true
+            onDispose {
+                nodes.remove(backdrop);nodes.remove(deity)
+                backdrop.destroy();deity.destroy()
+            }
         }
 
         Canvas(Modifier.fillMaxSize()) {
@@ -263,8 +298,17 @@ fun MandirAltarView(
         }
         ShrineAgingOverlay(viewport,dustLevel,cobwebLevel,space=idolPlacement.space,cleaned=cleanedAreas)
         Scene(Modifier.fillMaxSize(),engine=engine,modelLoader=loader,cameraNode=camera,cameraManipulator=null,childNodes=nodes,isOpaque=false,
-            onViewCreated={sceneView[0]=this},
-            onFrame={ _ ->
+            onViewCreated={
+                sceneView[0]=this
+                // Compose doors and glazing must occlude every scene object.
+                setZOrderOnTop(false)
+                setZOrderMediaOverlay(true)
+            },
+            onFrame=frame@{ _ ->
+                val moving=flightsNow.isNotEmpty() || bathTargetNow!=null ||
+                    prasadActive || conchActive || aartiActive || bellActive
+                if(!moving && !frameDirty[0]) return@frame
+                frameDirty[0]=moving
                 val halfWidth=viewport.width/viewport.imageWidth
                 camera.setProjection(Camera.Projection.ORTHO,-halfWidth.toDouble(),halfWidth.toDouble(),(1-2*viewport.height/viewport.imageWidth).toDouble(),1.0,.1,10.0)
                 offerings.forEachIndexed { i,node ->
@@ -273,11 +317,17 @@ fun MandirAltarView(
                         node.rotation=Rotation(x=55f+30f*wiltNow,z=offeringAngles[i])
                     }
                 }
+                flowers.forEachIndexed { index,node ->
+                    node.isVisible=flightsNow.none {it.offering.flowerIndex==index}
+                }
                 flightsNow.forEach { flight ->
                     flyingNodes[flight.id]?.let { node ->
                         val progress=flight.progress.value
                         val point=TempleSceneLayout.flowerFlight(TempleSceneLayout.plateFlower(flight.offering.flowerIndex),flight.offering.position,progress)
-                        node.placePosition(Position(2*point.x-1,1-2*point.y,.35f))
+                        val startDepth=plateDepths[flight.offering.flowerIndex]
+                        val endDepth=flightDepths[flight.id] ?: startDepth
+                        val depth=startDepth+(endDepth-startDepth)*progress+.4f*sin(kotlin.math.PI.toFloat()*progress)
+                        node.placePosition(Position(2*point.x-1,1-2*point.y,depth))
                         val startAngle=plateFlowerAngles[flight.offering.flowerIndex]
                         node.rotation=Rotation(x=55f,z=startAngle+(flight.offering.rotation-startAngle)*progress)
                     }
@@ -323,7 +373,7 @@ fun MandirAltarView(
                     placePosition(Position(2*TempleSceneLayout.bell.x-1,1-2*(TempleSceneLayout.bell.y-.045f*lift),.12f*lift))
                     rotation=Rotation(x=10f,z=sin(bellTime*3.5f*18f*1.5f)*12f*lift)
                 }
-                nodes.filterIsInstance<ShrineModelNode>().forEach {it.alignBounds()}
+                nodes.forEach { if(it is ShrineModelNode) it.alignBounds() }
             })
         if(session.aartiComplete && !aartiRunning) DeityHalosOverlay(heads=idolPlacement.heads)
         val aartiPoint=if(aartiRunning) idolPlacement.aartiPosition(aartiProgress) else TempleSceneLayout.aartiRest
@@ -331,6 +381,10 @@ fun MandirAltarView(
             RitualFlamesOverlay(session.lit,session.aartiLit,aartiPoint,oilPoint=oilPoint,traditional=selection["aarti"]!="original",brass=selection["lamp"]!="original",oilWick=oilWick)
         }
         WaterFlowOverlay(bathTarget,bathProgress,placement=idolPlacement)
+        ScreenWaterDroplets(
+            bathTarget=bathTarget, progress=bathProgress, bathed=session.bathed,
+            deityCount=session.deityCount, modifier=Modifier.zIndex(11f)
+        )
         TilakOverlay(session.tilak,idolPlacement)
         OfferedFlowerAgingOverlay(viewport,flowerWitherFactor,session.offeredFlowers)
         fun target(point:TemplePoint,width:Float,height:Float):Modifier {

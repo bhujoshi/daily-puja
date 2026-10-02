@@ -42,7 +42,9 @@ fun BhajanMiniPlayer(player: BhajanPlayer, hindi: Boolean, onExpand: () -> Unit,
                 Text(player.title,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.SemiBold)
                 Text(if(player.failed) {if(hindi) "फिर प्रयास करें" else "Unable to play · retry"} else if(player.loading) {if(hindi) "लोड हो रहा है…" else "Loading…"} else {if(hindi) "भजन बदलें" else "Change bhajan"},fontSize=11.sp)
             }
+            IconButton(onClick={player.skip(-1)},enabled=player.tracks.size>1) {Icon(Icons.Default.SkipPrevious,if(hindi) "पिछला" else "Previous")}
             IconButton(onClick=player::toggle) {Icon(if(player.failed) Icons.Default.Refresh else if(player.playing) Icons.Default.Pause else Icons.Default.PlayArrow,if(hindi) "चलाएँ / रोकें" else "Play / pause / retry")}
+            IconButton(onClick={player.skip(1)},enabled=player.tracks.size>1) {Icon(Icons.Default.SkipNext,if(hindi) "अगला" else "Next")}
             Icon(Icons.Default.KeyboardArrowUp,if(hindi) "खोलें" else "Expand player")
         }
     }

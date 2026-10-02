@@ -19,9 +19,9 @@ class WorshipSessionTest {
             val positions=(0 until TempleSceneLayout.OFFERED_FLOWER_SLOTS).map {
                 TempleSceneLayout.offeredFlower(deity,it)
             }
-            assertEquals(10,positions.toSet().size)
+            assertEquals(TempleSceneLayout.OFFERED_FLOWER_SLOTS,positions.toSet().size)
             assertTrue(positions.all {it.y in .685f.. .714f})
-            assertEquals(positions.first(),TempleSceneLayout.offeredFlower(deity,10))
+            assertEquals(positions.first(),TempleSceneLayout.offeredFlower(deity,TempleSceneLayout.OFFERED_FLOWER_SLOTS))
             assertTrue(positions.all {kotlin.math.abs(it.x-TempleSceneLayout.oil.x)>.045f})
         }
     }

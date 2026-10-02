@@ -1,17 +1,17 @@
 package com.worship.nityamandir.engine
 
 import android.content.Context
+import android.content.ComponentName
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import androidx.core.content.ContextCompat
 import android.os.SystemClock
 import android.util.Log
 import androidx.compose.runtime.*
 import androidx.media3.common.*
-import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.CacheWriter
-import androidx.media3.exoplayer.DefaultLoadControl
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.worship.nityamandir.BuildConfig
 import kotlinx.coroutines.*
 import org.json.JSONObject
@@ -20,7 +20,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.math.pow
 
-/** The screen owns one player; both player views share the same native playlist. */
+/** UI controller for the service-owned playlist and system media controls. */
 @android.annotation.SuppressLint("UnsafeOptInUsageError")
 class BhajanPlayer(context: Context) {
     data class Track(val title: String, val url: String, val id: String = url,
@@ -33,8 +33,8 @@ class BhajanPlayer(context: Context) {
     private val preferences = app.getSharedPreferences("music", Context.MODE_PRIVATE)
     private val base = BuildConfig.ACCOUNT_API_URL.trimEnd('/')
     private val catalogFile = File(app.filesDir, "bhajan-catalog-${base.hashCode()}.json")
-    private val ready = CompletableDeferred<ExoPlayer>()
-    private var player: ExoPlayer? = null
+    private val ready = CompletableDeferred<MediaController>()
+    private var player: MediaController? = null
     private var cacheSource: CacheDataSource.Factory? = null
     private var catalogJob: Job? = null
     private var startJob: Job? = null
@@ -47,7 +47,15 @@ class BhajanPlayer(context: Context) {
     private var firstFrameReported = false
     private var catalogFetched = false
 
-    var catalog by mutableStateOf<List<Track>>(emptyList()); private set
+    private val ganeshAarti = Track(
+            title = "Jai Ganesh Jai Ganesh Deva",
+            url = "https://archive.org/download/JaiGaneshJaiGaneshJaiGaneshDevaLordGaneshAarti/" +
+                "Jai%20Ganesh%20Jai%20Ganesh%20Jai%20Ganesh%20Deva%20-%20Lord%20Ganesh%20Aarti.mp3",
+            id = "jai_ganesh_deva",
+            collection = "ganesh", thumbnail = "shrine/idols/ganesh_hanuman.png", deity = "ganesh"
+        )
+
+    var catalog by mutableStateOf<List<Track>>(listOf(ganeshAarti)); private set
     var catalogLoading by mutableStateOf(false); private set
     var catalogError by mutableStateOf(false); private set
     var shuffle by mutableStateOf(preferences.getBoolean("shuffle", true)); private set
@@ -108,18 +116,26 @@ class BhajanPlayer(context: Context) {
                 cacheSource = withContext(Dispatchers.IO) {
                     runCatching { BhajanAudioCache.source(app) }.getOrNull()
                 }
-                val source = cacheSource ?: BhajanAudioCache.httpSource()
-                val native = ExoPlayer.Builder(app)
-                    .setMediaSourceFactory(DefaultMediaSourceFactory(source))
-                    .setLoadControl(DefaultLoadControl.Builder()
-                        .setBufferDurationsMs(15_000, 45_000, 1_000, 2_500).build())
-                    .build().apply {
-                        setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA)
-                            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), true)
-                        setHandleAudioBecomingNoisy(true)
-                        repeatMode = Player.REPEAT_MODE_ALL
-                        addListener(listener)
-                    }
+                val future = MediaController.Builder(app,
+                    SessionToken(app, ComponentName(app, BhajanPlaybackService::class.java))).buildAsync()
+                val native = suspendCancellableCoroutine<MediaController> { continuation ->
+                    future.addListener({
+                        try { continuation.resumeWith(Result.success(future.get())) }
+                        catch (e: Exception) { continuation.resumeWith(Result.failure(e)) }
+                    }, ContextCompat.getMainExecutor(app))
+                    continuation.invokeOnCancellation { MediaController.releaseFuture(future) }
+                }
+                tracks = List(native.mediaItemCount) { index ->
+                    val item = native.getMediaItemAt(index)
+                    Track(item.mediaMetadata.title?.toString().orEmpty(),
+                        item.mediaMetadata.extras?.getString("audio_url").orEmpty(), item.mediaId)
+                }
+                current = tracks.getOrNull(native.currentMediaItemIndex)
+                title = current?.title ?: "Choose a bhajan"
+                playing = native.isPlaying
+                loading = native.playbackState == Player.STATE_BUFFERING
+                repeat = native.repeatMode == Player.REPEAT_MODE_ONE
+                native.addListener(listener)
                 player = native; ready.complete(native)
             } catch (e: Exception) {
                 ready.completeExceptionally(e); failed = true; loading = false
@@ -146,7 +162,7 @@ class BhajanPlayer(context: Context) {
                     require(base.isNotBlank())
                     val connection = URL("$base/api/v2/music").openConnection() as HttpURLConnection
                     connection.connectTimeout = 8_000; connection.readTimeout = 8_000
-                    if (catalog.isNotEmpty()) {
+                    if (catalogFile.exists()) {
                         preferences.getString("etag-$base", null)?.let { connection.setRequestProperty("If-None-Match", it) }
                     }
                     try {
@@ -171,12 +187,12 @@ class BhajanPlayer(context: Context) {
 
     private fun parseCatalog(json: String): List<Track> {
         val rows = JSONObject(json).getJSONArray("tracks")
-        return List(rows.length()) { i -> rows.getJSONObject(i).let {
+        return (listOf(ganeshAarti) + List(rows.length()) { i -> rows.getJSONObject(i).let {
             Track(it.getString("title"), it.getString("audioUrl"), it.getString("id"),
                 it.getInt("order"), it.getString("collection"), it.getString("deity"), it.getString("thumbnail"),
                 it.optString("artist"), it.optInt("bitrateKbps"), it.optLong("durationSeconds"),
                 it.optDouble("volumeGainDb", 0.0).toFloat())
-        } }.filter { it.url.startsWith("https://") || BuildConfig.DEBUG && it.url.startsWith("http://") }
+        } }).distinctBy { it.url }.filter { it.url.startsWith("https://") || BuildConfig.DEBUG && it.url.startsWith("http://") }
     }
 
     fun changeShuffle(value: Boolean) {
@@ -196,9 +212,10 @@ class BhajanPlayer(context: Context) {
         }
     }
     private fun Track.mediaItem() = MediaItem.Builder().setMediaId(id).setUri(url)
-        .setCustomCacheKey(url).setMediaMetadata(MediaMetadata.Builder().setTitle(title).setArtist(artist).build()).build()
+        .setCustomCacheKey(url).setMediaMetadata(MediaMetadata.Builder().setTitle(title).setArtist(artist)
+            .setExtras(android.os.Bundle().apply { putString("audio_url", url) }).build()).build()
 
-    private fun launchPlayback(autoplay: Boolean, change: (ExoPlayer) -> Unit) {
+    private fun launchPlayback(autoplay: Boolean, change: (MediaController) -> Unit) {
         startJob?.cancel(); cancelPrefetch()
         loading = true; failed = false; requestedAt = SystemClock.elapsedRealtime(); firstFrameReported = false
         startJob = scope.launch {
@@ -211,15 +228,14 @@ class BhajanPlayer(context: Context) {
     }
     fun preload() { fetchCatalog() }
     fun startAarti() {
-        fetchCatalog()
-        startJob?.cancel()
-        val request = scope.launch(start = CoroutineStart.LAZY) {
-            if (catalog.isEmpty()) catalogJob?.join()
-            if (catalog.isEmpty()) { loading = false; return@launch }
-            playCatalog()
+        // The ritual always starts the original Ganesh aarti, independently of
+        // catalog availability, the selected idol, and the music shuffle setting.
+        val aarti = ganeshAarti
+        tracks = listOf(aarti) + BhajanQueue.order(catalog, shuffle, idol).filter { it.url != aarti.url }
+        failedIDs.clear(); notice = ""
+        launchPlayback(true) { native ->
+            native.setMediaItems(tracks.map { it.mediaItem() }, 0, 0L)
         }
-        startJob = request
-        request.start()
     }
     fun load(track: Track, autoplay: Boolean = true) {
         if (track.url.isBlank()) return
@@ -288,7 +304,7 @@ class BhajanPlayer(context: Context) {
     }
     private fun cancelPrefetch() { prefetchWriter?.cancel(); prefetchJob?.cancel(); prefetchJob = null }
     fun release() {
-        released = true; pause(); scope.cancel(); player?.release(); player = null
+        released = true; cancelPrefetch(); scope.cancel(); player?.removeListener(listener); player?.release(); player = null
         ready.cancel()
     }
 }

@@ -62,11 +62,12 @@ fun ShrineAgingOverlay(viewport:TempleViewport,dust:Float,webs:Float,space:Shrin
 fun OfferedFlowerAgingOverlay(viewport: TempleViewport, wilt: Float, offerings: List<FlowerOffering>) {
     if(wilt<=0f || offerings.isEmpty()) return
     Canvas(Modifier.fillMaxSize()) {
-        val unit=viewport.imageWidth
         fun at(x:Float,y:Float)=viewport.pixel(TemplePoint(x,y)).let {Offset(it.x,it.y)}
         // Brown curled petals sit directly on each flower, rather than tinting the whole plate.
-        val points=(0..1).flatMap { deity -> offerings.filter {it.deity==deity}.takeLast(TempleSceneLayout.OFFERED_FLOWER_SLOTS).map {it.position} }
-        points.forEachIndexed { i,p ->
+        val points=(0..1).flatMap { deity -> offerings.filter {it.deity==deity}.takeLast(TempleSceneLayout.OFFERED_FLOWER_SLOTS) }
+        points.forEachIndexed { i,offering ->
+            val p=offering.position
+            val unit=viewport.imageWidth*TempleSceneLayout.offeredFlowerSize(offering.flowerIndex)/.13f
             val center=at(p.x,p.y)
             repeat(7) { petal ->
                 val angle=petal*PI.toFloat()*2/7+i

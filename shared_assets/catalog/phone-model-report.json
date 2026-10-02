@@ -1,0 +1,698 @@
+{
+  "profile": "phone-balanced",
+  "models": [
+    {
+      "id": "aarti/golden",
+      "after": {
+        "bytes": 775924,
+        "triangles": 8000,
+        "materials": 1,
+        "texture_bytes": 310062,
+        "texture_pixels": 786432,
+        "images": [
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 28538
+          },
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 39125
+          },
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 242399
+          }
+        ]
+      },
+      "before": {
+        "bytes": 2868724,
+        "triangles": 18000,
+        "materials": 1,
+        "texture_bytes": 1984166,
+        "texture_pixels": 3145728,
+        "images": [
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 688226
+          },
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 592619
+          },
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 703321
+          }
+        ]
+      }
+    },
+    {
+      "id": "aarti/traditional",
+      "after": {
+        "bytes": 2238436,
+        "triangles": 7999,
+        "materials": 2,
+        "texture_bytes": 1909718,
+        "texture_pixels": 1572864,
+        "images": [
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 301307
+          },
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 330764
+          },
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 308484
+          },
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 159914
+          },
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 441426
+          },
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 367823
+          }
+        ]
+      },
+      "before": {
+        "bytes": 6120088,
+        "triangles": 17999,
+        "materials": 2,
+        "texture_bytes": 5516570,
+        "texture_pixels": 6291456,
+        "images": [
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 808452
+          },
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 943591
+          },
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 854416
+          },
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 359566
+          },
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 1363302
+          },
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 1187243
+          }
+        ]
+      }
+    },
+    {
+      "id": "accessories/bell",
+      "after": {
+        "bytes": 66524,
+        "triangles": 2498,
+        "materials": 1,
+        "texture_bytes": 0,
+        "texture_pixels": 0,
+        "images": []
+      },
+      "before": {
+        "bytes": 88160,
+        "triangles": 3458,
+        "materials": 1,
+        "texture_bytes": 0,
+        "texture_pixels": 0,
+        "images": []
+      }
+    },
+    {
+      "id": "accessories/copper_lota",
+      "after": {
+        "bytes": 65260,
+        "triangles": 2976,
+        "materials": 4,
+        "texture_bytes": 0,
+        "texture_pixels": 0,
+        "images": []
+      },
+      "before": {
+        "bytes": 125536,
+        "triangles": 5952,
+        "materials": 4,
+        "texture_bytes": 0,
+        "texture_pixels": 0,
+        "images": []
+      }
+    },
+    {
+      "id": "accessories/plate",
+      "after": {
+        "bytes": 832844,
+        "triangles": 3648,
+        "materials": 1,
+        "texture_bytes": 746604,
+        "texture_pixels": 786432,
+        "images": [
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 404622
+          },
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 321337
+          },
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 20645
+          }
+        ]
+      },
+      "before": {
+        "bytes": 2494484,
+        "triangles": 3648,
+        "materials": 1,
+        "texture_bytes": 2408245,
+        "texture_pixels": 3145728,
+        "images": [
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 1274034
+          },
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 834412
+          },
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 299799
+          }
+        ]
+      }
+    },
+    {
+      "id": "accessories/water_jug",
+      "after": {
+        "bytes": 180452,
+        "triangles": 8000,
+        "materials": 1,
+        "texture_bytes": 0,
+        "texture_pixels": 0,
+        "images": []
+      },
+      "before": {
+        "bytes": 400552,
+        "triangles": 18000,
+        "materials": 1,
+        "texture_bytes": 0,
+        "texture_pixels": 0,
+        "images": []
+      }
+    },
+    {
+      "id": "flowers/azalea",
+      "after": {
+        "bytes": 1078276,
+        "triangles": 11711,
+        "materials": 3,
+        "texture_bytes": 217550,
+        "texture_pixels": 786432,
+        "images": [
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 66812
+          },
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 69742
+          },
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 80996
+          }
+        ]
+      },
+      "before": {
+        "bytes": 5182376,
+        "triangles": 29711,
+        "materials": 3,
+        "texture_bytes": 3325754,
+        "texture_pixels": 3145728,
+        "images": [
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 1013266
+          },
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 1063324
+          },
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 1249164
+          }
+        ]
+      }
+    },
+    {
+      "id": "flowers/bouquet",
+      "after": {
+        "bytes": 1034508,
+        "triangles": 17621,
+        "materials": 1,
+        "texture_bytes": 109046,
+        "texture_pixels": 589824,
+        "images": [
+          {
+            "width": 768,
+            "height": 768,
+            "bytes": 109046
+          }
+        ]
+      },
+      "before": {
+        "bytes": 2384812,
+        "triangles": 29622,
+        "materials": 1,
+        "texture_bytes": 947822,
+        "texture_pixels": 1048576,
+        "images": [
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 947822
+          }
+        ]
+      }
+    },
+    {
+      "id": "flowers/orchid",
+      "after": {
+        "bytes": 1531448,
+        "triangles": 12000,
+        "materials": 1,
+        "texture_bytes": 1193698,
+        "texture_pixels": 1048576,
+        "images": [
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 9122
+          },
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 430906
+          },
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 530607
+          },
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 223063
+          }
+        ]
+      },
+      "before": {
+        "bytes": 4232548,
+        "triangles": 30000,
+        "materials": 1,
+        "texture_bytes": 3465952,
+        "texture_pixels": 4194304,
+        "images": [
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 8605
+          },
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 1364026
+          },
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 1605193
+          },
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 488128
+          }
+        ]
+      }
+    },
+    {
+      "id": "flowers/peony",
+      "after": {
+        "bytes": 1299156,
+        "triangles": 17963,
+        "materials": 1,
+        "texture_bytes": 125997,
+        "texture_pixels": 589824,
+        "images": [
+          {
+            "width": 768,
+            "height": 768,
+            "bytes": 125997
+          }
+        ]
+      },
+      "before": {
+        "bytes": 3042008,
+        "triangles": 29965,
+        "materials": 1,
+        "texture_bytes": 1194793,
+        "texture_pixels": 1048576,
+        "images": [
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 1194793
+          }
+        ]
+      }
+    },
+    {
+      "id": "flowers/rose",
+      "after": {
+        "bytes": 1022396,
+        "triangles": 12000,
+        "materials": 1,
+        "texture_bytes": 717235,
+        "texture_pixels": 786432,
+        "images": [
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 334235
+          },
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 347146
+          },
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 35854
+          }
+        ]
+      },
+      "before": {
+        "bytes": 2884156,
+        "triangles": 29999,
+        "materials": 1,
+        "texture_bytes": 2160044,
+        "texture_pixels": 3145728,
+        "images": [
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 1060858
+          },
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 1060992
+          },
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 38194
+          }
+        ]
+      }
+    },
+    {
+      "id": "flowers/sunflower",
+      "after": {
+        "bytes": 712460,
+        "triangles": 11824,
+        "materials": 1,
+        "texture_bytes": 59396,
+        "texture_pixels": 262144,
+        "images": [
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 59396
+          }
+        ]
+      },
+      "before": {
+        "bytes": 2257512,
+        "triangles": 29586,
+        "materials": 1,
+        "texture_bytes": 949103,
+        "texture_pixels": 1048576,
+        "images": [
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 949103
+          }
+        ]
+      }
+    },
+    {
+      "id": "lamps/brass_diya",
+      "after": {
+        "bytes": 1014876,
+        "triangles": 7989,
+        "materials": 1,
+        "texture_bytes": 567798,
+        "texture_pixels": 524288,
+        "images": [
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 313100
+          },
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 254698
+          }
+        ]
+      },
+      "before": {
+        "bytes": 2384428,
+        "triangles": 17980,
+        "materials": 1,
+        "texture_bytes": 1499950,
+        "texture_pixels": 2097152,
+        "images": [
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 926973
+          },
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 572977
+          }
+        ]
+      }
+    },
+    {
+      "id": "lamps/golden_oil",
+      "after": {
+        "bytes": 891224,
+        "triangles": 7996,
+        "materials": 1,
+        "texture_bytes": 278521,
+        "texture_pixels": 786432,
+        "images": [
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 26407
+          },
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 41251
+          },
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 210863
+          }
+        ]
+      },
+      "before": {
+        "bytes": 3054508,
+        "triangles": 17996,
+        "materials": 1,
+        "texture_bytes": 1844402,
+        "texture_pixels": 3145728,
+        "images": [
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 649720
+          },
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 619573
+          },
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 575109
+          }
+        ]
+      }
+    },
+    {
+      "id": "prasad/laddu",
+      "after": {
+        "bytes": 253284,
+        "triangles": 8000,
+        "materials": 1,
+        "texture_bytes": 37713,
+        "texture_pixels": 262144,
+        "images": [
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 37713
+          }
+        ]
+      },
+      "before": {
+        "bytes": 1198684,
+        "triangles": 18000,
+        "materials": 1,
+        "texture_bytes": 720912,
+        "texture_pixels": 1048576,
+        "images": [
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 720912
+          }
+        ]
+      }
+    },
+    {
+      "id": "shankh/classic",
+      "after": {
+        "bytes": 754828,
+        "triangles": 8000,
+        "materials": 1,
+        "texture_bytes": 427255,
+        "texture_pixels": 524288,
+        "images": [
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 222309
+          },
+          {
+            "width": 512,
+            "height": 512,
+            "bytes": 204946
+          }
+        ]
+      },
+      "before": {
+        "bytes": 1913852,
+        "triangles": 18000,
+        "materials": 1,
+        "texture_bytes": 1218605,
+        "texture_pixels": 2097152,
+        "images": [
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 753295
+          },
+          {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 465310
+          }
+        ]
+      }
+    },
+    {
+      "id": "shankh/ivory",
+      "after": {
+        "bytes": 145436,
+        "triangles": 8000,
+        "materials": 1,
+        "texture_bytes": 0,
+        "texture_pixels": 0,
+        "images": []
+      },
+      "before": {
+        "bytes": 325440,
+        "triangles": 18000,
+        "materials": 1,
+        "texture_bytes": 0,
+        "texture_pixels": 0,
+        "images": []
+      }
+    }
+  ],
+  "totals": {
+    "before": {
+      "bytes": 40957868,
+      "triangles": 335916,
+      "texture_bytes": 27236318,
+      "texture_pixels": 34603008
+    },
+    "after": {
+      "bytes": 13897332,
+      "triangles": 156225,
+      "texture_bytes": 6700593,
+      "texture_pixels": 9306112
+    }
+  }
+}

@@ -1,5 +1,6 @@
 """Validate catalog synchronization and GLB structure without third-party modules."""
 import json,pathlib,struct,hashlib
+from audit_models import inspect
 root=pathlib.Path(__file__).resolve().parents[1]
 source=root/'shared_assets/catalog/catalog.json';catalog=json.loads(source.read_text())
 for target in ['backend/internal/community/catalog.json','android/app/src/main/assets/shrine/catalog.json']:
@@ -20,7 +21,13 @@ for p in (assets/'shrine').rglob('*.glb'):
  assert all('uri' not in b for b in model.get('buffers',[])),p
  assert all('uri' not in image for image in model.get('images',[])),p
  assert not model.get('extensionsRequired'),f'Unsupported decoder dependency: {p}'
-for entry in json.loads((root/'shared_assets/catalog/model-report.json').read_text()):
+report=json.loads((root/'shared_assets/catalog/model-report.json').read_text())
+assert {str(p.relative_to(root)) for p in (assets/'shrine').rglob('*.glb')}=={entry['runtime'] for entry in report},'Model report must cover every runtime GLB'
+for entry in report:
  assert (root/entry['source']).exists(),entry
  assert (root/entry['runtime']).stat().st_size==entry['runtime_bytes'],entry
+ stats=inspect(root/entry['runtime'])
+ assert stats['triangles']==entry['runtime_faces'],entry
+ assert stats['triangles']<=entry['target_faces'],entry
+ assert all(max(image['width'],image['height'])<=entry['texture_limit'] for image in stats['images']),entry
 print(f"Verified {len(catalog['categories'])} categories, {sum(len(c['options']) for c in catalog['categories'])} choices and all embedded models.")

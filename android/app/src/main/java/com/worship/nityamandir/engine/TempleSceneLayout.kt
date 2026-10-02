@@ -22,7 +22,7 @@ object TempleSceneLayout {
     val conch = TemplePoint(.50f,1.10f)
     const val CONCH_SIZE = .34f
     const val CONCH_REST_DEPTH = .58f
-    const val FLOWER_COUNT = 24
+    const val FLOWER_COUNT = 6
     val bell = TemplePoint(.16f,.97f)
     const val AARTI_MODEL_SIZE = AARTI_WIDTH * 2f
     const val AARTI_DEPTH = 1.1f
@@ -41,9 +41,9 @@ object TempleSceneLayout {
     val aartiRest = TemplePoint(.79f,1.08f)
     fun feet(deity: Int, petal: Int = 0) = TemplePoint((if(deity==0) .405f else .604f)+(petal-2f)*.015f,.689f)
     fun plateFlower(index: Int): TemplePoint {
-        val angle = index*2.39996f
-        val radius = .012f + .014f*sqrt(index.toFloat())
-        return TemplePoint(plate.x-.16f+cos(angle)*radius,plate.y+sin(angle)*radius*.45f-.012f)
+        // Broad blooms form a shallow pile; depth separates overlapping projections.
+        return TemplePoint(plate.x-.13f+(index%3-1f)*FLOWER_SPACING,
+            plate.y+.01f+(index/3-.5f)*FLOWER_SPACING)
     }
     const val PRASAD_SIZE = .18f
     const val PRASAD_DEPTH = .95f
@@ -68,15 +68,37 @@ object TempleSceneLayout {
         }
     }
 
-    const val OFFERED_FLOWER_SLOTS = 10
+    const val OFFERED_FLOWER_SLOTS = 4
+    const val FLOWER_SPACING = .062f
     fun flowerSize(index: Int) = (.10f+(index%3)*.008f)*1.3f
 
-    // Two orderly rows at the feet, leaving the central lamp and prasad clear.
+    fun offeredFlowerSize(index: Int) = flowerSize(index)
+
+    // Four visible offerings per deity keep full-size blooms in a bounded bed.
     fun offeredFlower(deity: Int, count: Int): TemplePoint {
         val slot=count%OFFERED_FLOWER_SLOTS
         val center=if(deity==0) .395f else .615f
-        val column=when(slot%5) {0 -> 0;1 -> -1;2 -> 1;3 -> -2;else -> 2}
-        return TemplePoint(center+column*.030f,.685f+(slot/5)*.028f)
+        val column=if(slot%2==0) 0 else -1
+        return TemplePoint(center+column*.045f,.685f+(slot/2)*.028f)
+    }
+
+    /** Conservative spheres enclose any rotation of a model fitted to its largest dimension.
+     * Solve separation along scene Z once at placement time, not in the frame loop.
+     * Points use image-width fractions; scene X/Y use twice that scale.
+     */
+    fun flowerDepths(points: List<TemplePoint>, sizes: List<Float>, base: Float): List<Float> {
+        require(points.size == sizes.size)
+        val depths=MutableList(points.size) {base}
+        points.indices.forEach {i ->
+            for(j in 0 until i) {
+                val dx=2f*(points[i].x-points[j].x)
+                val dy=2f*(points[i].y-points[j].y)
+                val separation=sqrt(3f)*(sizes[i]+sizes[j])/2f+.004f
+                val remaining=separation*separation-dx*dx-dy*dy
+                if(remaining>0f) depths[i]=max(depths[i],depths[j]+sqrt(remaining))
+            }
+        }
+        return depths
     }
 
     fun flowerFlight(start: TemplePoint, end: TemplePoint, progress: Float): TemplePoint {

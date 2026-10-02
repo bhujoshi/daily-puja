@@ -11,7 +11,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import com.worship.nityamandir.engine.*
 import kotlin.math.*
 
-/** Crown-targeted pour, followed by runoff and a gentle settling ripple. */
+/** Continuous clear pour, crown splash, runoff and a few foreground water beads. */
 @Composable
 fun WaterFlowOverlay(deity:Int?,progress:Float,placement:IdolPlacement,modifier:Modifier=Modifier) {
     if(deity==null) return
@@ -21,16 +21,43 @@ fun WaterFlowOverlay(deity:Int?,progress:Float,placement:IdolPlacement,modifier:
         val crown=placement.crowns[deity];val source=at(placement.bathSource(deity));val impact=at(crown)
         val pour=(min((progress-.12f)/.14f,(.86f-progress)/.15f)).coerceIn(0f,1f)
         val settle=min(progress/.12f,(1-progress)/.15f).coerceIn(0f,1f)
-        val stream=Path().apply {moveTo(source.x,source.y);cubicTo(source.x,source.y+u*.025f,impact.x,impact.y-u*.025f,impact.x,impact.y)}
-        drawPath(stream,Color(0xFF98D4DF).copy(alpha=.40f*pour),style=Stroke(u*.008f,cap=StrokeCap.Round))
-        drawPath(stream,Color.White.copy(alpha=.80f*pour),style=Stroke(u*.0022f,cap=StrokeCap.Round))
-        repeat(18) {i ->
-            val t=(progress*3.5f+i/18f)%1f
-            // Cubic Bezier samples keep moving droplets attached to the curved stream.
-            val q=1-t
-            val x=q*q*q*source.x+3*q*q*t*source.x+3*q*t*t*impact.x+t*t*t*impact.x
-            val y=q*q*q*source.y+3*q*q*t*(source.y+u*.025f)+3*q*t*t*(impact.y-u*.025f)+t*t*t*impact.y
-            drawCircle(Color.White.copy(alpha=pour*.8f),u*.0014f,Offset(x,y))
+        // Connected edges narrow under gravity, with travelling ripples in the highlights.
+        fun streamPoint(t:Float,side:Float):Offset {
+            val radius=u*(.0045f-.0017f*t)*(1f+.13f*sin(t*24f-progress*48f))*(.65f+.35f*pour)
+            val center=source.x+(impact.x-source.x)*t+u*.0007f*sin(t*17f-progress*21f)*sin(PI.toFloat()*t)
+            return Offset(center+side*radius,source.y+(impact.y-source.y)*t)
+        }
+        val stream=Path().apply {
+            val first=streamPoint(0f,-1f);moveTo(first.x,first.y)
+            for(i in 1..36) {val p=streamPoint(i/36f,-1f);lineTo(p.x,p.y)}
+            for(i in 36 downTo 0) {val p=streamPoint(i/36f,1f);lineTo(p.x,p.y)}
+            close()
+        }
+        drawPath(stream,Brush.horizontalGradient(listOf(
+            Color(0xFFEAF4EB).copy(alpha=.66f*pour),
+            Color(0xFFB4D5D4).copy(alpha=.18f*pour),
+            Color(0xFFFFFFEF).copy(alpha=.78f*pour)
+        ),source.x-u*.005f,source.x+u*.005f))
+        for(side in listOf(-.78f,.72f)) {
+            val edge=Path().apply {
+                for(i in 0..36) {
+                    val p=streamPoint(i/36f,side)
+                    if(i==0) moveTo(p.x,p.y) else lineTo(p.x,p.y)
+                }
+            }
+            drawPath(edge,Color.White.copy(alpha=.58f*pour),style=Stroke(u*.0009f,cap=StrokeCap.Round))
+        }
+        repeat(9) {i ->
+            val t=(progress*3.5f+i/9f)%1f
+            val p=streamPoint(t,0f)
+            drawOval(Color.White.copy(alpha=pour*.32f),p-Offset(u*.0027f,u*.0007f),Size(u*.0054f,u*.0014f))
+        }
+        repeat(12) {i ->
+            val t=(progress*4f+i/12f)%1f
+            val side=if(i%2==0) -1f else 1f
+            val spread=.012f+(i%5)*.004f
+            val p=impact+Offset(side*u*spread*t,u*(-.030f*t+.041f*t*t))
+            drawOval(Color(0xFFEDF7F5).copy(alpha=pour*(1-t)*.62f),p,Size(u*.002f,u*.0034f))
         }
         val feet=at(TemplePoint(crown.x,placement.bottom))
         repeat(5) {i ->

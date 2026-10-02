@@ -80,7 +80,7 @@ fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCus
                         Text(tr("रोज़ की पूरी पूजा हमेशा निःशुल्क है।","Your complete daily puja is always free."),fontSize=14.sp)
                     }
                 }
-                DevotionStreak(profile?.optInt("streak") ?: 0,hindi,unlocked)
+                DevotionStreak(account.streakDays,hindi,unlocked)
                 if(!unlocked) {
                     Text(tr("या एक मित्र को आमंत्रित करें","Or invite one friend"),fontWeight=FontWeight.SemiBold)
                     Text(tr("मित्र की पहली पूरी पूजा पर पैकेज अनलॉक होगा।","The package unlocks when your friend completes their first puja."))
@@ -103,7 +103,7 @@ fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCus
             } else if(account.signedIn) {
                 Text(profile?.optString("phone")?.takeIf {it.isNotEmpty()}?.let {"+91 $it"} ?: profile?.optString("email").orEmpty(),fontSize=18.sp)
                 OutlinedButton(onClick={run {account.signOut();destination=DevotionPage.LOGIN}},enabled=!busy,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {Icon(Icons.Outlined.Logout,null);Spacer(Modifier.width(8.dp));Text(tr("लॉग आउट","Log out"))}
-                DevotionStreak(profile?.optInt("streak") ?: 0,hindi,unlocked)
+                DevotionStreak(account.streakDays,hindi,unlocked)
                 Text(tr("एक दिन छूट जाए तो फिर शुरू करें। अनलॉक किया पैकेज आपका रहेगा।","Missed a day? Begin again. An unlocked package stays yours."),fontSize=14.sp)
                 TextButton(onClick={destination=DevotionPage.PACKAGE}) {Icon(Icons.Outlined.AutoAwesome,null);Spacer(Modifier.width(8.dp));Text(tr("मंदिर पैकेज देखें","View temple package"))}
                 Text(tr("हाल की पूजा","Recent pujas"),fontSize=20.sp)

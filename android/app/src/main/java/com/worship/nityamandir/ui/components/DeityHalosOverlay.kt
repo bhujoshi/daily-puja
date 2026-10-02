@@ -3,6 +3,9 @@ package com.worship.nityamandir.ui.components
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -22,9 +25,19 @@ import kotlin.math.hypot
 @Composable
 fun DeityHalosOverlay(single: Boolean = false, altarOffset:Float=0f, heads:List<TemplePoint>?=null) {
     var seconds by remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(Unit) {
-        val start = withFrameNanos { it }
-        while(true) withFrameNanos { seconds = (it-start)/1_000_000_000f }
+    val lifecycle=LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            val start=withFrameNanos { it }-(seconds*1_000_000_000L).toLong()
+            var lastFrame=0L
+            while(true) withFrameNanos { now ->
+                // Decorative light needs only 30 updates/second, including on 120 Hz screens.
+                if(now-lastFrame >= 33_000_000L) {
+                    seconds=(now-start)/1_000_000_000f
+                    lastFrame=now
+                }
+            }
+        }
     }
     Canvas(Modifier.fillMaxSize()) {
         val viewport = TempleViewport(size.width, size.height)

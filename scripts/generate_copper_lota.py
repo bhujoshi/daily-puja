@@ -13,7 +13,8 @@ import struct
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "android/app/src/main/assets/shrine/accessories/copper_lota.glb"
-SIDES = 96
+# 48 segments keep the phone-sized silhouette smooth without excess geometry.
+SIDES = 48
 
 # (height, radius) pairs travel from the outer base, over the rim, then down
 # the visible inner wall to the bottom of the opening.
