@@ -14,4 +14,14 @@ class ShrineCleaningTest {
             assertEquals(1f,ShrineCleaning.coverage(space,ShrineCleaning.samples(space)),.0001f)
         }
     }
+
+    @Test fun lowerAltarObjectsCanBeWiped() {
+        val space=ShrineSpace.forId("original")
+        val plate=TempleSceneLayout.plate
+        assertTrue(ShrineCleaning.contains(space,plate))
+        assertTrue(ShrineCleaning.contains(space,TempleSceneLayout.bell))
+        assertFalse(ShrineCleaning.contains(space,TemplePoint(.05f,1.5f)))
+        assertTrue(ShrineCleaning.coverage(space,listOf(plate))>0f)
+        assertTrue(ShrineCleaning.coverage(space,ShrineCleaning.samples(space))>=.99f)
+    }
 }

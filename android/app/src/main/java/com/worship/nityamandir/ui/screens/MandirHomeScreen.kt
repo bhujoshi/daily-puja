@@ -263,7 +263,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                     if(!cleaningSweep) {
                         val viewport=TempleViewport(size.width.toFloat(),size.height.toFloat())
                         val point=TemplePoint((change.position.x-viewport.left)/viewport.imageWidth,change.position.y/viewport.imageWidth)
-                        if(shrineSpace.contains(point) && cleanedAreas.none {kotlin.math.hypot(it.x-point.x,it.y-point.y)<.018f}) {
+                        if(ShrineCleaning.contains(shrineSpace,point) && cleanedAreas.none {kotlin.math.hypot(it.x-point.x,it.y-point.y)<.018f}) {
                             cleanedAreas.add(point);wipe=ShrineCleaning.coverage(shrineSpace,cleanedAreas)
                             if(wipe>=.9f) {finishCleaning();session=WorshipSession(deityCount=selection.deityCount)}
                         }
@@ -278,24 +278,13 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                     IconButton(onClick={menu=true}) {Icon(Icons.Outlined.MoreHoriz,tr("मंदिर विकल्प","Temple options"))}
                 }
                 if(aging.needsCleaning) {
-                    Text(tr("मंदिर की स्वच्छता","Refresh your temple"),color=RitualInk,fontSize=20.sp)
-                    Text(tr("दिन ${ (aging.elapsedHours/24).toInt() } · मंदिर पर उंगली फेरें","Day ${(aging.elapsedHours/24).toInt()} · Swipe over the altar to wipe away dust"),color=RitualGold)
                     Button(onClick={cleaningSweep=true;session=WorshipSession(deityCount=selection.deityCount)},enabled=!cleaningSweep,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),colors=buttonColors) {Text(tr("छूकर मंदिर साफ़ करें","Tap to clean temple"))}
-                    LinearProgressIndicator(progress={wipe},modifier=Modifier.fillMaxWidth(),color=RitualGold)
                 } else if(aartiRunning) {
-                    Text(tr("आरती चल रही है …","Offering aarti …"),color=RitualInk,fontSize=16.sp)
-                    LinearProgressIndicator(progress={aarti.value},modifier=Modifier.fillMaxWidth().height(2.dp),color=RitualGold)
+                    RitualChoice(tr("आरती चल रही है …","Offering aarti …"),false,{},Modifier.fillMaxWidth(),enabled=false)
                 } else if(session.aartiComplete) {
-                    Text(tr("पूजा संपन्न हुई। आपका दिन मंगलमय हो।","Puja complete. May your day be peaceful."),color=RitualInk,fontSize=18.sp)
-                    DropdownMenuItem(
-                        leadingIcon={Icon(Icons.Outlined.AccountCircle,null)},
-                        text={Text(tr("मेरी प्रोफ़ाइल","My profile"))},
-                        onClick={devotionPage=DevotionPage.PROFILE;devotionSheet=true}
-                    )
+                    RitualChoice(tr("मेरी प्रोफ़ाइल","My profile"),false,
+                        {devotionPage=DevotionPage.PROFILE;devotionSheet=true},Modifier.fillMaxWidth())
                 } else {
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)) {
-                        repeat(WorshipStep.values().size) {i -> Box(Modifier.weight(1f).height(2.dp).background(if(i<=session.step.ordinal) Color(0xFFB39268) else Color(0xFFE0D8CF),RoundedCornerShape(4.dp)))}
-                    }
                     AnimatedContent(targetState=session.step,transitionSpec={ (slideInHorizontally {it}+fadeIn()) togetherWith (slideOutHorizontally {-it}+fadeOut()) },label="ritual step") { displayedStep ->
                     when(displayedStep) {
                         WorshipStep.LIGHT -> RitualChoice(tr("दीप जलाएँ","Light oil lamp"),session.lit,{light()},Modifier.fillMaxWidth())
@@ -312,17 +301,17 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                         WorshipStep.AARTI -> RitualChoice(if(aartiRunning) tr("आरती चल रही है …","Offering aarti …") else tr("दीप आरती आरंभ करें","Begin diya aarti"),session.aartiComplete,{startAarti()},Modifier.fillMaxWidth(),enabled=!aartiRunning)
                     }
                     }
-                    if(busy) LinearProgressIndicator(progress={when {prasadRunning -> prasad.value;bathTarget!=null -> bath.value;flowerFlights.isNotEmpty() -> flowerFlights.first().progress.value;bellRunning -> bell.value;conchRunning -> conch.value;else -> aarti.value}},modifier=Modifier.fillMaxWidth().height(2.dp),color=RitualGold)
-
                 }
             } }
         }
-        if(!menu && !musicSheet && !devotionSheet && !customizer && !curtainMoving) Popup(alignment=Alignment.TopCenter) {
+        if(!menu && !musicSheet && !devotionSheet && !customizer && !curtainMoving && (bhajan.current!=null || bhajan.loading)) Popup(alignment=Alignment.TopCenter) {
             Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal=14.dp,vertical=8.dp)) {
-                if(bhajan.current!=null || bhajan.loading) BhajanMiniPlayer(bhajan,hindi,{musicSheet=true})
-                if(!entered) Surface(Modifier.align(Alignment.End).padding(top=8.dp),shape=RoundedCornerShape(16.dp),color=cream,shadowElevation=4.dp) {
-                    IconButton(onClick={menu=true}) {Icon(Icons.Outlined.MoreHoriz,tr("मंदिर विकल्प","Temple options"))}
-                }
+                BhajanMiniPlayer(bhajan,hindi,{musicSheet=true})
+            }
+        }
+        if(!entered && !menu && !musicSheet && !devotionSheet && !customizer && !curtainMoving) Popup(alignment=Alignment.BottomEnd) {
+            Surface(Modifier.navigationBarsPadding().padding(horizontal=14.dp,vertical=8.dp),shape=RoundedCornerShape(16.dp),color=cream,shadowElevation=4.dp) {
+                IconButton(onClick={menu=true}) {Icon(Icons.Outlined.MoreHoriz,tr("मंदिर विकल्प","Temple options"))}
             }
         }
         if(customizer) ShrineControlsTheme { ShrineCustomizer(account,customizerDraft ?: selection,hindi,

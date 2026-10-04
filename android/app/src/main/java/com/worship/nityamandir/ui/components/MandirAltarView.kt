@@ -286,7 +286,6 @@ fun MandirAltarView(
             shadow(prasadShadowPoint.copy(y=prasadShadowPoint.y+.04f),.14f,.035f)
             shadow(TempleSceneLayout.aartiRest.copy(y=TempleSceneLayout.aartiRest.y+.04f),.15f,.035f)
         }
-        ShrineAgingOverlay(viewport,dustLevel,cobwebLevel,space=idolPlacement.space,cleaned=cleanedAreas)
         if(showModels) Scene(Modifier.fillMaxSize(),engine=engine,modelLoader=loader,cameraNode=camera,cameraManipulator=null,childNodes=nodes,isOpaque=false,
             onViewCreated={sceneView[0]=this},
             onFrame=frame@{ _ ->
@@ -360,6 +359,7 @@ fun MandirAltarView(
                 }
                 nodes.forEach { if(it is ShrineModelNode) it.alignBounds() }
             })
+        ShrineAgingOverlay(viewport,dustLevel,cobwebLevel,space=idolPlacement.space,idol=idolPlacement,cleaned=cleanedAreas)
         if(session.aartiComplete && !aartiRunning) DeityHalosOverlay(heads=idolPlacement.heads)
         val aartiPoint=if(aartiRunning) idolPlacement.aartiPosition(aartiProgress) else TempleSceneLayout.aartiRest
         Box(Modifier.fillMaxSize().zIndex(10f)) {
