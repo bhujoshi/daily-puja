@@ -22,7 +22,8 @@ android {
         targetSdk = 36
         versionCode = 6
         versionName = "1.0.5"
-        buildConfigField("String", "ACCOUNT_API_URL", "\"${providers.gradleProperty("accountApiUrl").getOrElse("")}\"")
+        // Android emulator alias for the development machine's localhost.
+        buildConfigField("String", "ACCOUNT_API_URL", "\"${providers.gradleProperty("accountApiUrl").getOrElse("http://10.0.2.2:8080")}\"")
 
         buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${providers.gradleProperty("googleClientId").getOrElse("")}\"")
 

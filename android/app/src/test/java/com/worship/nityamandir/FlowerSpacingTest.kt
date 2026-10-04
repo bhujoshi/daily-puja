@@ -28,6 +28,27 @@ class FlowerSpacingTest {
         verify((0 until TempleSceneLayout.FLOWER_COUNT).map(TempleSceneLayout::plateFlower),
             (0 until TempleSceneLayout.FLOWER_COUNT).maxOf(TempleSceneLayout::flowerSize))
     }
+    @Test fun carriedItemsStayAheadOfFullFlowerBeds() {
+        val plateDepths=TempleSceneLayout.flowerDepths(
+            (0 until TempleSceneLayout.FLOWER_COUNT).map(TempleSceneLayout::plateFlower),
+            (0 until TempleSceneLayout.FLOWER_COUNT).map(TempleSceneLayout::flowerSize),.15f)
+        assertTrue(TempleSceneLayout.FLOWER_FLIGHT_DEPTH > plateDepths.max()+.3f)
+        assertTrue(TempleSceneLayout.ACTIVE_RITUAL_DEPTH > TempleSceneLayout.FLOWER_FLIGHT_DEPTH)
+
+        for(shrine in listOf("original","marble","ivory","carved")) {
+            for(idol in listOf("original","ganesh_hanuman","shiva","lakshmi","durga","ram_darbar")) {
+                val selection=ShrineSelection(mapOf("shrine" to shrine,"idols" to idol))
+                val placement=IdolPlacement(selection)
+                val offered=(0 until selection.deityCount).flatMap { deity ->
+                    (0 until TempleSceneLayout.OFFERED_FLOWER_SLOTS).map { count -> placement.offering(deity,count) }
+                }
+                val largestFlower=(0 until TempleSceneLayout.FLOWER_COUNT).maxOf(TempleSceneLayout::offeredFlowerSize)
+                val sizes=List(offered.size) {largestFlower}
+                val offeredDepths=TempleSceneLayout.flowerDepths(offered,sizes,.20f)
+                assertTrue("$shrine/$idol: ${offeredDepths.max()}",TempleSceneLayout.FLOWER_FLIGHT_DEPTH > offeredDepths.max()+.3f)
+            }
+        }
+    }
     @Test fun offeredBoundsRemainSeparateAcrossLayoutsAndSlotReuse() {
         for(shrine in listOf("original","marble","ivory","carved")) {
             for(idol in listOf("original","ganesh_hanuman","shiva","lakshmi","durga","ram_darbar")) {

@@ -44,14 +44,29 @@ class IdolPlacement(selection:ShrineSelection) {
         val shift=(top+height*.60f)-.58f
         return base.copy(y=base.y+shift*TempleSceneLayout.pickup(progress))
     }
-    val prasadFloor=TemplePoint(.60f,space.floorY+.065f)
+    val prasadFloor = TemplePoint(
+        when(selection["shrine"]) {
+            "carved" -> .22f
+            "marble" -> .26f
+            "ivory" -> .28f
+            else -> .28f
+        },
+        when(selection["shrine"]) {
+            "carved" -> space.floorY + .02f
+            "marble" -> space.floorY + .01f
+            "ivory" -> space.floorY + .01f
+            else -> space.floorY + .015f
+        }
+    )
     fun prasadPosition(progress:Float):TemplePoint {
         val base=TempleSceneLayout.prasadPosition(progress)
         val p=progress.coerceIn(0f,1f)
         val rise=(p/.22f).coerceIn(0f,1f)
         val settle=((p-.78f)/.22f).coerceIn(0f,1f)
         val altarShift=top+height*.60f-.56f
-        return base.copy(y=base.y+altarShift*rise*(1-settle)+(prasadFloor.y-TempleSceneLayout.prasadFloor.y)*settle)
+        val targetX=base.x+(prasadFloor.x-TempleSceneLayout.prasadFloor.x)*settle
+        val targetY=base.y+altarShift*rise*(1-settle)+(prasadFloor.y-TempleSceneLayout.prasadFloor.y)*settle
+        return TemplePoint(targetX,targetY)
     }
     fun offering(deity:Int,count:Int):TemplePoint {
         val base=TempleSceneLayout.offeredFlower(deity,count)

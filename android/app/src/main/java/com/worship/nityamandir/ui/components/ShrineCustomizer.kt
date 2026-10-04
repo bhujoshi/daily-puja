@@ -20,10 +20,12 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.worship.nityamandir.data.*
 import com.worship.nityamandir.engine.WorshipSession
+import com.worship.nityamandir.engine.BhajanPlayer
 import kotlinx.coroutines.launch
 
 @Composable
-fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boolean,onDismiss:()->Unit,onAccount:(ShrineSelection)->Unit,onApplied:(ShrineSelection)->Unit) {
+fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boolean,onDismiss:()->Unit,onAccount:(ShrineSelection)->Unit,onApplied:(ShrineSelection)->Unit,
+    player:BhajanPlayer,onMusic:()->Unit) {
     val context=LocalContext.current
     val catalog=remember {ShrineCatalog(context)}
     var draft by remember {mutableStateOf(catalog.normalize(current))}
@@ -38,6 +40,7 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
     Dialog(onDismissRequest={if(!busy) onDismiss()},properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Surface(Modifier.fillMaxSize(),color=Color(0xFFFFF7EC)) {
             Column(Modifier.safeDrawingPadding().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                if(player.current!=null || player.loading) BhajanMiniPlayer(player,hindi,onMusic)
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                     Text(tr("अपना मंदिर सजाएँ","Make this temple yours"),Modifier.weight(1f),fontSize=23.sp)
                     TextButton(onClick=onDismiss,enabled=!busy) {Text(tr("बंद करें","Close"))}
@@ -100,6 +103,9 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                         Button(onClick={showPreview=false},modifier=Modifier.heightIn(min=52.dp)) {Text(tr("चुनाव पर वापस जाएँ","Back to choices"))}
                     }
                 }
+            }
+            if(player.current!=null || player.loading) androidx.compose.ui.window.Popup(alignment=Alignment.TopCenter) {
+                BhajanMiniPlayer(player,hindi,{showPreview=false;onMusic()},Modifier.statusBarsPadding().padding(16.dp))
             }
         }
     }

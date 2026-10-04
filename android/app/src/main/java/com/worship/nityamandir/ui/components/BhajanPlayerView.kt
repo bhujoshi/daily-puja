@@ -45,7 +45,7 @@ fun BhajanMiniPlayer(player: BhajanPlayer, hindi: Boolean, onExpand: () -> Unit,
             IconButton(onClick={player.skip(-1)},enabled=player.tracks.size>1) {Icon(Icons.Default.SkipPrevious,if(hindi) "पिछला" else "Previous")}
             IconButton(onClick=player::toggle) {Icon(if(player.failed) Icons.Default.Refresh else if(player.playing) Icons.Default.Pause else Icons.Default.PlayArrow,if(hindi) "चलाएँ / रोकें" else "Play / pause / retry")}
             IconButton(onClick={player.skip(1)},enabled=player.tracks.size>1) {Icon(Icons.Default.SkipNext,if(hindi) "अगला" else "Next")}
-            Icon(Icons.Default.KeyboardArrowUp,if(hindi) "खोलें" else "Expand player")
+            IconButton(onClick=player::remove) {Icon(Icons.Default.Close,if(hindi) "संगीत हटाएँ" else "Remove music player")}
         }
     }
 }
@@ -86,6 +86,8 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
             properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
             Surface(Modifier.fillMaxSize(), color = MusicCream) {
                 Column(Modifier.fillMaxSize().systemBarsPadding()) {
+                    if (player.current != null || player.loading) BhajanMiniPlayer(player, hindi, onDismiss,
+                        Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                     Row(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(tr("भक्ति का संगीत", "Music for your mandir"), fontWeight = FontWeight.Bold, fontSize = 24.sp)

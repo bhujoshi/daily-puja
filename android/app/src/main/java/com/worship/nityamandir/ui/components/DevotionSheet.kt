@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.worship.nityamandir.data.DevotionAccount
+import com.worship.nityamandir.engine.BhajanPlayer
 import kotlinx.coroutines.launch
 
 enum class DevotionPage { PROFILE, PACKAGE, LOGIN }
@@ -55,7 +56,8 @@ fun DevotionStreak(streak:Int, hindi:Boolean, unlocked:Boolean=false) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCustomize:()->Unit,canCustomize:Boolean=true,page:DevotionPage=DevotionPage.PROFILE) {
+fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCustomize:()->Unit,canCustomize:Boolean=true,page:DevotionPage=DevotionPage.PROFILE,
+    player:BhajanPlayer,onMusic:()->Unit) {
     fun tr(hi:String,en:String)=if(hindi) hi else en
     val scope=rememberCoroutineScope();val context=LocalContext.current
     var destination by remember(page) {mutableStateOf(page)}
@@ -66,7 +68,9 @@ fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCus
     val unlocked=profile?.optBoolean("unlocked")==true
     fun run(action:suspend ()->Unit) {scope.launch {busy=true;message="";try {action()} catch(e:Exception) {message=e.message ?: tr("फिर कोशिश करें","Please try again")} finally {busy=false}}}
     ModalBottomSheet(onDismissRequest=onDismiss,sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true),containerColor=Color(0xFFFFF7EC)) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+        Column(Modifier.fillMaxWidth()) {
+            if(player.current!=null || player.loading) BhajanMiniPlayer(player,hindi,onMusic,Modifier.padding(horizontal=24.dp,vertical=8.dp))
+            Column(Modifier.fillMaxWidth().weight(1f,fill=false).verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 Icon(if(destination==DevotionPage.PACKAGE) Icons.Outlined.AutoAwesome else Icons.Outlined.AccountCircle,null,tint=RitualGold,modifier=Modifier.size(32.dp))
                 Text(when(destination) {DevotionPage.PACKAGE -> tr("मंदिर पैकेज","Temple package");DevotionPage.LOGIN -> tr("लॉग इन","Log in");else -> tr("मेरी प्रोफ़ाइल","My profile")},fontSize=25.sp,fontWeight=FontWeight.SemiBold)
@@ -158,6 +162,7 @@ fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCus
             if(busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             if(message.isNotEmpty()) Text(message,color=MaterialTheme.colorScheme.error)
             TextButton(onClick=onDismiss,modifier=Modifier.fillMaxWidth()) {Text(tr("पूजा पर वापस जाएँ","Return to puja"))}
+            }
         }
     }
     if(deleteConfirm) AlertDialog(onDismissRequest={deleteConfirm=false},title={Text(tr("खाता मिटाएँ?","Delete account?"))},text={Text(tr("पूजा का इतिहास और अनलॉक हटा दिए जाएँगे।","Your puja history and unlock will be removed."))},confirmButton={TextButton(onClick={deleteConfirm=false;run {account.delete()}}){Text(tr("मिटाएँ","Delete"))}},dismissButton={TextButton(onClick={deleteConfirm=false}){Text(tr("वापस","Cancel"))}})

@@ -35,6 +35,7 @@ class BhajanPlayer(context: Context) {
     private val catalogFile = File(app.filesDir, "bhajan-catalog-${base.hashCode()}.json")
     private val ready = CompletableDeferred<MediaController>()
     private var player: MediaController? = null
+    private var clearOnConnect = false
     private var cacheSource: CacheDataSource.Factory? = null
     private var catalogJob: Job? = null
     private var startJob: Job? = null
@@ -124,6 +125,9 @@ class BhajanPlayer(context: Context) {
                         catch (e: Exception) { continuation.resumeWith(Result.failure(e)) }
                     }, ContextCompat.getMainExecutor(app))
                     continuation.invokeOnCancellation { MediaController.releaseFuture(future) }
+                }
+                if (clearOnConnect) {
+                    native.stop(); native.clearMediaItems(); clearOnConnect = false
                 }
                 tracks = List(native.mediaItemCount) { index ->
                     val item = native.getMediaItemAt(index)
@@ -255,6 +259,14 @@ class BhajanPlayer(context: Context) {
     fun pause() {
         startJob?.cancel(); cancelPrefetch(); player?.pause(); playing = false
         if (player == null || player?.mediaItemCount == 0) loading = false
+    }
+    fun remove() {
+        startJob?.cancel(); cancelPrefetch()
+        player?.run { stop(); clearMediaItems() } ?: run { clearOnConnect = true }
+        tracks = emptyList(); current = null; title = "Choose a bhajan"
+        playing = false; loading = false; failed = false
+        position = 0L; duration = 0L; notice = ""
+        failedIDs.clear()
     }
     fun seek(ms: Long) { player?.seekTo(ms.coerceIn(0, duration)); syncProgress() }
     fun toggleRepeat() {

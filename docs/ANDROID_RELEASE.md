@@ -28,7 +28,9 @@ prepend `clean` to the Gradle tasks if needed.
 Release builds use `https://mcp-daily-puja-backend-staging-b3mqb.sprites.app`
 as the account API base URL. The app adds `/api/v2/` to request paths.
 To override the URL, pass `-PaccountApiUrl=https://your-backend.example` to
-Gradle. Debug builds require an explicit `accountApiUrl` property to connect.
+Gradle. Debug builds default to `http://10.0.2.2:8080`, the Android emulator's
+route to the development machine's localhost. Pass `-PaccountApiUrl=...` for a
+different server, including a reachable HTTPS URL when testing on a device.
 
 Google login requires `-PgoogleClientId=YOUR_WEB_CLIENT_ID.apps.googleusercontent.com`
 and the same `GOOGLE_CLIENT_ID` on the backend. Register the installed build's
