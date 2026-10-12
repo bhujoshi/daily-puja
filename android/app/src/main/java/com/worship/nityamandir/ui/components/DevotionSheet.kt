@@ -1,6 +1,6 @@
 package com.worship.nityamandir.ui.components
 
-import android.content.Intent
+import com.worship.nityamandir.data.WhatsAppShare
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.res.painterResource
@@ -26,10 +26,10 @@ import com.worship.nityamandir.data.DevotionAccount
 import com.worship.nityamandir.engine.BhajanPlayer
 import kotlinx.coroutines.launch
 
-enum class DevotionPage { PROFILE, PACKAGE, LOGIN }
+enum class DevotionPage { PROFILE, PACKAGE, LOGIN, SHARE }
 
 @Composable
-fun DevotionStreak(streak:Int, hindi:Boolean, unlocked:Boolean=false) {
+fun DevotionStreak(streak:Int, hindi:Boolean) {
     val completed=streak.coerceIn(0,7)
     Surface(color=Color(0xFFF2E5D2),shape=RoundedCornerShape(20.dp)) {
         Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -48,8 +48,7 @@ fun DevotionStreak(streak:Int, hindi:Boolean, unlocked:Boolean=false) {
                     }
                 }
             }
-            Text(if(unlocked) {if(hindi) "आपका मंदिर पैकेज अनलॉक है" else "Your temple package is unlocked"}
-                else if(hindi) "${7-completed} और लगातार पूजा के दिन — पैकेज अनलॉक करें" else "${7-completed} more consecutive puja days to unlock",fontSize=14.sp)
+            Text(if(hindi) "हर दिन पूरी पूजा पर 1 सिक्का। कमाए सिक्के बने रहते हैं।" else "Earn 1 coin for each day you complete puja. Your coins stay with you.",fontSize=14.sp)
         }
     }
 }
@@ -61,55 +60,54 @@ fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCus
     fun tr(hi:String,en:String)=if(hindi) hi else en
     val scope=rememberCoroutineScope();val context=LocalContext.current
     var destination by remember(page) {mutableStateOf(page)}
-    var invite by remember {mutableStateOf("")}
+    var shareAfterLogin by remember {mutableStateOf(page==DevotionPage.SHARE)}
     var busy by remember {mutableStateOf(false)};var message by remember {mutableStateOf("")}
     var deleteConfirm by remember {mutableStateOf(false)}
     val profile=account.profile
-    val unlocked=profile?.optBoolean("unlocked")==true
     fun run(action:suspend ()->Unit) {scope.launch {busy=true;message="";try {action()} catch(e:Exception) {message=e.message ?: tr("फिर कोशिश करें","Please try again")} finally {busy=false}}}
+    suspend fun share() {
+        val invitation=account.createShare()
+        val text=tr("पवित्र मंदिर पर मेरे साथ पूजा करें। डाउनलोड करें और Google से साइन इन करें:\n", "Join me for daily puja on Pavitra Mandir. Install and sign in with Google:\n")+invitation.getString("url")
+        WhatsAppShare.open(context,text)
+        account.queueShareOpened(invitation.getString("share_id"))
+        try { account.recordShareOpened(invitation.getString("share_id")) }
+        catch (_: Exception) { message=tr("WhatsApp खुल गया। शेयर गिनती अगली बार सहेजेंगे।", "WhatsApp opened. Your share count will sync when connected.") }
+    }
+    LaunchedEffect(page) {
+        if(page==DevotionPage.SHARE && account.googleAccount) run {shareAfterLogin=false;share()}
+    }
     ModalBottomSheet(onDismissRequest=onDismiss,sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true),containerColor=Color(0xFFFFF7EC)) {
         Column(Modifier.fillMaxWidth()) {
             if(player.current!=null || player.loading) BhajanMiniPlayer(player,hindi,onMusic,Modifier.padding(horizontal=24.dp,vertical=8.dp))
             Column(Modifier.fillMaxWidth().weight(1f,fill=false).verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 Icon(if(destination==DevotionPage.PACKAGE) Icons.Outlined.AutoAwesome else Icons.Outlined.AccountCircle,null,tint=RitualGold,modifier=Modifier.size(32.dp))
-                Text(when(destination) {DevotionPage.PACKAGE -> tr("मंदिर पैकेज","Temple package");DevotionPage.LOGIN -> tr("लॉग इन","Log in");else -> tr("मेरी प्रोफ़ाइल","My profile")},fontSize=25.sp,fontWeight=FontWeight.SemiBold)
+                Text(when(destination) {DevotionPage.PACKAGE -> tr("सिक्के और अनलॉक","Coins & unlocks");DevotionPage.SHARE -> tr("मित्र को आमंत्रित करें","Invite a friend");DevotionPage.LOGIN -> tr("लॉग इन","Log in");else -> tr("मेरी प्रोफ़ाइल","My profile")},fontSize=25.sp,fontWeight=FontWeight.SemiBold)
             }
+            Surface(color=Color(0xFFF2E5D2),shape=RoundedCornerShape(20.dp)) {
+                Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                    Text(tr("${account.coins} सिक्के", "${account.coins} coins"),fontSize=28.sp,fontWeight=FontWeight.SemiBold)
+                    Text(tr("पूरी पूजा · दिन में 1 सिक्का\nमित्र का नया इंस्टॉल और Google लॉगिन · 1 सिक्का", "Daily puja · 1 coin per day\nFriend installs and signs in with Google · 1 coin each"))
+                    Text(tr("मंदिर · 7 सिक्के प्रति रूप   फूल · 2 सिक्के प्रति किस्म", "Shrine · 7 coins each   Flower · 2 coins each"),fontSize=14.sp)
+                    Text(tr("शंख, आरती, प्रसाद, मूर्तियाँ और दीपक मुफ़्त हैं।", "Shankh, aarti, prasad, idols and oil lamps are free."),fontSize=14.sp)
+                    if(account.signedIn) Text(tr("WhatsApp खुले: ${profile?.optInt("share_count") ?: 0} · नए मित्र: ${profile?.optInt("referrals") ?: 0}", "WhatsApp opens: ${profile?.optInt("share_count") ?: 0} · New friends: ${profile?.optInt("referrals") ?: 0}"),fontSize=14.sp)
+                }
+            }
+            RitualChoice(tr("WhatsApp पर साझा करें", "Share on WhatsApp"), false, {
+                if(account.googleAccount) run {share()}
+                else {shareAfterLogin=true;destination=DevotionPage.LOGIN}
+            },Modifier.fillMaxWidth(),enabled=!busy)
+            if(shareAfterLogin && !account.googleAccount) Text(tr("साझा करने और सिक्के सहेजने के लिए पहले Google से साइन इन करें।", "Sign in with Google first to share and keep your coins."))
             if(destination==DevotionPage.PACKAGE) {
-                Surface(color=if(unlocked) Color(0xFFE4EFDF) else Color(0xFFF2E5D2),shape=RoundedCornerShape(20.dp)) {
-                    Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                        Icon(if(unlocked) Icons.Outlined.LockOpen else Icons.Outlined.Lock,null,tint=RitualGold)
-                        Text(if(unlocked) tr("आपका अपना मंदिर, अनलॉक","Your personal temple, unlocked") else tr("अपनी पूजा से अनलॉक करें","Unlock through your daily puja"),fontSize=22.sp)
-                        Text(tr("मंदिर, मूर्तियाँ, फूल, दीपक, शंख और प्रसाद के सभी रूप।","All shrine designs, idols, flowers, lamps, shankh and prasad."))
-                        Text(tr("रोज़ की पूरी पूजा हमेशा निःशुल्क है।","Your complete daily puja is always free."),fontSize=14.sp)
-                    }
-                }
-                DevotionStreak(account.streakDays,hindi,unlocked)
-                if(!unlocked) {
-                    Text(tr("या एक मित्र को आमंत्रित करें","Or invite one friend"),fontWeight=FontWeight.SemiBold)
-                    Text(tr("मित्र की पहली पूरी पूजा पर पैकेज अनलॉक होगा।","The package unlocks when your friend completes their first puja."))
-                }
-                Button(onClick=onCustomize,enabled=!busy && canCustomize,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)) {
-                    Icon(Icons.Outlined.TempleHindu,null);Spacer(Modifier.width(8.dp))
-                    Text(if(unlocked) tr("मेरा मंदिर सजाएँ","Customize my temple") else tr("मंदिर के रूप देखें","Explore temple designs"))
-                }
-                if(account.signedIn && !unlocked) {
-                    OutlinedButton(onClick={
-                        val text=tr("पवित्र मंदिर पर मेरे साथ पूजा करें। निमंत्रण कोड: ","Join me for puja on Pavitra Mandir. Invitation code: ")+profile?.optString("invite_code")+"\nhttps://play.google.com/store/apps/details?id=com.pavitramandir.app"
-                        context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,text),tr("निमंत्रण भेजें","Share invitation")))
-                    },modifier=Modifier.fillMaxWidth(),enabled=!busy) {Icon(Icons.Outlined.PersonAdd,null);Spacer(Modifier.width(8.dp));Text(tr("मित्र को आमंत्रित करें","Invite a friend"))}
-                    if(profile?.optBoolean("mock_payments")==true) {
-                        OutlinedButton(onClick={run {account.purchase()}},enabled=!busy,modifier=Modifier.fillMaxWidth()) {Text(tr("डेमो अनलॉक · ₹0","Demo unlock · ₹0"))}
-                        Text(tr("परीक्षण भुगतान। कोई पैसा नहीं कटेगा।","Test payment. No money will be charged."),fontSize=12.sp)
-                    }
-                }
-                if(!account.signedIn) OutlinedButton(onClick={destination=DevotionPage.LOGIN},modifier=Modifier.fillMaxWidth()) {Icon(Icons.Outlined.Login,null);Spacer(Modifier.width(8.dp));Text(tr("प्रगति सहेजने के लिए लॉग इन करें","Log in to save your progress"))}
-            } else if(account.signedIn) {
+                DevotionStreak(account.streakDays,hindi)
+                RitualChoice(tr("मेरा मंदिर सजाएँ","Customize my temple"),false,onCustomize,Modifier.fillMaxWidth(),enabled=!busy && canCustomize)
+                if(!account.signedIn) OutlinedButton(onClick={destination=DevotionPage.LOGIN},modifier=Modifier.fillMaxWidth()) {Text(tr("सिक्के सहेजने के लिए लॉग इन करें","Log in to keep your coins"))}
+            } else if(account.signedIn && destination!=DevotionPage.LOGIN) {
                 Text(profile?.optString("phone")?.takeIf {it.isNotEmpty()}?.let {"+91 $it"} ?: profile?.optString("email").orEmpty(),fontSize=18.sp)
                 OutlinedButton(onClick={run {account.signOut();destination=DevotionPage.LOGIN}},enabled=!busy,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {Icon(Icons.Outlined.Logout,null);Spacer(Modifier.width(8.dp));Text(tr("लॉग आउट","Log out"))}
-                DevotionStreak(account.streakDays,hindi,unlocked)
-                Text(tr("एक दिन छूट जाए तो फिर शुरू करें। अनलॉक किया पैकेज आपका रहेगा।","Missed a day? Begin again. An unlocked package stays yours."),fontSize=14.sp)
-                TextButton(onClick={destination=DevotionPage.PACKAGE}) {Icon(Icons.Outlined.AutoAwesome,null);Spacer(Modifier.width(8.dp));Text(tr("मंदिर पैकेज देखें","View temple package"))}
+                DevotionStreak(account.streakDays,hindi)
+                Text(tr("एक दिन छूटने पर भी आपके सिक्के और अनलॉक बने रहते हैं।","Your coins and unlocked items stay yours, even if you miss a day."),fontSize=14.sp)
+                TextButton(onClick={destination=DevotionPage.PACKAGE}) {Icon(Icons.Outlined.AutoAwesome,null);Spacer(Modifier.width(8.dp));Text(tr("सिक्के और अनलॉक देखें","View coins & unlocks"))}
                 Text(tr("हाल की पूजा","Recent pujas"),fontSize=20.sp)
                 val days=profile?.optJSONArray("days")
                 val dates=(0 until (days?.length() ?: 0)).map {days!!.getString(it)}.toSet()
@@ -128,25 +126,32 @@ fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCus
                 else for(i in history.length()-1 downTo maxOf(0,history.length()-8)) {
                     val event=history.getJSONObject(i)
                     val label=when(event.optString("kind")) {
-                        "puja_completed" -> tr("पूजा पूरी हुई","Puja completed")
+                        "puja_completed" -> tr("पूजा पूरी हुई · +1 सिक्का","Puja completed · +1 coin")
                         "shrine_saved" -> tr("मंदिर सहेजा","Temple design saved")
-                        "streak_unlock","referral_unlock","mock_purchase" -> tr("पैकेज अनलॉक","Package unlocked")
+                        "streak_unlock","referral_unlock","mock_purchase","package_granted" -> tr("पैकेज अनलॉक","Package unlocked")
+                        "referral_coin" -> tr("मित्र का इंस्टॉल · +1 सिक्का","Friend installed · +1 coin")
+                        "coin_unlock" -> tr("सिक्कों से अनलॉक","Unlocked with coins")
+                        "whatsapp_opened" -> tr("WhatsApp निमंत्रण खुला","WhatsApp invitation opened")
                         else -> tr("खाता बनाया","Account created")
                     }
                     Text("$label · ${event.optString("at").take(10)}",fontSize=14.sp)
                 }
                 TextButton(onClick={deleteConfirm=true},enabled=!busy) {Text(tr("खाता और गतिविधि मिटाएँ","Delete account and activity"))}
             } else {
+                if(account.referredInstall) Text(tr("Google से साइन इन करके अपने मित्र का निमंत्रण पूरा करें। पूजा बिना लॉगिन के भी मुफ़्त है।", "Sign in with Google to credit your friend's invitation. Puja is free even without signing in."))
                 Text(tr("अपनी पूजा श्रृंखला और मंदिर के रूप सहेजें।","Save your puja streak and your temple designs."))
                 if(!account.configured) Text(tr("खाता सेवा अभी जुड़ी नहीं है। पूजा जारी रख सकते हैं।","Account service is not connected yet. You can continue your puja."))
                 else {
                     if (!account.googleConfigured) {
                         Text(tr("Google लॉगिन अभी जुड़ा नहीं है। पूजा जारी रख सकते हैं।", "Google sign-in is not connected yet. You can continue your puja."))
                     } else {
-                        OutlinedTextField(invite,{invite=it},label={Text(tr("निमंत्रण कोड (वैकल्पिक)","Invitation code (optional)"))},singleLine=true,enabled=!busy,modifier=Modifier.fillMaxWidth())
                         OutlinedButton(onClick={run {
-                            account.signInWithGoogle(context,invite)
-                            if (account.signedIn) { destination=DevotionPage.PROFILE;account.sync() }
+                            account.signInWithGoogle(context, "")
+                            if (account.signedIn) {
+                                destination=DevotionPage.PROFILE
+                                account.sync()
+                                if(shareAfterLogin) {shareAfterLogin=false;share()}
+                            }
                         }},enabled=!busy,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),border=BorderStroke(1.dp,Color(0xFF747775)),colors=ButtonDefaults.outlinedButtonColors(containerColor=Color.White,contentColor=Color(0xFF1F1F1F))) {
                             Image(painterResource(R.drawable.google_sign_in_logo),contentDescription=null,modifier=Modifier.size(20.dp))
                             Spacer(Modifier.width(10.dp))

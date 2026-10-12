@@ -360,6 +360,11 @@ fun MandirAltarView(
                 nodes.forEach { if(it is ShrineModelNode) it.alignBounds() }
             })
         ShrineAgingOverlay(viewport,dustLevel,cobwebLevel,space=idolPlacement.space,idol=idolPlacement,cleaned=cleanedAreas)
+        if(GaneshMouseAnimation.isEligible(selection)) GaneshMouseOverlay(
+            placement=idolPlacement,selection=selection,
+            offered=session.prasadOffered && !prasadRunning,
+            visible=showModels && modelsReady
+        )
         if(session.aartiComplete && !aartiRunning) DeityHalosOverlay(heads=idolPlacement.heads)
         val aartiPoint=if(aartiRunning) idolPlacement.aartiPosition(aartiProgress) else TempleSceneLayout.aartiRest
         Box(Modifier.fillMaxSize().zIndex(10f)) {

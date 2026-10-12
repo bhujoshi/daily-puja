@@ -41,6 +41,9 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
     val account=remember {com.worship.nityamandir.data.DevotionAccount(context.applicationContext)}
     var devotionSheet by remember {mutableStateOf(false)}
     var devotionPage by remember {mutableStateOf(DevotionPage.PROFILE)}
+    LaunchedEffect(Unit) {
+        if(account.readReferral() && !account.signedIn) { devotionPage=DevotionPage.LOGIN;devotionSheet=true }
+    }
     var customizer by remember {mutableStateOf(false)}
     var customizerDraft by remember {mutableStateOf<com.worship.nityamandir.data.ShrineSelection?>(null)}
     var selection by remember {mutableStateOf(com.worship.nityamandir.data.ShrineSelection())}
@@ -274,9 +277,6 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
             if(entered && !curtainMoving && !musicSheet && !devotionSheet && !customizer) Popup(alignment=Alignment.BottomCenter) { RitualGlassPanel(Modifier.navigationBarsPadding().padding(horizontal=14.dp,vertical=10.dp)
                 .fillMaxWidth().heightIn(max=270.dp).verticalScroll(rememberScrollState()),sceneSize,sceneOrigin,backgroundPath=if(selection["shrine"]=="original") null else "shrine/backgrounds/${selection["shrine"]}.png") {
                 val buttonColors=ButtonDefaults.buttonColors(containerColor=RitualInk,contentColor=cream,disabledContainerColor=Color(0xCFE2D9CF),disabledContentColor=Color(0xFF81766C))
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End) {
-                    IconButton(onClick={menu=true}) {Icon(Icons.Outlined.MoreHoriz,tr("मंदिर विकल्प","Temple options"))}
-                }
                 if(aging.needsCleaning) {
                     Button(onClick={cleaningSweep=true;session=WorshipSession(deityCount=selection.deityCount)},enabled=!cleaningSweep,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),colors=buttonColors) {Text(tr("छूकर मंदिर साफ़ करें","Tap to clean temple"))}
                 } else if(aartiRunning) {
@@ -304,14 +304,19 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                 }
             } }
         }
-        if(!menu && !musicSheet && !devotionSheet && !customizer && !curtainMoving && (bhajan.current!=null || bhajan.loading)) Popup(alignment=Alignment.TopCenter) {
-            Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal=14.dp,vertical=8.dp)) {
-                BhajanMiniPlayer(bhajan,hindi,{musicSheet=true})
-            }
-        }
-        if(!entered && !menu && !musicSheet && !devotionSheet && !customizer && !curtainMoving) Popup(alignment=Alignment.BottomEnd) {
-            Surface(Modifier.navigationBarsPadding().padding(horizontal=14.dp,vertical=8.dp),shape=RoundedCornerShape(16.dp),color=cream,shadowElevation=4.dp) {
-                IconButton(onClick={menu=true}) {Icon(Icons.Outlined.MoreHoriz,tr("मंदिर विकल्प","Temple options"))}
+        // Global options stay outside the ritual dock, so a single action needs only one row.
+        if(!menu && !musicSheet && !devotionSheet && !customizer && !curtainMoving) {
+            val hasMusic=bhajan.current!=null || bhajan.loading
+            Popup(alignment=if(hasMusic) Alignment.TopCenter else Alignment.TopEnd) {
+                Row((if(hasMusic) Modifier.fillMaxWidth() else Modifier).statusBarsPadding().padding(horizontal=14.dp,vertical=8.dp),
+                    horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.Top) {
+                    if(hasMusic) {
+                        BhajanMiniPlayer(bhajan,hindi,{musicSheet=true},Modifier.weight(1f),showTrackNavigation=false)
+                    }
+                    Surface(Modifier.size(48.dp),shape=RoundedCornerShape(16.dp),color=cream,contentColor=RitualInk,shadowElevation=4.dp) {
+                        IconButton(onClick={menu=true},modifier=Modifier.fillMaxSize()) {Icon(Icons.Outlined.MoreHoriz,tr("मंदिर विकल्प","Temple options"))}
+                    }
+                }
             }
         }
         if(customizer) ShrineControlsTheme { ShrineCustomizer(account,customizerDraft ?: selection,hindi,
@@ -325,7 +330,8 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
             MandirNavigationDrawer(menu,{menu=false},hindi) {
                 if(bhajan.current != null || bhajan.loading) BhajanMiniPlayer(bhajan,hindi,{menu=false;musicSheet=true})
                 DropdownMenuItem(leadingIcon={Icon(Icons.Outlined.AccountCircle,null)},text={Text(tr("मेरी प्रोफ़ाइल","My profile"))},onClick={menu=false;devotionPage=DevotionPage.PROFILE;devotionSheet=true})
-                DropdownMenuItem(leadingIcon={Icon(Icons.Outlined.AutoAwesome,null)},text={Text(tr("मंदिर पैकेज","Temple package"))},onClick={menu=false;devotionPage=DevotionPage.PACKAGE;devotionSheet=true})
+                DropdownMenuItem(leadingIcon={Icon(Icons.Outlined.Share,null)},text={Text(tr("WhatsApp पर साझा करें","Share on WhatsApp"))},onClick={menu=false;devotionPage=DevotionPage.SHARE;devotionSheet=true})
+                DropdownMenuItem(leadingIcon={Icon(Icons.Outlined.AutoAwesome,null)},text={Text(tr("सिक्के और अनलॉक","Coins & unlocks"))},onClick={menu=false;devotionPage=DevotionPage.PACKAGE;devotionSheet=true})
                 HorizontalDivider()
                 DropdownMenuItem(leadingIcon={Icon(Icons.Outlined.MusicNote,null)},text={Text(tr("संगीत प्लेयर खोलें","Open music player"))},onClick={menu=false;musicSheet=true})
                 DropdownMenuItem(leadingIcon={Icon(Icons.Outlined.Translate,null)},text={Text(if(hindi) "English" else "हिंदी")},onClick={hindi=!hindi;prefs.edit().putBoolean("hindi",hindi).apply();menu=false})

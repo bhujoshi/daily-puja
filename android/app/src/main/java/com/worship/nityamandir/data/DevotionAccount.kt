@@ -13,6 +13,7 @@ import java.net.URL
 
 /** Account identity with a Keystore-protected session and durable profile snapshot. */
 class DevotionAccount(context: Context) {
+    private val referral = ReferralInstall(context.applicationContext)
     private val credentialManager = androidx.credentials.CredentialManager.create(context)
     val googleConfigured get() = configured && BuildConfig.GOOGLE_CLIENT_ID.isNotBlank()
     private val prefs = context.getSharedPreferences("devotion", Context.MODE_PRIVATE)
@@ -26,6 +27,21 @@ class DevotionAccount(context: Context) {
             BuildConfig.DEBUG && uri.scheme=="http" && uri.host in listOf("10.0.2.2","localhost","127.0.0.1")
     }
     val signedIn get() = token.isNotEmpty()
+    val googleAccount get() = signedIn && profile?.optBoolean("google_account") == true
+    var referredInstall by mutableStateOf(false)
+        private set
+    val coins get() = profile?.optInt("coins") ?: 0
+    fun cost(category: String, item: String) = if (item == "original") 0 else when(category) {
+        "shrine" -> 7
+        "flowers" -> 2
+        else -> 0
+    }
+    fun owns(category: String, item: String) = cost(category, item) == 0 ||
+        profile?.optBoolean("unlocked") == true || profile?.optJSONObject("owned")?.optBoolean("$category:$item") == true
+    fun owns(selection: ShrineSelection) = selection.values.all { (category, value) ->
+        value.split(',').all { owns(category, it) }
+    }
+    suspend fun readReferral(): Boolean { referral.read(); referredInstall=referral.hasPending; return referredInstall }
     private fun today() = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata")).toString()
     val pending get() = prefs.getString("pending_day", "") == today() &&
         (prefs.getString("pending_owner", "") == "" || prefs.getString("pending_owner", "") == profile?.optString("id"))
@@ -109,7 +125,8 @@ class DevotionAccount(context: Context) {
         }
         val googleToken = com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.createFrom(credential.data)
         val result = request("auth/google", "POST", JSONObject()
-            .put("id_token", googleToken.idToken).put("nonce", nonce).put("invite_code", invite.trim()))
+            .put("id_token", googleToken.idToken).put("nonce", nonce).put("invite_code", invite.trim())
+            .put("install_id", referral.identity().orEmpty()))
         val session = result.getString("token")
         val encrypted = vault.encrypt(session)
         token = session
@@ -131,13 +148,45 @@ class DevotionAccount(context: Context) {
             cache(request("activity/puja", "POST", JSONObject().put("steps",org.json.JSONArray(listOf("LIGHT","BATH","TILAK","FLOWERS","BELL","CONCH","PRASAD","AARTI")))))
             prefs.edit().remove("pending_day").apply()
         } else cache(request("me"))
+        if (googleAccount) referral.pending()?.let { claim ->
+            val result = request("referrals/install", "POST", claim)
+            if (result.optBoolean("processed")) { referral.processed(); referredInstall=false }
+        }
+        prefs.getStringSet("pending_shares_" + profile?.optString("id"), emptySet()).orEmpty().toList().forEach {
+            recordShareOpened(it)
+        }
     }
     fun selection(): ShrineSelection {
-        val items=profile?.optJSONObject("selections") ?: return ShrineSelection()
+        val items=profile?.optJSONObject("selections") ?: runCatching {
+            JSONObject(prefs.getString("guest_selection", "{}").orEmpty())
+        }.getOrDefault(JSONObject())
         return ShrineSelection(items.keys().asSequence().associateWith {items.getString(it)})
     }
     suspend fun saveSelection(selection: ShrineSelection) {
-        cache(request("shrine","PUT",JSONObject().put("selections",JSONObject(selection.values))))
+        if (signedIn) cache(request("shrine","PUT",JSONObject().put("selections",JSONObject(selection.values))))
+        else {
+            check(owns(selection)) { "Sign in to unlock this design with coins." }
+            prefs.edit().putString("guest_selection", JSONObject(selection.values).toString()).apply()
+        }
+    }
+    suspend fun unlock(category: String, item: String) {
+        cache(request("coins/unlock", "POST", JSONObject().put("category", category).put("item", item)))
+    }
+    suspend fun createShare(): JSONObject {
+        check(googleAccount) { "Sign in with Google before sharing." }
+        val key = "share_request_" + profile?.optString("id")
+        val id = prefs.getString(key, null) ?: java.util.UUID.randomUUID().toString().also { prefs.edit().putString(key, it).apply() }
+        return request("shares", "POST", JSONObject().put("request_id", id))
+    }
+    fun queueShareOpened(id: String) {
+        prefs.edit().remove("share_request_" + profile?.optString("id")).apply()
+        val key = "pending_shares_" + profile?.optString("id")
+        prefs.edit().putStringSet(key, prefs.getStringSet(key, emptySet()).orEmpty() + id).apply()
+    }
+    suspend fun recordShareOpened(id: String) {
+        val key = "pending_shares_" + profile?.optString("id")
+        cache(request("shares/opened", "POST", JSONObject().put("share_id", id)))
+        prefs.edit().putStringSet(key, prefs.getStringSet(key, emptySet()).orEmpty() - id).apply()
     }
     private fun clearLocal() { token="";profile=null;prefs.edit().remove("session").remove("profile").remove("pending_day").remove("pending_owner").apply() }
     suspend fun signOut() { request("logout","POST",JSONObject()); clearLocal(); clearGoogleState() }

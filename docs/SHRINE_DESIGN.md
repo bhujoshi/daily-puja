@@ -1,5 +1,12 @@
 # Shrine screen design
 
+## 2026-10-05 — Compact ritual dock
+
+- Moved temple options to a 48dp button at the top right, available before and during worship. Removing its separate row saves 57dp in the bottom dock; a typical single-action panel is now about 80dp tall instead of 137dp.
+- Kept ritual actions and the post-puja profile button full-width with their existing styling and touch targets.
+- When music is visible, the top row keeps play/pause and remove beside the options button. Tap the player to access track selection and previous/next controls. Other music-player locations retain their existing controls.
+- Verified the isolated debug build and emulator interactions in Hindi and English, including a 320dp screen width with 1.3× text scaling.
+
 ## 2026-09-28 — Reduce visual clutter
 
 - Removed the gold center stripe from Android curtains. The panels meet with matching fabric color; softer folds and color-matched outer shadows retain depth for red and saffron curtains.

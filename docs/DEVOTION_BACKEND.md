@@ -17,7 +17,7 @@ All paths below start `/api/v2`. JSON errors use `error`. Authenticated requests
 | Method/path | Body / behavior |
 | --- | --- |
 | POST /auth/google/challenge | `{}`; returns a short-lived sign-in nonce |
-| POST /auth/google | `id_token`, `nonce`, optional `invite_code`; verified Google login returns token/profile |
+| POST /auth/google | `id_token`, `nonce`, optional `invite_code`, `install_id`; verified Google login returns token/profile |
 | POST /auth/otp/request | `phone`; sends WhatsApp/SMS via configured provider (demo notice in mock mode) |
 | POST /auth/otp/verify | `phone`, `otp`, optional `invite_code` (`1234` in mock mode); creates or signs into the same mobile account |
 | POST /register | `email`, `password` (10–128 chars), optional `invite_code`; returns token/profile |
@@ -25,28 +25,44 @@ All paths below start `/api/v2`. JSON errors use `error`. Authenticated requests
 | GET /catalog | Seven categories, reward thresholds and availability flags |
 | GET /me | Mobile, account ID, streak, credited days, invite code, qualified referrals, selections, entitlement, activity/payment history, mock payment availability |
 | POST /activity/puja | `steps`: LIGHT, BATH, TILAK, FLOWERS, BELL, CONCH, PRASAD, AARTI in that order |
-| PUT /shrine | `selections`: seven catalog category keys; requires entitlement (six-key legacy clients are supported) |
+| PUT /shrine | `selections`: seven catalog category keys; requires ownership of every selected paid item (six-key legacy clients are supported) |
 | POST /purchase | Authenticated `request_id` (8–128 chars); mock mode grants package and records ₹0 demo payment. Retries are idempotent. Returns 503 with mock mode disabled. |
 | POST /logout | `{}`; revokes session |
 | DELETE /me | Deletes account, activity and sessions |
 
 The package covers `shrine`, `idols`, `flowers`, `shankh`, `aarti`, `prasad`. The catalog now includes 24 real choices across these categories plus `lamp`. Android provides a thumbnail picker, full-scene preview and server-authorized selection saving. Assets are bundled for offline rendering. See ASSET_PIPELINE.md. Older six-category clients default to the original oil lamp.
 
-## Reward rules (initial product assumptions)
+## Coins and WhatsApp referrals
 
-- Base puja stays free without registration.
-- Seven consecutive India calendar days unlock the package permanently. Missing a day resets progress, not an earned entitlement.
-- One invited account completing its first puja unlocks the inviter's package. Opening the share sheet or registering alone earns nothing. No contact access is requested. Codes are entered on registration and cannot be changed later.
-- Completion is deduplicated per authenticated account and server date. Client dates and debug time travel cannot award extra days.
-- Android saves one pending completion locally and retries on the same India date via the progress screen. Older offline days are **not** backfilled. Add a trusted offline reconciliation policy before promising offline streak continuity.
-- The server validates the reported eight steps; it cannot prove physical/devotional activity. Unverified pilot accounts can still be used to farm referral rewards. Identity verification and abuse controls are required before rewards have monetary value.
-- Live Google Play Billing, verified purchase tokens, refunds, restore purchases and pricing are not implemented. No real charge is made. Mock purchase entitlements are granted by the server only with explicit `MOCK_MODE=true`; Android labels them as demo payments. Use a separate demo datastore; never enable this mode for public deployment.
+- Completed puja earns **1 coin per account per India calendar day**. All eight steps must be reported in order. Repeats are idempotent, and missing days does not reset the wallet. Server time determines eligibility; debug time travel cannot award coins.
+- A **new referred installation followed by Google sign-in earns the inviter 1 coin**. Each new Google subject and app-scoped device identity can qualify once. Multiple friends using the same link each qualify. Opening WhatsApp, a repeat install, an existing account, self-referral, or the friend's first puja does not earn a referral coin.
+- Each additional shrine costs **7 coins**; each additional flower variety costs **2 coins**. Original items, shankh, aarti, prasad, idols and oil lamps are free. Idols and oil lamps were unspecified in the request and default to free. Unlocks are permanent, per catalog item, and separate from selection. The server rejects unowned selections and insufficient balances. Repeated unlock requests cannot spend twice.
+- Legacy package and owner entitlements remain valid. Existing distinct credited puja days and qualified referrals initialize a wallet once. No new streak or referral grants an all-items package. The old mock-purchase endpoint remains only for existing test clients, and is no longer offered by the Android UI.
+- Android requires Google sign-in before creating a share link. Every share gets a random opaque `share_id` mapped to the sender on the server. The URL is a Play Store listing URL with an encoded `referrer=share_id=...`; it contains no email or account ID. WhatsApp is opened directly, with WhatsApp Business as fallback. The user chooses the recipient and sends the message. An absent WhatsApp app produces a recoverable error.
+- `share_count` counts successful handoffs to WhatsApp, **not messages delivered**. Share creation and handoff reporting are separately idempotent. Failed handoff reports are queued on the device per account and retried on sync. No coin is awarded for a handoff.
+- The app reads [Google Play Install Referrer](https://developer.android.com/google/play/installreferrer/library) on first execution and retains the attribution until a successful claim. A referred guest is offered Google login and may dismiss it to worship offline. The backend binds the claim to the Google account's initial app-scoped installation identity and checks the install time against share creation and account creation. Devices already registered to an account cannot qualify a second account. Claims and deductions use the same mutex and atomic persistence as the wallet.
+- This is **attribution with duplicate prevention, not server attestation of a genuine install**. Install Referrer values and the hashed device identity are submitted by the app. A modified client can falsify them. Integrate server-validated Play Integrity verdicts and abuse rate limits before assigning monetary value to coins. Factory resets, other Android users and signing-key changes can change the scoped device identity.
+- Account deletion removes wallet, history, selections, owned items, sessions, and outbound share links. Minimal one-way digests of previously registered device identities and rewarded Google subjects remain to prevent account deletion/recreation from earning another reward. These are pseudonymous anti-abuse records, not anonymous data.
+- Worship stays available offline. Android keeps one completion pending for retry on the same India date; older offline days are **not backfilled**. A trusted offline reconciliation policy is still required before promising rewards for unsynced earlier days.
 
-Cached history contains account creation, completed puja days, mock purchases, shrine selections and referral/streak unlocks. The server retains the full history; the sheet shows the latest 20 events. Account deletion removes this history. Failed network requests retain the last successful snapshot; failed purchases are safe to retry with the saved request ID.
+### New API routes
 
-## Validation
+All require a valid bearer session. Share creation and install claims additionally require a verified Google account.
 
-`go test ./...` covers persistence, authentication, locked selection rejection, step validation, duplicate completion, seven-day unlock, referral qualification, India midnight, missed days and deletion. Android compile and existing unit tests pass. Emulator interaction checks cover mobile login, mock purchase and process restart; TalkBack testing remains pending. No accessibility certification is claimed.
+| Method/path | Body / response |
+| --- | --- |
+| POST /coins/unlock | `category`, `item`; deducts the server's catalog price once and returns profile; 409 for insufficient coins |
+| POST /shares | `request_id` (8–128 chars); returns stable `share_id`, `url` for retries of the same request |
+| POST /shares/opened | `share_id`; records one WhatsApp handoff for the owning account and returns profile |
+| POST /referrals/install | `share_id`, `install_id` (SHA-256 of app-scoped Android identity), `installed_at` (Play install Unix seconds); returns `processed`, `credited` |
+
+Google login also accepts `install_id` to bind the first account creation to a registered installation. `GET /me` includes `coins`, `owned` (keys such as `shrine:marble`), `share_count`, `referrals`, `google_account`, and `coin_costs`. `PUT /shrine` validates ownership of every item, including each comma-separated flower. Free variants do not require the legacy package entitlement.
+
+## Validation and release
+
+Backend tests cover daily caps, India midnight, missed days, new and legacy account persistence, coin migration, free variants, unowned selections, concurrent spending, rollback on persistence failure, share idempotency and Google-only authorization, multiple referred users, repeated claims, ineligible existing accounts, self-referral, same-device accounts, deletion/recreation, and install timestamps. Android unit tests and build verification cover compilation and the existing ritual suite.
+
+A live end-to-end attribution test must use the release-signed app installed from a Google Play test track using a real generated referral URL, then Google sign-in. Sideloading an APK does not reproduce Play installation attribution. Test WhatsApp and WhatsApp Business handoffs, missing WhatsApp, cancellation, backend interruption and restart, and wallet restoration on another device. Deploy the updated backend together with the Android build; an older server does not implement these routes. No production deployment is performed by the source change.
 
 ## Remaining launch decisions
 

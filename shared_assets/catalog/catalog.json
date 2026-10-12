@@ -1,10 +1,21 @@
 {
-  "version": 1,
+  "version": 2,
   "package_id": "personal-mandir",
   "purchase_available": false,
   "asset_variants_available": true,
-  "streak_days": 7,
-  "qualified_referrals": 1,
+  "daily_puja_coins": 1,
+  "referral_install_coins": 1,
+  "coin_costs": {
+    "shrine": 7,
+    "flowers": 2
+  },
+  "free_categories": [
+    "idols",
+    "lamp",
+    "shankh",
+    "aarti",
+    "prasad"
+  ],
   "categories": [
     {
       "id": "shrine",

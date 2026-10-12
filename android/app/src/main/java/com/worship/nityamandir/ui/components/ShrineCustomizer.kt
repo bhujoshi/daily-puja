@@ -45,7 +45,8 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                     Text(tr("अपना मंदिर सजाएँ","Make this temple yours"),Modifier.weight(1f),fontSize=23.sp)
                     TextButton(onClick=onDismiss,enabled=!busy) {Text(tr("बंद करें","Close"))}
                 }
-                Text(tr("पहले देखकर चुनें। लागू करने पर नई पूजा शुरू होगी।","Preview before choosing. Applying a design starts a fresh puja."),fontSize=16.sp)
+                Text(tr("${account.coins} सिक्के · मंदिर 7 · फूल 2 · बाकी मुफ़्त", "${account.coins} coins · Shrine 7 · Flower 2 · Other items free"),fontSize=16.sp)
+                Text(tr("लागू करने पर नई पूजा शुरू होगी।", "Applying a design starts a fresh puja."),fontSize=14.sp)
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     catalog.categories.forEach {category ->
                         FilterChip(selected=categoryId==category.id,onClick={categoryId=category.id},label={Text(if(hindi) category.hi else category.en)})
@@ -63,6 +64,19 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                                 Column(Modifier.weight(1f)) {
                                     Text(if(hindi) option.hi else option.en,fontSize=18.sp)
                                     Text(if(selected) tr("चुना हुआ","Selected") else tr("चुनने के लिए छुएँ","Tap to choose"),fontSize=14.sp)
+                                    val owned=account.owns(category.id,option.id)
+                                    val cost=account.cost(category.id,option.id)
+                                    Text(if(cost==0) tr("मुफ़्त","Free") else if(owned) tr("अनलॉक है","Unlocked") else tr("$cost सिक्के","$cost coins"),color=RitualGold,fontSize=14.sp)
+                                    if(!owned) OutlinedButton(onClick={
+                                        if(!account.signedIn) onAccount(draft)
+                                        else scope.launch {
+                                            busy=true;error=""
+                                            try {account.unlock(category.id,option.id)}
+                                            catch(e:Exception) {error=e.message ?: tr("अनलॉक नहीं हुआ। फिर कोशिश करें।","Could not unlock. Please try again.")}
+                                            finally {busy=false}
+                                        }
+                                    },enabled=!busy && (!account.signedIn || account.coins>=cost)) {Text(tr("अनलॉक · $cost सिक्के","Unlock · $cost coins"))}
+
                                 }
                                 if(category.id=="flowers") Checkbox(checked=selected,onCheckedChange=null)
                                 else RadioButton(selected=selected,onClick=null)
@@ -71,19 +85,19 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                     }
                 }
                 OutlinedButton(onClick={showPreview=true},enabled=!busy,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)) {Text(tr("पूरे मंदिर में देखें","Preview in the temple"))}
-                val unlocked=account.profile?.optBoolean("unlocked")==true
-                if(!unlocked && !draft.original) Text(tr("सहेजने के लिए पैकेज अनलॉक करें: 7 दिन पूजा या एक मित्र की पहली पूजा।","To save, unlock the package: 7 daily pujas or a friend's first puja."))
+                val owned=account.owns(draft)
+                if(!owned) Text(tr("चुने हुए मंदिर या फूल को पहले सिक्कों से अनलॉक करें।", "Unlock the selected shrine or flowers with coins before applying."))
                 if(error.isNotEmpty()) Text(error,color=MaterialTheme.colorScheme.error)
                 Button(onClick={
-                    if(!draft.original && !unlocked) {onAccount(draft)}
-                    else if(account.signedIn && unlocked) scope.launch {
+                    if(!owned) {onAccount(draft)}
+                    else scope.launch {
                         busy=true;error=""
                         try {account.saveSelection(draft);onApplied(draft)}
                         catch(e:Exception) {error=e.message ?: tr("सहेजा नहीं गया। फिर कोशिश करें।","Not saved. Please try again.")}
                         finally {busy=false}
-                    } else onApplied(draft)
+                    }
                 },enabled=!busy,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)) {
-                    Text(if(busy) tr("सहेज रहे हैं…","Saving…") else if(!draft.original && !unlocked) tr("खाता और अनलॉक विकल्प","Account & unlock options") else tr("इस मंदिर को लागू करें","Apply this temple"))
+                    Text(if(busy) tr("सहेज रहे हैं…","Saving…") else if(!owned) tr("सिक्के कमाएँ","Earn coins") else tr("इस मंदिर को लागू करें","Apply this temple"))
                 }
             }
         }

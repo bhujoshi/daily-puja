@@ -17,6 +17,25 @@ type CatalogCategory struct {
 	Options []CatalogOption `json:"options"`
 }
 
+func catalogItem(categoryID, itemID string) bool {
+	var catalog struct {
+		Categories []CatalogCategory `json:"categories"`
+	}
+	if json.Unmarshal(catalogJSON, &catalog) != nil {
+		return false
+	}
+	for _, category := range catalog.Categories {
+		if category.ID == categoryID {
+			for _, item := range category.Options {
+				if item.ID == itemID {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 func validSelections(selections map[string]string) bool {
 	var catalog struct {
 		Categories []CatalogCategory `json:"categories"`

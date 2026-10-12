@@ -118,6 +118,7 @@ dependencies {
     implementation("androidx.credentials:credentials:1.3.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+    implementation("com.android.installreferrer:installreferrer:2.2")
 
     // Media3 1.5.1 is compatible with the project's Kotlin 1.9 toolchain.
     implementation("androidx.media3:media3-exoplayer:1.5.1")

@@ -24,19 +24,26 @@ import (
 )
 
 type Account struct {
-	GoogleSubject string            `json:"google_subject,omitempty"`
-	Phone         string            `json:"phone"`
-	History       []Event           `json:"history"`
-	ID            string            `json:"id"`
-	Email         string            `json:"email"`
-	Salt          string            `json:"salt"`
-	Hash          string            `json:"hash"`
-	Invite        string            `json:"invite_code"`
-	Referrer      string            `json:"referrer"`
-	Days          []string          `json:"days"`
-	Selections    map[string]string `json:"selections"`
-	Unlocked      bool              `json:"unlocked"`
-	Referrals     int               `json:"referrals"`
+	GoogleSubject    string            `json:"google_subject,omitempty"`
+	Phone            string            `json:"phone"`
+	History          []Event           `json:"history"`
+	ID               string            `json:"id"`
+	Email            string            `json:"email"`
+	Salt             string            `json:"salt"`
+	Hash             string            `json:"hash"`
+	Invite           string            `json:"invite_code"`
+	Referrer         string            `json:"referrer"`
+	Days             []string          `json:"days"`
+	Selections       map[string]string `json:"selections"`
+	Unlocked         bool              `json:"unlocked"`
+	Referrals        int               `json:"referrals"`
+	Coins            int               `json:"coins"`
+	WalletVersion    int               `json:"wallet_version"`
+	Owned            map[string]bool   `json:"owned"`
+	ShareCount       int               `json:"share_count"`
+	CreatedAt        time.Time         `json:"created_at"`
+	InstallID        string            `json:"install_id,omitempty"`
+	ReferralEligible bool              `json:"referral_eligible"`
 }
 type Event struct {
 	ID     string    `json:"id"`
@@ -54,8 +61,12 @@ type Session struct {
 	Expires time.Time
 }
 type database struct {
-	Accounts map[string]*Account
-	Sessions map[string]Session
+	Accounts         map[string]*Account
+	Sessions         map[string]Session
+	Shares           map[string]*Share
+	ReferralUsers    map[string]bool
+	ReferralInstalls map[string]bool
+	InstallUsers     map[string]string
 }
 type Server struct {
 	MockMode     bool
@@ -72,7 +83,7 @@ type Server struct {
 var india = time.FixedZone("Asia/Kolkata", 19800)
 
 func New(path string) (*Server, error) {
-	s := &Server{path: path, now: time.Now, db: database{map[string]*Account{}, map[string]Session{}}}
+	s := &Server{path: path, now: time.Now, db: database{Accounts: map[string]*Account{}, Sessions: map[string]Session{}}}
 	b, err := os.ReadFile(path)
 	if err == nil {
 		err = json.Unmarshal(b, &s.db)
@@ -80,6 +91,7 @@ func New(path string) (*Server, error) {
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
+	s.initRewards()
 	return s, nil
 }
 func random() string {
@@ -145,22 +157,12 @@ func streak(a *Account, now time.Time) int {
 	return n
 }
 func (s *Server) profile(a *Account) any {
-	return map[string]any{"id": a.ID, "phone": a.Phone, "history": a.History, "mock_payments": s.MockMode, "email": a.Email, "invite_code": a.Invite, "days": a.Days, "streak": streak(a, s.now()), "unlocked": a.Unlocked, "referrals": a.Referrals, "selections": a.Selections, "streak_target": 7, "referral_target": 1}
+	return map[string]any{"id": a.ID, "phone": a.Phone, "history": a.History, "mock_payments": s.MockMode, "email": a.Email, "invite_code": a.Invite, "days": a.Days, "streak": streak(a, s.now()), "unlocked": a.Unlocked, "referrals": a.Referrals, "selections": a.Selections, "streak_target": 7, "referral_target": 1, "coins": a.Coins, "owned": a.Owned, "share_count": a.ShareCount, "google_account": a.GoogleSubject != "", "coin_costs": map[string]int{"shrine": 7, "flowers": 2}}
 }
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/api/v2/")
-	var body struct {
-		IDToken    string            `json:"id_token"`
-		Nonce      string            `json:"nonce"`
-		Phone      string            `json:"phone"`
-		OTP        string            `json:"otp"`
-		RequestID  string            `json:"request_id"`
-		Email      string            `json:"email"`
-		Password   string            `json:"password"`
-		Invite     string            `json:"invite_code"`
-		Steps      []string          `json:"steps"`
-		Selections map[string]string `json:"selections"`
-	}
+	var body rewardRequest
+
 	if r.Method == "POST" || r.Method == "PUT" {
 		dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8192))
 		dec.DisallowUnknownFields()
@@ -227,9 +229,20 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			}
-			a = &Account{ID: random(), GoogleSubject: googleIdentity.Subject, Email: googleIdentity.Email, Invite: random()[:12], Referrer: ref, Days: []string{}, Selections: map[string]string{}}
+			a = &Account{ID: random(), GoogleSubject: googleIdentity.Subject, Email: googleIdentity.Email, Invite: random()[:12], Referrer: ref, Days: []string{}, Selections: map[string]string{}, WalletVersion: 1, Owned: map[string]bool{}, CreatedAt: s.now()}
 			s.db.Accounts[key] = a
 			s.event(a, "account_created", "Google account created")
+			if installPattern.MatchString(body.InstallID) {
+				installKey := digest("referral-install:" + body.InstallID)
+				a.InstallID = installKey
+				a.ReferralEligible = s.db.InstallUsers[installKey] == "" && !s.db.ReferralUsers[digest("referral-google:"+a.GoogleSubject)]
+			}
+		}
+		if installPattern.MatchString(body.InstallID) {
+			installKey := digest("referral-install:" + body.InstallID)
+			if s.db.InstallUsers[installKey] == "" {
+				s.db.InstallUsers[installKey] = digest("referral-google:" + a.GoogleSubject)
+			}
 		}
 		a.Email = googleIdentity.Email
 		if strings.EqualFold(a.Email, "bhuwanchandra.it@gmail.com") && !a.Unlocked {
@@ -265,7 +278,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			}
-			a = &Account{ID: random(), Phone: phone, Invite: random()[:12], Referrer: ref, Days: []string{}, Selections: map[string]string{}}
+			a = &Account{ID: random(), Phone: phone, Invite: random()[:12], Referrer: ref, Days: []string{}, Selections: map[string]string{}, WalletVersion: 1, Owned: map[string]bool{}, CreatedAt: s.now()}
 			s.db.Accounts[key] = a
 			s.event(a, "account_created", "Mobile account created")
 		}
@@ -301,7 +314,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			}
-			a = &Account{ID: random(), Email: body.Email, Salt: random(), Invite: random()[:12], Referrer: ref, Days: []string{}, Selections: map[string]string{}}
+			a = &Account{ID: random(), Email: body.Email, Salt: random(), Invite: random()[:12], Referrer: ref, Days: []string{}, Selections: map[string]string{}, WalletVersion: 1, Owned: map[string]bool{}, CreatedAt: s.now()}
 			a.Hash = password(body.Password, a.Salt)
 			s.db.Accounts[body.Email] = a
 		} else {
@@ -348,6 +361,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	case path == "me" && r.Method == "DELETE":
 		delete(s.db.Accounts, session.User)
+		for id, share := range s.db.Shares {
+			if share.Owner == a.ID {
+				delete(s.db.Shares, id)
+			}
+		}
 		for k, v := range s.db.Sessions {
 			if v.User == session.User {
 				delete(s.db.Sessions, k)
@@ -375,32 +393,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		first := len(a.Days) == 0
 		a.Days = append(a.Days, today)
-		s.event(a, "puja_completed", today)
-		if streak(a, s.now()) >= 7 {
-			if !a.Unlocked {
-				s.event(a, "streak_unlock", "Seven-day puja streak")
-			}
-			a.Unlocked = true
-		}
-		if first && a.Referrer != "" {
-			for _, other := range s.db.Accounts {
-				if other.ID == a.Referrer {
-					s.event(other, "referral_unlock", "Invited friend completed their first puja")
-					other.Referrals++
-					other.Unlocked = true
-				}
-			}
-		}
+		a.Coins++
+		s.event(a, "puja_completed", today+" · +1 coin")
+
 		if commit() {
 			reply(w, 200, s.profile(a))
 		}
 	case path == "shrine" && r.Method == "PUT":
-		if !a.Unlocked {
-			fail(w, 403, "Unlock customization with a daily streak or an invitation")
-			return
-		}
 		// Accept the old six-category client by supplying the original oil lamp.
 		if _, ok := body.Selections["lamp"]; !ok && len(body.Selections) == 6 {
 			body.Selections["lamp"] = "original"
@@ -408,6 +408,15 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if !validSelections(body.Selections) {
 			fail(w, 400, "Choose an available item in every category")
 			return
+		}
+
+		for category, value := range body.Selections {
+			for _, item := range strings.Split(value, ",") {
+				if !owns(a, category, item) {
+					fail(w, 403, "Unlock the selected shrine or flower with coins first")
+					return
+				}
+			}
 		}
 
 		a.Selections = body.Selections
@@ -439,6 +448,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			reply(w, 200, s.profile(a))
 		}
 	default:
-		fail(w, 404, "Endpoint not found")
+		if !s.rewards(w, r, path, a, body, commit) {
+			fail(w, 404, "Endpoint not found")
+		}
 	}
 }

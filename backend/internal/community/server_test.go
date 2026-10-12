@@ -37,7 +37,7 @@ func TestAccountJourney(t *testing.T) {
 	if c, _ := call(s, "GET", "me", "fake", ""); c != 401 {
 		t.Fatal(c)
 	}
-	if c, _ := call(s, "PUT", "shrine", token, `{"selections":{}}`); c != 403 {
+	if c, _ := call(s, "PUT", "shrine", token, `{"selections":{}}`); c != 400 {
 		t.Fatal(c)
 	}
 	if c, _ := call(s, "POST", "activity/puja", token, `{"steps":["AARTI"]}`); c != 400 {
@@ -55,7 +55,7 @@ func TestAccountJourney(t *testing.T) {
 		}
 	}
 	_, v = call(s, "GET", "me", token, "")
-	if !v["unlocked"].(bool) || len(v["days"].([]any)) != 7 {
+	if v["unlocked"].(bool) || v["coins"].(float64) != 7 || len(v["days"].([]any)) != 7 {
 		t.Fatal(v)
 	}
 	restored, err := New(path)
@@ -92,7 +92,7 @@ func TestReferralAndIndiaMidnight(t *testing.T) {
 	call(s, "POST", "activity/puja", friend, steps)
 	call(s, "POST", "activity/puja", friend, steps)
 	_, v = call(s, "GET", "me", owner, "")
-	if !v["unlocked"].(bool) || v["referrals"].(float64) != 1 {
+	if v["unlocked"].(bool) || v["referrals"].(float64) != 0 || v["coins"].(float64) != 0 {
 		t.Fatal(v)
 	}
 	now = now.Add(2 * time.Minute)

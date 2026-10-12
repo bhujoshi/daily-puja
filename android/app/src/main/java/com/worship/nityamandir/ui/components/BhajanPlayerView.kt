@@ -33,18 +33,18 @@ private val MusicOrange = Color(0xFFB84308)
 private val MusicInk = Color(0xFF76300C)
 
 @Composable
-fun BhajanMiniPlayer(player: BhajanPlayer, hindi: Boolean, onExpand: () -> Unit, modifier: Modifier = Modifier) {
+fun BhajanMiniPlayer(player: BhajanPlayer, hindi: Boolean, onExpand: () -> Unit, modifier: Modifier = Modifier, showTrackNavigation: Boolean = true) {
     Surface(modifier.fillMaxWidth(), shape=RoundedCornerShape(20.dp), color=MusicOrange, contentColor=MusicCream) {
-        Row(Modifier.clickable(onClick=onExpand).padding(10.dp), verticalAlignment=Alignment.CenterVertically) {
+        Row(Modifier.clickable(onClickLabel=if(hindi) "संगीत प्लेयर खोलें" else "Open music player",onClick=onExpand).padding(10.dp), verticalAlignment=Alignment.CenterVertically) {
             Icon(Icons.Default.MusicNote,null,tint=Color(0xFFFFD46C))
             Column(Modifier.weight(1f).padding(horizontal=8.dp)) {
-                Text(if(hindi) "भजन संगीत" else "BHAJAN MUSIC",fontSize=10.sp,color=Color(0xFFFFD46C))
+                Text(if(hindi) "भजन संगीत" else "BHAJAN MUSIC",fontSize=10.sp,color=Color(0xFFFFD46C),maxLines=1,overflow=TextOverflow.Ellipsis)
                 Text(player.title,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.SemiBold)
-                Text(if(player.failed) {if(hindi) "फिर प्रयास करें" else "Unable to play · retry"} else if(player.loading) {if(hindi) "लोड हो रहा है…" else "Loading…"} else {if(hindi) "भजन बदलें" else "Change bhajan"},fontSize=11.sp)
+                Text(if(player.failed) {if(hindi) "फिर प्रयास करें" else "Unable to play · retry"} else if(player.loading) {if(hindi) "लोड हो रहा है…" else "Loading…"} else {if(hindi) "भजन बदलें" else "Change bhajan"},fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
             }
-            IconButton(onClick={player.skip(-1)},enabled=player.tracks.size>1) {Icon(Icons.Default.SkipPrevious,if(hindi) "पिछला" else "Previous")}
+            if(showTrackNavigation) IconButton(onClick={player.skip(-1)},enabled=player.tracks.size>1) {Icon(Icons.Default.SkipPrevious,if(hindi) "पिछला" else "Previous")}
             IconButton(onClick=player::toggle) {Icon(if(player.failed) Icons.Default.Refresh else if(player.playing) Icons.Default.Pause else Icons.Default.PlayArrow,if(hindi) "चलाएँ / रोकें" else "Play / pause / retry")}
-            IconButton(onClick={player.skip(1)},enabled=player.tracks.size>1) {Icon(Icons.Default.SkipNext,if(hindi) "अगला" else "Next")}
+            if(showTrackNavigation) IconButton(onClick={player.skip(1)},enabled=player.tracks.size>1) {Icon(Icons.Default.SkipNext,if(hindi) "अगला" else "Next")}
             IconButton(onClick=player::remove) {Icon(Icons.Default.Close,if(hindi) "संगीत हटाएँ" else "Remove music player")}
         }
     }

@@ -18,6 +18,6 @@ category('lamp','Oil lamp','दीपक',[model('original','Golden lamp','स�
 category('shankh','Shankh','शंख',[model('original','Classic shankh','पारंपरिक शंख','shankh','classic'),model('ivory','Ivory shankh','श्वेत शंख','shankh','ivory')])
 category('aarti','Aarti lamp','आरती दीप',[model('original','Golden aarti','सुनहरी आरती','aarti','golden'),model('traditional','Traditional aarti','पारंपरिक आरती','aarti','traditional')])
 category('prasad','Prasad','प्रसाद',[picture('original','Laddu bowl','लड्डू का कटोरा','prasad','laddu_bowl'),picture('halwa','Halwa','हलवा','prasad','halwa'),model('laddu','Tirupati laddu','तिरुपति लड्डू','prasad','laddu')])
-data=dict(version=1,package_id='personal-mandir',purchase_available=False,asset_variants_available=True,streak_days=7,qualified_referrals=1,categories=categories)
+data=dict(version=2,package_id='personal-mandir',purchase_available=False,asset_variants_available=True,daily_puja_coins=1,referral_install_coins=1,coin_costs=dict(shrine=7,flowers=2),free_categories=['idols','lamp','shankh','aarti','prasad'],categories=categories)
 for p in ['shared_assets/catalog/catalog.json','android/app/src/main/assets/shrine/catalog.json','backend/internal/community/catalog.json']:
  (root/p).parent.mkdir(parents=True,exist_ok=True);(root/p).write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
