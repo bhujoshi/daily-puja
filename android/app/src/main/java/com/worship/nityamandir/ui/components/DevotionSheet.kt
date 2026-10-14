@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.worship.nityamandir.data.DevotionAccount
+import com.worship.nityamandir.data.ShrineCatalog
 import com.worship.nityamandir.engine.BhajanPlayer
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
@@ -31,6 +32,43 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 
 enum class DevotionPage { PROFILE, PACKAGE, LOGIN, SHARE }
+
+@Composable
+private fun MandirSajayeEntry(account:DevotionAccount,catalog:ShrineCatalog,hindi:Boolean,onCustomize:()->Unit,enabled:Boolean) {
+    fun tr(hi:String,en:String)=if(hindi) hi else en
+    val newUnlocks=account.newUnlocks(catalog)
+    val availableUnlocks=account.availableUnlocks(catalog)
+    fun names(items:List<com.worship.nityamandir.data.ShrineUnlock>)=items.take(2).joinToString(" · ") {if(hindi) it.option.hi else it.option.en}+
+        if(items.size>2) tr(" और ${items.size-2}"," + ${items.size-2} more") else ""
+    Surface(color=Color(0xFFF2E5D2),shape=RoundedCornerShape(20.dp)) {
+        Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+            when {
+                newUnlocks.isNotEmpty() -> {
+                    Text(tr("${newUnlocks.size} नए अनलॉक आपके लिए तैयार हैं",if(newUnlocks.size==1) "1 newly unlocked item is ready" else "${newUnlocks.size} newly unlocked items are ready"),fontWeight=FontWeight.SemiBold)
+                    Text(names(newUnlocks),fontSize=14.sp)
+                }
+                availableUnlocks.isEmpty() && account.signedIn -> Text(tr("अपने मंदिर का रूप चुनें","Choose your mandir’s look"),fontWeight=FontWeight.SemiBold)
+                !account.signedIn -> {
+                    Text(tr("मुफ़्त वस्तुओं से मंदिर सजाएँ","Decorate with free items"),fontWeight=FontWeight.SemiBold)
+                    Text(tr("मूर्तियाँ, दीपक, शंख, आरती और प्रसाद चुन सकते हैं।","Choose idols, oil lamps, shankh, aarti and prasad."),fontSize=14.sp)
+                }
+            }
+            if(availableUnlocks.isNotEmpty()) {
+                Text(tr("आपके सिक्कों से ${availableUnlocks.size} नई वस्तुएँ अनलॉक हो सकती हैं",if(availableUnlocks.size==1) "Your coins can unlock 1 new item" else "Your coins can unlock ${availableUnlocks.size} new items"),fontWeight=FontWeight.SemiBold)
+                Text(names(availableUnlocks),fontSize=14.sp)
+            } else if(account.signedIn && newUnlocks.isEmpty()) {
+                val nextCost=catalog.categories.flatMap {category -> category.options.map {category.id to it}}
+                    .filter {(category,option) -> !account.owns(category,option.id)}
+                    .map {(category,option) -> account.cost(category,option.id)}.filter {it>0}.minOrNull()
+                if(nextCost!=null) Text(tr(
+                    "अगली वस्तु के लिए ${nextCost-account.coins} और सिक्के कमाएँ। रोज़ पूजा करें या मित्र को आमंत्रित करें।",
+                    "Earn ${nextCost-account.coins} more coins for your next item. Complete daily puja or invite a friend."),fontSize=14.sp)
+                else Text(tr("आपकी सभी वस्तुएँ सजाने के लिए तैयार हैं।","All your items are ready to use."),fontSize=14.sp)
+            }
+            RitualChoice(tr("मंदिर सजाएँ","Mandir Sajaye"),false,onCustomize,Modifier.fillMaxWidth(),enabled=enabled)
+        }
+    }
+}
 
 @Composable
 fun DevotionStreak(streak:Int, hindi:Boolean) {
@@ -60,12 +98,14 @@ fun DevotionStreak(streak:Int, hindi:Boolean) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCustomize:()->Unit,canCustomize:Boolean=true,page:DevotionPage=DevotionPage.PROFILE,
-    player:BhajanPlayer,onMusic:()->Unit) {
+    player:BhajanPlayer,onMusic:()->Unit,onSignedIn:()->Unit={}) {
     fun tr(hi:String,en:String)=if(hindi) hi else en
     val scope=rememberCoroutineScope();val context=LocalContext.current
+    val catalog=remember(context) {ShrineCatalog(context)}
     var destination by remember(page) {mutableStateOf(page)}
     var shareAfterLogin by remember(page) {mutableStateOf(page==DevotionPage.SHARE)}
     var busy by remember {mutableStateOf(false)}
+    var refreshing by remember {mutableStateOf(false)}
     var message by remember {mutableStateOf("")}
     var messageIsError by remember {mutableStateOf(false)}
     var busyLabel by remember {mutableStateOf("")}
@@ -135,10 +175,18 @@ fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCus
             catch (_: Exception) {
                 if(!continueToShare) message=tr("साइन इन हो गया। इंटरनेट मिलने पर प्रगति सहेजेंगे।", "You’re signed in. Your progress will sync when connected.")
             }
+            if(!continueToShare) onSignedIn()
         }
     }
     LaunchedEffect(page) {
         if(page==DevotionPage.SHARE && account.googleAccount) run(tr("निमंत्रण तैयार हो रहा है…", "Preparing your invitation…")) {shareAfterLogin=false;share()}
+        else if(account.signedIn && page in listOf(DevotionPage.PROFILE,DevotionPage.PACKAGE)) {
+            refreshing=true
+            try {account.sync()}
+            catch(cancelled:CancellationException) {throw cancelled}
+            catch(error:Exception) {message=errorMessage(error);messageIsError=true}
+            finally {refreshing=false}
+        }
     }
     val sharing=destination==DevotionPage.SHARE || shareAfterLogin
     val signingIn=destination==DevotionPage.LOGIN || (!account.signedIn && destination==DevotionPage.PROFILE)
@@ -150,7 +198,7 @@ fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCus
             Column(Modifier.fillMaxWidth().weight(1f,fill=false).verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 Icon(if(sharing) Icons.Outlined.Share else if(destination==DevotionPage.PACKAGE) Icons.Outlined.AutoAwesome else Icons.Outlined.AccountCircle,null,tint=RitualGold,modifier=Modifier.size(32.dp))
-                Text(if(sharing) tr("मित्र को आमंत्रित करें","Invite a friend") else if(signingIn) tr("साइन इन करें","Sign in") else if(destination==DevotionPage.PACKAGE) tr("सिक्के और अनलॉक","Coins & unlocks") else tr("मेरी प्रोफ़ाइल","My profile"),fontSize=25.sp,fontWeight=FontWeight.SemiBold)
+                Text(if(sharing) tr("मित्र को आमंत्रित करें","Invite a friend") else if(signingIn) tr("साइन इन करें","Sign in") else if(destination==DevotionPage.PACKAGE) tr("सिक्के कमाएँ","Earn coins") else tr("मेरी प्रोफ़ाइल","My profile"),fontSize=25.sp,fontWeight=FontWeight.SemiBold)
             }
             if(sharing) {
                 Text(tr("मित्र को अपने साथ रोज़ की पूजा के लिए आमंत्रित करें।", "Invite a friend to join your daily puja."))
@@ -171,11 +219,14 @@ fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCus
                 Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     Text(tr("${account.coins} सिक्के", "${account.coins} coins"),fontSize=28.sp,fontWeight=FontWeight.SemiBold)
                     Text(tr("पूरी पूजा · दिन में 1 सिक्का\nमित्र का नया इंस्टॉल और Google लॉगिन · 1 सिक्का", "Daily puja · 1 coin per day\nFriend installs and signs in with Google · 1 coin each"))
-                    Text(tr("मंदिर · 7 सिक्के प्रति रूप   फूल · 2 सिक्के प्रति किस्म", "Shrine · 7 coins each   Flower · 2 coins each"),fontSize=14.sp)
+                    val shrineCost=account.cost("shrine","marble")
+                    val flowerCost=account.cost("flowers","rose")
+                    Text(tr("मंदिर · $shrineCost सिक्के प्रति रूप   फूल · $flowerCost सिक्के प्रति किस्म", "Shrine · $shrineCost coins each   Flower · $flowerCost coins each"),fontSize=14.sp)
                     Text(tr("शंख, आरती, प्रसाद, मूर्तियाँ और दीपक मुफ़्त हैं।", "Shankh, aarti, prasad, idols and oil lamps are free."),fontSize=14.sp)
                     if(account.signedIn) Text(tr("WhatsApp खुले: ${profile?.optInt("share_count") ?: 0} · नए मित्र: ${profile?.optInt("referrals") ?: 0}", "WhatsApp opens: ${profile?.optInt("share_count") ?: 0} · New friends: ${profile?.optInt("referrals") ?: 0}"),fontSize=14.sp)
                 }
             }
+            MandirSajayeEntry(account,catalog,hindi,onCustomize,enabled=!busy && canCustomize)
             RitualChoice(tr("WhatsApp पर साझा करें", "Share on WhatsApp"), false, {
                 destination=DevotionPage.SHARE
                 if(account.googleAccount) run(tr("निमंत्रण तैयार हो रहा है…", "Preparing your invitation…")) {share()}
@@ -184,14 +235,12 @@ fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCus
             }
             if(destination==DevotionPage.PACKAGE && !focused) {
                 DevotionStreak(account.streakDays,hindi)
-                RitualChoice(tr("मेरा मंदिर सजाएँ","Customize my temple"),false,onCustomize,Modifier.fillMaxWidth(),enabled=!busy && canCustomize)
                 if(!account.signedIn) OutlinedButton(onClick={destination=DevotionPage.LOGIN},modifier=Modifier.fillMaxWidth()) {Text(tr("सिक्के सहेजने के लिए लॉग इन करें","Log in to keep your coins"))}
             } else if(account.signedIn && !focused) {
                 Text(profile?.optString("phone")?.takeIf {it.isNotEmpty()}?.let {"+91 $it"} ?: profile?.optString("email").orEmpty(),fontSize=18.sp)
                 OutlinedButton(onClick={run {account.signOut();destination=DevotionPage.LOGIN}},enabled=!busy,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {Icon(Icons.Outlined.Logout,null);Spacer(Modifier.width(8.dp));Text(tr("लॉग आउट","Log out"))}
                 DevotionStreak(account.streakDays,hindi)
                 Text(tr("एक दिन छूटने पर भी आपके सिक्के और अनलॉक बने रहते हैं।","Your coins and unlocked items stay yours, even if you miss a day."),fontSize=14.sp)
-                TextButton(onClick={destination=DevotionPage.PACKAGE}) {Icon(Icons.Outlined.AutoAwesome,null);Spacer(Modifier.width(8.dp));Text(tr("सिक्के और अनलॉक देखें","View coins & unlocks"))}
                 Text(tr("हाल की पूजा","Recent pujas"),fontSize=20.sp)
                 val days=profile?.optJSONArray("days")
                 val dates=(0 until (days?.length() ?: 0)).map {days!!.getString(it)}.toSet()
@@ -234,14 +283,15 @@ fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCus
                     }
                 }
                 Text(tr("बिना साइन इन किए भी पूजा मुफ़्त है।", "Puja is free, even without signing in."),fontSize=14.sp)
+                if(!sharing) MandirSajayeEntry(account,catalog,hindi,onCustomize,enabled=!busy && canCustomize)
             }
             if(account.signedIn && !focused) {
                 if(account.pending) Text(tr("आज की पूजा सहेजने के लिए ताज़ा करें।","Today's puja is waiting to sync."),color=RitualGold)
                 OutlinedButton(onClick={run {account.sync()}},enabled=!busy,modifier=Modifier.fillMaxWidth()) {Icon(Icons.Outlined.Refresh,null);Spacer(Modifier.width(8.dp));Text(tr("प्रगति ताज़ा करें","Refresh progress"))}
             }
-            if(busy) {
+            if(busy || refreshing) {
                 LinearProgressIndicator(Modifier.fillMaxWidth())
-                Text(busyLabel,fontSize=14.sp,modifier=Modifier.semantics {liveRegion=LiveRegionMode.Polite})
+                Text(if(busy) busyLabel else tr("प्रगति ताज़ा हो रही है…","Refreshing your progress…"),fontSize=14.sp,modifier=Modifier.semantics {liveRegion=LiveRegionMode.Polite})
             }
             if(message.isNotEmpty()) Surface(color=if(messageIsError) MaterialTheme.colorScheme.errorContainer else Color(0xFFF2E5D2),shape=RoundedCornerShape(16.dp)) {
                 Text(message,color=if(messageIsError) MaterialTheme.colorScheme.error else RitualInk,modifier=Modifier.fillMaxWidth().padding(14.dp).semantics {liveRegion=LiveRegionMode.Polite})

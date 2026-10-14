@@ -7,6 +7,13 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ShrineSelectionTest {
+    @Test fun unlockingSelectsItemsWithoutRemovingChosenFlowers() {
+        val selected=ShrineSelection(mapOf("flowers" to "rose,orchid"))
+        assertEquals(listOf("rose","orchid"),selected.selectItem("flowers","rose").flowerIds)
+        assertEquals(listOf("rose","orchid","azalea"),selected.selectItem("flowers","azalea").flowerIds)
+        assertEquals("marble",selected.selectItem("shrine","marble")["shrine"])
+        assertEquals(selected.flowerIds,selected.selectItem("shrine","marble").flowerIds)
+    }
     @Test fun allFlowerVarietiesCanBeSelectedAndRestored() {
         val ids=listOf("original","orchid","rose","azalea","bouquet")
         val selection=ids.drop(1).fold(ShrineSelection()) {s,id -> s.toggleFlower(id)}

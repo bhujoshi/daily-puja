@@ -320,18 +320,19 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
             }
         }
         if(customizer) ShrineControlsTheme { ShrineCustomizer(account,customizerDraft ?: selection,hindi,
-            onDismiss={customizer=false;customizerDraft=null},onAccount={customizerDraft=it;customizer=false;devotionPage=DevotionPage.PACKAGE;devotionSheet=true},
+            onDismiss={customizer=false;customizerDraft=null},onAccount={customizerDraft=it;customizer=false;devotionPage=if(account.signedIn) DevotionPage.PACKAGE else DevotionPage.LOGIN;devotionSheet=true},
             onApplied={selection=it;customizerDraft=null;session=WorshipSession(deityCount=it.deityCount);customizer=false},
             player=bhajan,onMusic={customizer=false;musicSheet=true}) }
         if(devotionSheet) ShrineControlsTheme { DevotionSheet(account,hindi,{devotionSheet=false},onCustomize={devotionSheet=false;customizer=true},canCustomize=!busy,page=devotionPage,
-            player=bhajan,onMusic={devotionSheet=false;musicSheet=true}) }
+            player=bhajan,onMusic={devotionSheet=false;musicSheet=true},
+            onSignedIn={if(customizerDraft!=null) {devotionSheet=false;customizer=true}}) }
         if(musicSheet) BhajanPlayerSheet(bhajan,hindi,{musicSheet=false})
         ShrineControlsTheme {
             MandirNavigationDrawer(menu,{menu=false},hindi) {
                 if(bhajan.current != null || bhajan.loading) BhajanMiniPlayer(bhajan,hindi,{menu=false;musicSheet=true})
                 DropdownMenuItem(leadingIcon={Icon(Icons.Outlined.AccountCircle,null)},text={Text(tr("मेरी प्रोफ़ाइल","My profile"))},onClick={menu=false;devotionPage=DevotionPage.PROFILE;devotionSheet=true})
                 DropdownMenuItem(leadingIcon={Icon(Icons.Outlined.Share,null)},text={Text(tr("WhatsApp पर साझा करें","Share on WhatsApp"))},onClick={menu=false;devotionPage=DevotionPage.SHARE;devotionSheet=true})
-                DropdownMenuItem(leadingIcon={Icon(Icons.Outlined.AutoAwesome,null)},text={Text(tr("सिक्के और अनलॉक","Coins & unlocks"))},onClick={menu=false;devotionPage=DevotionPage.PACKAGE;devotionSheet=true})
+                DropdownMenuItem(leadingIcon={Icon(Icons.Outlined.AutoAwesome,null)},text={Text(tr("मंदिर सजाएँ","Mandir Sajaye"))},enabled=!busy,onClick={menu=false;customizerDraft=null;customizer=true})
                 HorizontalDivider()
                 DropdownMenuItem(leadingIcon={Icon(Icons.Outlined.MusicNote,null)},text={Text(tr("संगीत प्लेयर खोलें","Open music player"))},onClick={menu=false;musicSheet=true})
                 DropdownMenuItem(leadingIcon={Icon(Icons.Outlined.Translate,null)},text={Text(if(hindi) "English" else "हिंदी")},onClick={hindi=!hindi;prefs.edit().putBoolean("hindi",hindi).apply();menu=false})

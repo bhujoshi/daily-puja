@@ -1,7 +1,20 @@
 # Android release builds
 
 Application ID: `com.pavitramandir.app`  
-Version: `1.0.7` (version code `8`)
+Version: `1.0.8` (version code `9`)
+
+## Latest release verification
+
+Version 1.0.8 includes Mandir Sajaye purchase confirmations, preservation of
+selected flowers, profile unlock notices, and serialized account updates.
+The signed APK and AAB were built with the existing release key. All 53 release
+unit tests, seven isolated emulator purchase-flow tests, and release lint passed.
+The backend was rebuilt and deployed to the existing staging Sprite after a
+checkpoint and account-data backup. Backend race tests and local/public health,
+catalog, authentication, and private-metrics checks passed.
+
+Versioned build copies and SHA-256 checksums are stored locally in
+`android/app/build/outputs/releases/1.0.8/`.
 
 ## Build from the command line
 

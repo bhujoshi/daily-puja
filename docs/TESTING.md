@@ -65,6 +65,23 @@ Execute via Gradle:
   - `CurtainPurityGateTest`: Asserts curtains remain closed until `onConfirmPurity` is triggered.
   - `DustWipingGestureTest`: Simulates drag gestures across the `CleaningView` and verifies dust alpha decrements to 0.
 
+#### Mandir Sajaye purchase flows
+
+With a local Android emulator running, verify the chooser, coin purchase confirmation,
+selection saving, guest/low-balance handoffs, and profile unlock notices:
+
+```bash
+./gradlew connectedDebugAndroidTest -PisolatedVerification=true \
+  -PaccountApiUrl=http://127.0.0.1:8189 \
+  -Pandroid.testInstrumentationRunnerArguments.class=com.worship.nityamandir.ui.MandirSajayeFlowTest
+```
+
+These tests start a temporary coin service inside the emulator and use separate
+preferences. They require the isolated verification application and the exact
+loopback URL above; other configurations skip them. They never use a remote account.
+The normal unit suite covers unlock availability, account-specific acknowledgements,
+server pricing, and selecting purchased flowers without removing existing choices.
+
 ### 3.3 iOS Automated Tests (`ios/`)
 Execute via Swift Package Manager / Xcode:
 ```bash

@@ -8,6 +8,9 @@ data class ShrineCategory(val id:String,val en:String,val hi:String,val options:
 data class ShrineSelection(val values:Map<String,String> = emptyMap()) {
     operator fun get(category:String)=values[category] ?: "original"
     fun with(category:String,id:String)=copy(values=values+(category to id))
+    /** Choosing an unlocked flower adds it without toggling an existing choice off. */
+    fun selectItem(category:String,id:String)=if(category=="flowers")
+        with(category,(flowerIds+id).distinct().joinToString(",")) else with(category,id)
     // Comma-separated IDs preserve the existing string-valued account wire format.
     val flowerIds get()=this["flowers"].split(',').filter {it.isNotBlank()}.distinct().ifEmpty {listOf("original")}
     fun toggleFlower(id:String):ShrineSelection {

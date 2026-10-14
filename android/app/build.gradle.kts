@@ -20,8 +20,8 @@ android {
         applicationId = "com.pavitramandir.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "1.0.7"
+        versionCode = 9
+        versionName = "1.0.8"
         // Use the Google-enabled backend by default; local development can override this URL.
         buildConfigField("String", "ACCOUNT_API_URL", "\"${providers.gradleProperty("accountApiUrl").getOrElse("https://mcp-daily-puja-backend-staging-b3mqb.sprites.app")}\"")
 
