@@ -57,12 +57,23 @@ Keep the existing Grafana settings. From `backend/deploy`:
 docker compose up -d --build api
 ```
 
-For local Go development, export `GOOGLE_CLIENT_ID` before `go run ./cmd/server`.
+For local Go development, start the server with:
+
+```sh
+GOOGLE_CLIENT_ID=653836355193-vvbqtr7f50p3ct29c3id30pt8doak8is.apps.googleusercontent.com MOCK_MODE=false go run ./cmd/server
+```
+
 The Go server does not load `.env` automatically. An unset client ID leaves Google
 login disabled; a malformed client ID fails startup. Outbound HTTPS access to
 Google's public signing-key endpoint is required.
 
 ## Configure Android
+
+Debug and release builds default to the Google-enabled staging backend. A normal
+`./gradlew :app:installDebug` can test Google sign-in without a local server.
+Use the regular `com.pavitramandir.app` package: `-PisolatedVerification=true`
+changes the package to `com.pavitramandir.app.verification`, which requires its
+own Android OAuth client before it can be used for Google sign-in.
 
 Use the same Web client ID as the `googleClientId` Gradle property. It is a public
 identifier, not a secret. You can persist it in your local `~/.gradle/gradle.properties`
@@ -82,7 +93,7 @@ still restore normally.
 ## Test the flow
 
 Use a device or emulator with Google Play services. Open the profile/login sheet,
-optionally enter an invitation code, tap **Sign in with Google**, select an account
+tap **Sign in with Google**, select an account
 and confirm consent. Cancelling returns to the login sheet. Reopen the app to
 check session restoration; log out to choose another Google account.
 
@@ -122,5 +133,49 @@ challenge returned 200, and an invalid ID token returned 401.
 
 The debug APK at `android/app/build/outputs/apk/debug/app-debug.apk` includes the
 staging URL and this Web client ID. Android build and unit tests passed. A real
-Google account sign-in still needs an on-device test and matching Android OAuth
-certificate/test-user configuration in Google Cloud.
+Google account sign-in was verified on the emulator on 2026-10-13 using the
+regular debug package and staging backend. The older verification install used
+a local backend without `GOOGLE_CLIENT_ID`, which returned 503 before the account
+picker opened. Keep matching Android OAuth certificate/test-user configuration
+in Google Cloud for each installed package and certificate.
+
+### Signed APK verified on Pixel 9 (2026-10-14)
+
+The real Pixel 9 reproduced the release sign-in failure: the account picker
+opened, but selecting an account returned Google Play services status
+`UNREGISTERED_ON_API_CONSOLE`. Credential Manager wrapped this provider failure
+as `TYPE_USER_CANCELED`; no ID token reached the backend.
+
+Direct inspection of Google Cloud project `653836355193`
+(`gen-lang-client-0511734124`) established the cause. Its existing Android client
+registered `com.pavitramandir.app` with the **debug** SHA-1 only:
+`9B:DE:BC:AC:B7:99:F4:C6:25:53:37:D2:55:2B:0A:CD:8C:CB:F5:61`.
+The signed APK's verified SHA-1 is
+`5D:9B:97:33:C1:36:38:44:F4:DA:B9:EE:A4:5F:66:10:94:90:C4:0F`.
+
+With user approval, a separate Android client named
+**Pavitra Mandir — direct release** was created for the release certificate:
+`653836355193-e60oej5pi1rfhrdmecqraavsm8lba0bb.apps.googleusercontent.com`.
+The existing debug registration and Web client were preserved. The Web client
+ID embedded in the app and configured on the backend remains unchanged.
+
+After registration, the signed release successfully completed Google sign-in
+on the Pixel 9 and opened WhatsApp's recipient chooser from the guest sharing
+flow. Cancellation returned to a focused sheet with a neutral retry message.
+App restart restored the signed-in session; logout and a new sign-in succeeded.
+Rapid repeated sign-in taps opened one picker. Sharing records an accepted
+WhatsApp handoff, not message delivery; no test message was sent.
+
+The updated app focuses sign-in and sharing sheets on their next action, keeps
+coin/pricing/history details in profile and unlock screens, localizes common
+provider/network/missing-WhatsApp failures, preserves coroutine cancellation,
+and permits a requested WhatsApp handoff before optional progress sync.
+Credential fallback is limited to an explicit unsupported-provider exception;
+other provider/configuration failures retain their diagnostic classification.
+
+Verification: signed release build and 46 unit tests passed. Four instrumentation
+tests passed on the Pixel using a separate verification package and captured
+intents: WhatsApp payload, Business fallback, missing-app handling, and Activity
+context flags/wrapper safety. See [phone test record](PHONE_SIGNIN_SHARE_TEST.md).
+Google Play installs still require their own Play app signing certificate
+registration when it differs from the directly installed APK.

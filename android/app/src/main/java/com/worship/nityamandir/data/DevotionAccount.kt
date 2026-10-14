@@ -8,8 +8,29 @@ import com.worship.nityamandir.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URL
+
+class GoogleSignInFailure(val reason: Reason, cause: Throwable? = null) : IllegalStateException(
+    when (reason) {
+        Reason.UNAVAILABLE -> "Google sign-in is unavailable. Please try again later."
+        Reason.PROVIDER_ERROR -> "Google sign-in could not start. Please try again."
+        Reason.INVALID_CREDENTIAL -> "Google sign-in could not be completed. Please try again."
+    }, cause
+) {
+    enum class Reason { UNAVAILABLE, PROVIDER_ERROR, INVALID_CREDENTIAL }
+}
+
+class AccountConnectionFailure(val reason: Reason, cause: IOException) : IOException(
+    when (reason) {
+        Reason.TIMEOUT -> "The connection timed out. Please try again."
+        Reason.CONNECTION -> "Could not connect. Check your internet connection and try again."
+    }, cause
+) {
+    enum class Reason { TIMEOUT, CONNECTION }
+}
 
 /** Account identity with a Keystore-protected session and durable profile snapshot. */
 class DevotionAccount(context: Context) {
@@ -64,40 +85,51 @@ class DevotionAccount(context: Context) {
     }
     private suspend fun request(path: String, method: String = "GET", body: JSONObject? = null): JSONObject = withContext(Dispatchers.IO) {
         check(configured) { "Account service is not connected yet." }
-        val connection = URL(BuildConfig.ACCOUNT_API_URL.trimEnd('/') + "/api/v2/" + path).openConnection() as HttpURLConnection
         try {
-            connection.requestMethod = method
-            connection.connectTimeout = 10000; connection.readTimeout = 15000
-            connection.setRequestProperty("Authorization", "Bearer $token")
-            if (body != null) {
-                connection.doOutput = true
-                connection.setRequestProperty("Content-Type", "application/json")
-                connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-            }
-            val status = connection.responseCode
-            val text = (if(status in 200..299) connection.inputStream else connection.errorStream)?.bufferedReader()?.use { it.readText() } ?: "{}"
-            val result = JSONObject(text)
-            if(status==401 && signedIn && !path.startsWith("auth/")) withContext(Dispatchers.Main) { clearLocal() }
-            check(status in 200..299) { result.optString("error", "Please try again") }
-            result
-        } finally { connection.disconnect() }
+            val connection = URL(BuildConfig.ACCOUNT_API_URL.trimEnd('/') + "/api/v2/" + path).openConnection() as HttpURLConnection
+            try {
+                connection.requestMethod = method
+                connection.connectTimeout = 10000; connection.readTimeout = 15000
+                connection.setRequestProperty("Authorization", "Bearer $token")
+                if (body != null) {
+                    connection.doOutput = true
+                    connection.setRequestProperty("Content-Type", "application/json")
+                    connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+                }
+                val status = connection.responseCode
+                val text = (if(status in 200..299) connection.inputStream else connection.errorStream)?.bufferedReader()?.use { it.readText() } ?: "{}"
+                val result = JSONObject(text)
+                if(status==401 && signedIn && !path.startsWith("auth/")) withContext(Dispatchers.Main) { clearLocal() }
+                check(status in 200..299) { result.optString("error", "Please try again") }
+                result
+            } finally { connection.disconnect() }
+        } catch (e: SocketTimeoutException) {
+            throw AccountConnectionFailure(AccountConnectionFailure.Reason.TIMEOUT, e)
+        } catch (e: IOException) {
+            throw AccountConnectionFailure(AccountConnectionFailure.Reason.CONNECTION, e)
+        }
     }
-    suspend fun signInWithGoogle(activityContext: Context, invite: String) {
-        check(googleConfigured) { "Google sign-in is not configured yet." }
+    /** False means Google returned without completing sign-in, including cancellation. */
+    suspend fun signInWithGoogle(activityContext: Context, invite: String): Boolean {
+        if (!googleConfigured) throw GoogleSignInFailure(GoogleSignInFailure.Reason.UNAVAILABLE)
         val challenge = request("auth/google/challenge", "POST", JSONObject())
         val nonce = challenge.getString("nonce")
         val option = com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
             .Builder(BuildConfig.GOOGLE_CLIENT_ID).setNonce(nonce).build()
         val credentialRequest = androidx.credentials.GetCredentialRequest.Builder()
             .addCredentialOption(option).build()
+        fun logProviderFailure(stage: String, e: androidx.credentials.exceptions.GetCredentialException) {
+            // Keep the original failure classification without logging provider messages,
+            // which may contain account information, or any credential data.
+            android.util.Log.w("GoogleSignIn", "$stage: ${e.javaClass.simpleName}; type=${e.type}")
+        }
         suspend fun getGoogleCredential(): androidx.credentials.Credential {
             try {
                 return credentialManager.getCredential(android.content.MutableContextWrapper(activityContext), credentialRequest).credential
-            } catch (e: androidx.credentials.exceptions.GetCredentialCancellationException) {
-                throw e
-            } catch (_: androidx.credentials.exceptions.GetCredentialException) {
-                // Older Play services cannot parse the dedicated button option.
-                // The account-picker request supports new and returning Google accounts.
+            } catch (e: androidx.credentials.exceptions.GetCredentialUnsupportedException) {
+                // Only an explicit capability failure permits a compatibility fallback.
+                // Cancellation, OAuth configuration and other provider errors are not retried.
+                logProviderFailure("Google button unsupported; requesting account picker", e)
                 val fallbackOption = com.google.android.libraries.identity.googleid.GetGoogleIdOption.Builder()
                     .setServerClientId(BuildConfig.GOOGLE_CLIENT_ID)
                     .setFilterByAuthorizedAccounts(false)
@@ -105,25 +137,46 @@ class DevotionAccount(context: Context) {
                     .setNonce(nonce).build()
                 val fallbackRequest = androidx.credentials.GetCredentialRequest.Builder()
                     .addCredentialOption(fallbackOption).build()
-                return credentialManager.getCredential(android.content.MutableContextWrapper(activityContext), fallbackRequest).credential
+                try {
+                    return credentialManager.getCredential(android.content.MutableContextWrapper(activityContext), fallbackRequest).credential
+                } catch (fallback: androidx.credentials.exceptions.GetCredentialException) {
+                    fallback.addSuppressed(e)
+                    throw fallback
+                }
             }
         }
         val credential = try {
             getGoogleCredential()
         } catch (e: androidx.credentials.exceptions.GetCredentialCancellationException) {
-            return
+            // Providers can also report configuration failures as cancellation.
+            // Let the caller show an incomplete sign-in instead of silently doing nothing.
+            logProviderFailure("Credential request did not complete", e)
+            return false
         } catch (e: androidx.credentials.exceptions.NoCredentialException) {
-            throw IllegalStateException("No Google account is available. Add an account on this device and update Google Play services.")
+            // This also happens when the installed signing certificate is not registered
+            // with Google OAuth; it does not prove the device has no Google account.
+            logProviderFailure("No Google credential returned", e)
+            throw GoogleSignInFailure(GoogleSignInFailure.Reason.UNAVAILABLE, e)
         } catch (e: androidx.credentials.exceptions.GetCredentialException) {
-            // Record only the exception type; never log credentials or account data.
-            android.util.Log.w("GoogleSignIn", "Credential request failed: ${e.type}")
-            throw IllegalStateException("Google sign-in could not start. Update Google Play services and check this app's Google OAuth configuration.")
+            logProviderFailure("Credential request failed", e)
+            val unavailable = e is androidx.credentials.exceptions.GetCredentialUnsupportedException ||
+                e is androidx.credentials.exceptions.GetCredentialProviderConfigurationException
+            throw GoogleSignInFailure(
+                if (unavailable) GoogleSignInFailure.Reason.UNAVAILABLE else GoogleSignInFailure.Reason.PROVIDER_ERROR,
+                e
+            )
         }
-        check(credential is androidx.credentials.CustomCredential &&
-            credential.type == com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-            "Google sign-in returned an unsupported credential."
+        if (credential !is androidx.credentials.CustomCredential ||
+            credential.type != com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+            android.util.Log.w("GoogleSignIn", "Credential response classification: unsupported credential")
+            throw GoogleSignInFailure(GoogleSignInFailure.Reason.INVALID_CREDENTIAL)
         }
-        val googleToken = com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.createFrom(credential.data)
+        val googleToken = try {
+            com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.createFrom(credential.data)
+        } catch (e: com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException) {
+            android.util.Log.w("GoogleSignIn", "Credential response classification: ${e.javaClass.simpleName}")
+            throw GoogleSignInFailure(GoogleSignInFailure.Reason.INVALID_CREDENTIAL, e)
+        }
         val result = request("auth/google", "POST", JSONObject()
             .put("id_token", googleToken.idToken).put("nonce", nonce).put("invite_code", invite.trim())
             .put("install_id", referral.identity().orEmpty()))
@@ -132,6 +185,7 @@ class DevotionAccount(context: Context) {
         token = session
         prefs.edit().putString("session", encrypted).apply()
         cache(result.getJSONObject("profile"))
+        return true
     }
     private suspend fun clearGoogleState() {
         try { credentialManager.clearCredentialState(androidx.credentials.ClearCredentialStateRequest()) }

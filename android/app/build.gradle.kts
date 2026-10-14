@@ -20,10 +20,10 @@ android {
         applicationId = "com.pavitramandir.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 6
-        versionName = "1.0.5"
-        // Android emulator alias for the development machine's localhost.
-        buildConfigField("String", "ACCOUNT_API_URL", "\"${providers.gradleProperty("accountApiUrl").getOrElse("http://10.0.2.2:8080")}\"")
+        versionCode = 8
+        versionName = "1.0.7"
+        // Use the Google-enabled backend by default; local development can override this URL.
+        buildConfigField("String", "ACCOUNT_API_URL", "\"${providers.gradleProperty("accountApiUrl").getOrElse("https://mcp-daily-puja-backend-staging-b3mqb.sprites.app")}\"")
 
         buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${providers.gradleProperty("googleClientId").getOrElse("")}\"")
 
@@ -52,11 +52,6 @@ android {
             }
         }
         release {
-            buildConfigField(
-                "String",
-                "ACCOUNT_API_URL",
-                "\"${providers.gradleProperty("accountApiUrl").getOrElse("https://mcp-daily-puja-backend-staging-b3mqb.sprites.app")}\""
-            )
             if (releaseSigningFile.isFile) {
                 signingConfig = signingConfigs.getByName("release")
             }

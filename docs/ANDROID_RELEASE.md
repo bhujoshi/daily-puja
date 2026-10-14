@@ -1,7 +1,7 @@
 # Android release builds
 
 Application ID: `com.pavitramandir.app`  
-Version: `1.0.5` (version code `6`)
+Version: `1.0.7` (version code `8`)
 
 ## Build from the command line
 
@@ -25,18 +25,19 @@ To build only the APK, run `./gradlew :app:assembleRelease`. To build only the
 bundle, run `./gradlew :app:bundleRelease`. A clean build is normally unnecessary;
 prepend `clean` to the Gradle tasks if needed.
 
-Release builds use `https://mcp-daily-puja-backend-staging-b3mqb.sprites.app`
+Debug and release builds use `https://mcp-daily-puja-backend-staging-b3mqb.sprites.app`
 as the account API base URL. The app adds `/api/v2/` to request paths.
 To override the URL, pass `-PaccountApiUrl=https://your-backend.example` to
-Gradle. Debug builds default to `http://10.0.2.2:8080`, the Android emulator's
-route to the development machine's localhost. Pass `-PaccountApiUrl=...` for a
-different server, including a reachable HTTPS URL when testing on a device.
+Gradle. For a local backend, pass `-PaccountApiUrl=http://10.0.2.2:8080`, the
+Android emulator's route to the development machine's localhost, and start the
+backend with `GOOGLE_CLIENT_ID` set as described in [GOOGLE_LOGIN_SETUP.md](GOOGLE_LOGIN_SETUP.md).
 
-Google login requires `-PgoogleClientId=YOUR_WEB_CLIENT_ID.apps.googleusercontent.com`
-and the same `GOOGLE_CLIENT_ID` on the backend. Register the installed build's
+Google login uses the public Web client ID in `android/gradle.properties`; override
+it with `-PgoogleClientId=YOUR_WEB_CLIENT_ID.apps.googleusercontent.com` and set
+the same `GOOGLE_CLIENT_ID` on the backend. Register the installed build's
 signing certificate SHA-1 with Google's Android OAuth client. See
-[GOOGLE_LOGIN_SETUP.md](GOOGLE_LOGIN_SETUP.md). Live Google login remains unavailable
-until OAuth configuration is completed. Real payments still require a payment provider.
+[GOOGLE_LOGIN_SETUP.md](GOOGLE_LOGIN_SETUP.md). Google login was verified on the
+emulator with the regular debug package and staging backend. Real payments still require a payment provider.
 
 ## Signing key
 

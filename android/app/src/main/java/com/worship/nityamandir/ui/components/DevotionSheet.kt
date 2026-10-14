@@ -25,6 +25,10 @@ import androidx.compose.ui.unit.sp
 import com.worship.nityamandir.data.DevotionAccount
 import com.worship.nityamandir.engine.BhajanPlayer
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 
 enum class DevotionPage { PROFILE, PACKAGE, LOGIN, SHARE }
 
@@ -60,30 +64,109 @@ fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCus
     fun tr(hi:String,en:String)=if(hindi) hi else en
     val scope=rememberCoroutineScope();val context=LocalContext.current
     var destination by remember(page) {mutableStateOf(page)}
-    var shareAfterLogin by remember {mutableStateOf(page==DevotionPage.SHARE)}
-    var busy by remember {mutableStateOf(false)};var message by remember {mutableStateOf("")}
+    var shareAfterLogin by remember(page) {mutableStateOf(page==DevotionPage.SHARE)}
+    var busy by remember {mutableStateOf(false)}
+    var message by remember {mutableStateOf("")}
+    var messageIsError by remember {mutableStateOf(false)}
+    var busyLabel by remember {mutableStateOf("")}
     var deleteConfirm by remember {mutableStateOf(false)}
     val profile=account.profile
-    fun run(action:suspend ()->Unit) {scope.launch {busy=true;message="";try {action()} catch(e:Exception) {message=e.message ?: tr("फिर कोशिश करें","Please try again")} finally {busy=false}}}
+    fun errorMessage(error: Exception): String = when (error) {
+        is com.worship.nityamandir.data.MissingWhatsAppException -> tr(
+            "निमंत्रण साझा करने के लिए WhatsApp या WhatsApp Business इंस्टॉल करें।",
+            "Install WhatsApp or WhatsApp Business to share your invitation.")
+        is com.worship.nityamandir.data.GoogleSignInFailure -> when(error.reason) {
+            com.worship.nityamandir.data.GoogleSignInFailure.Reason.UNAVAILABLE -> tr(
+                "Google साइन इन अभी उपलब्ध नहीं है। थोड़ी देर बाद फिर कोशिश करें।",
+                "Google sign-in is currently unavailable. Please try again later.")
+            com.worship.nityamandir.data.GoogleSignInFailure.Reason.PROVIDER_ERROR -> tr(
+                "Google साइन इन शुरू नहीं हो पाया। फिर कोशिश करें या Google Play सेवाएँ अपडेट करें।",
+                "Google sign-in could not start. Try again or update Google Play services.")
+            com.worship.nityamandir.data.GoogleSignInFailure.Reason.INVALID_CREDENTIAL -> tr(
+                "Google साइन इन पूरा नहीं हो पाया। कृपया फिर कोशिश करें।",
+                "Google sign-in could not be completed. Please try again.")
+        }
+        is com.worship.nityamandir.data.AccountConnectionFailure -> tr(
+            "कनेक्शन नहीं हो पाया। इंटरनेट जाँचें और फिर कोशिश करें।",
+            "Could not connect. Check your internet connection and try again.")
+        is java.io.IOException -> tr(
+            "कनेक्शन नहीं हो पाया। इंटरनेट जाँचें और फिर कोशिश करें।",
+            "Could not connect. Check your internet connection and try again.")
+        else -> error.message ?: tr("फिर कोशिश करें", "Please try again")
+    }
+    fun run(label: String = tr("कृपया प्रतीक्षा करें…", "Please wait…"), action:suspend ()->Unit) {
+        if (busy) return
+        busy=true; busyLabel=label; message=""; messageIsError=false
+        scope.launch {
+            try { action() }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (error: Exception) { message=errorMessage(error); messageIsError=true }
+            finally { busy=false }
+        }
+    }
     suspend fun share() {
         val invitation=account.createShare()
         val text=tr("पवित्र मंदिर पर मेरे साथ पूजा करें। डाउनलोड करें और Google से साइन इन करें:\n", "Join me for daily puja on Pavitra Mandir. Install and sign in with Google:\n")+invitation.getString("url")
         WhatsAppShare.open(context,text)
         account.queueShareOpened(invitation.getString("share_id"))
+        message=tr("आपका निमंत्रण WhatsApp में खुल गया।", "WhatsApp opened with your invitation.")
+        messageIsError=false
         try { account.recordShareOpened(invitation.getString("share_id")) }
-        catch (_: Exception) { message=tr("WhatsApp खुल गया। शेयर गिनती अगली बार सहेजेंगे।", "WhatsApp opened. Your share count will sync when connected.") }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { message=tr("WhatsApp खुल गया। शेयर गिनती इंटरनेट मिलने पर सहेजेंगे।", "WhatsApp opened. Your share count will sync when connected.") }
+    }
+    fun signIn() = run(tr("Google से साइन इन हो रहा है…", "Signing in with Google…")) {
+        if (!account.signInWithGoogle(context, "")) {
+            message=tr("साइन इन पूरा नहीं हुआ। तैयार हों तो फिर कोशिश करें।", "Sign-in was not completed. Try again when you’re ready.")
+        } else {
+            val continueToShare=shareAfterLogin || destination==DevotionPage.SHARE
+            shareAfterLogin=false
+            destination=if(continueToShare) DevotionPage.SHARE else if(page==DevotionPage.PACKAGE) DevotionPage.PACKAGE else DevotionPage.PROFILE
+            message=tr("साइन इन हो गया।", "You’re signed in.")
+            // The requested WhatsApp handoff must not wait on optional progress sync.
+            if(continueToShare) {
+                busyLabel=tr("निमंत्रण तैयार हो रहा है…", "Preparing your invitation…")
+                try { share() }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (error: Exception) { message=errorMessage(error); messageIsError=true }
+            }
+            try { account.sync() }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) {
+                if(!continueToShare) message=tr("साइन इन हो गया। इंटरनेट मिलने पर प्रगति सहेजेंगे।", "You’re signed in. Your progress will sync when connected.")
+            }
+        }
     }
     LaunchedEffect(page) {
-        if(page==DevotionPage.SHARE && account.googleAccount) run {shareAfterLogin=false;share()}
+        if(page==DevotionPage.SHARE && account.googleAccount) run(tr("निमंत्रण तैयार हो रहा है…", "Preparing your invitation…")) {shareAfterLogin=false;share()}
     }
+    val sharing=destination==DevotionPage.SHARE || shareAfterLogin
+    val signingIn=destination==DevotionPage.LOGIN || (!account.signedIn && destination==DevotionPage.PROFILE)
+    val focused=sharing || signingIn
+
     ModalBottomSheet(onDismissRequest=onDismiss,sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true),containerColor=Color(0xFFFFF7EC)) {
         Column(Modifier.fillMaxWidth()) {
             if(player.current!=null || player.loading) BhajanMiniPlayer(player,hindi,onMusic,Modifier.padding(horizontal=24.dp,vertical=8.dp))
             Column(Modifier.fillMaxWidth().weight(1f,fill=false).verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                Icon(if(destination==DevotionPage.PACKAGE) Icons.Outlined.AutoAwesome else Icons.Outlined.AccountCircle,null,tint=RitualGold,modifier=Modifier.size(32.dp))
-                Text(when(destination) {DevotionPage.PACKAGE -> tr("सिक्के और अनलॉक","Coins & unlocks");DevotionPage.SHARE -> tr("मित्र को आमंत्रित करें","Invite a friend");DevotionPage.LOGIN -> tr("लॉग इन","Log in");else -> tr("मेरी प्रोफ़ाइल","My profile")},fontSize=25.sp,fontWeight=FontWeight.SemiBold)
+                Icon(if(sharing) Icons.Outlined.Share else if(destination==DevotionPage.PACKAGE) Icons.Outlined.AutoAwesome else Icons.Outlined.AccountCircle,null,tint=RitualGold,modifier=Modifier.size(32.dp))
+                Text(if(sharing) tr("मित्र को आमंत्रित करें","Invite a friend") else if(signingIn) tr("साइन इन करें","Sign in") else if(destination==DevotionPage.PACKAGE) tr("सिक्के और अनलॉक","Coins & unlocks") else tr("मेरी प्रोफ़ाइल","My profile"),fontSize=25.sp,fontWeight=FontWeight.SemiBold)
             }
+            if(sharing) {
+                Text(tr("मित्र को अपने साथ रोज़ की पूजा के लिए आमंत्रित करें।", "Invite a friend to join your daily puja."))
+                Surface(color=Color(0xFFF2E5D2),shape=RoundedCornerShape(20.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                        if(!account.googleAccount) Text(tr("1. Google से साइन इन करें\n2. WhatsApp में मित्र चुनकर निमंत्रण भेजें", "1. Sign in with Google\n2. Choose a friend in WhatsApp and send your invitation"))
+                        else Text(tr("WhatsApp में मित्र चुनें और भेजें पर टैप करें।", "Choose a friend in WhatsApp and tap Send."))
+                        Text(tr("मित्र पहली बार इंस्टॉल करके Google से साइन इन करे तो आपको 1 सिक्का मिलेगा।", "Earn 1 coin when a new friend installs and signs in with Google."),fontSize=14.sp)
+                    }
+                }
+                if(account.googleAccount) {
+                    RitualChoice(tr("WhatsApp पर साझा करें", "Share on WhatsApp"),false,{run(tr("निमंत्रण तैयार हो रहा है…", "Preparing your invitation…")) {share()}},Modifier.fillMaxWidth(),enabled=!busy)
+                    TextButton(onClick={destination=DevotionPage.PROFILE;message=""},enabled=!busy) {Text(tr("मेरी प्रोफ़ाइल देखें", "View my profile"))}
+                }
+            }
+            if(!focused) {
             Surface(color=Color(0xFFF2E5D2),shape=RoundedCornerShape(20.dp)) {
                 Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     Text(tr("${account.coins} सिक्के", "${account.coins} coins"),fontSize=28.sp,fontWeight=FontWeight.SemiBold)
@@ -94,15 +177,16 @@ fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCus
                 }
             }
             RitualChoice(tr("WhatsApp पर साझा करें", "Share on WhatsApp"), false, {
-                if(account.googleAccount) run {share()}
-                else {shareAfterLogin=true;destination=DevotionPage.LOGIN}
+                destination=DevotionPage.SHARE
+                if(account.googleAccount) run(tr("निमंत्रण तैयार हो रहा है…", "Preparing your invitation…")) {share()}
+                else {shareAfterLogin=true;message=""}
             },Modifier.fillMaxWidth(),enabled=!busy)
-            if(shareAfterLogin && !account.googleAccount) Text(tr("साझा करने और सिक्के सहेजने के लिए पहले Google से साइन इन करें।", "Sign in with Google first to share and keep your coins."))
-            if(destination==DevotionPage.PACKAGE) {
+            }
+            if(destination==DevotionPage.PACKAGE && !focused) {
                 DevotionStreak(account.streakDays,hindi)
                 RitualChoice(tr("मेरा मंदिर सजाएँ","Customize my temple"),false,onCustomize,Modifier.fillMaxWidth(),enabled=!busy && canCustomize)
                 if(!account.signedIn) OutlinedButton(onClick={destination=DevotionPage.LOGIN},modifier=Modifier.fillMaxWidth()) {Text(tr("सिक्के सहेजने के लिए लॉग इन करें","Log in to keep your coins"))}
-            } else if(account.signedIn && destination!=DevotionPage.LOGIN) {
+            } else if(account.signedIn && !focused) {
                 Text(profile?.optString("phone")?.takeIf {it.isNotEmpty()}?.let {"+91 $it"} ?: profile?.optString("email").orEmpty(),fontSize=18.sp)
                 OutlinedButton(onClick={run {account.signOut();destination=DevotionPage.LOGIN}},enabled=!busy,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {Icon(Icons.Outlined.Logout,null);Spacer(Modifier.width(8.dp));Text(tr("लॉग आउट","Log out"))}
                 DevotionStreak(account.streakDays,hindi)
@@ -137,35 +221,31 @@ fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCus
                     Text("$label · ${event.optString("at").take(10)}",fontSize=14.sp)
                 }
                 TextButton(onClick={deleteConfirm=true},enabled=!busy) {Text(tr("खाता और गतिविधि मिटाएँ","Delete account and activity"))}
-            } else {
-                if(account.referredInstall) Text(tr("Google से साइन इन करके अपने मित्र का निमंत्रण पूरा करें। पूजा बिना लॉगिन के भी मुफ़्त है।", "Sign in with Google to credit your friend's invitation. Puja is free even without signing in."))
-                Text(tr("अपनी पूजा श्रृंखला और मंदिर के रूप सहेजें।","Save your puja streak and your temple designs."))
-                if(!account.configured) Text(tr("खाता सेवा अभी जुड़ी नहीं है। पूजा जारी रख सकते हैं।","Account service is not connected yet. You can continue your puja."))
+            }
+            if((signingIn || sharing) && (!account.googleAccount || signingIn)) {
+                if(account.referredInstall) Text(tr("Google से साइन इन करके अपने मित्र का निमंत्रण पूरा करें।", "Sign in with Google to credit your friend's invitation."))
+                if(!sharing) Text(tr("अपनी पूजा श्रृंखला, सिक्के और मंदिर के रूप अपने Google खाते में सहेजें।", "Keep your puja streak, coins and temple designs with your Google account."))
+                if(!account.googleConfigured) Text(tr("साइन इन अभी उपलब्ध नहीं है। पूजा जारी रख सकते हैं।", "Sign-in is currently unavailable. You can continue your puja."))
                 else {
-                    if (!account.googleConfigured) {
-                        Text(tr("Google लॉगिन अभी जुड़ा नहीं है। पूजा जारी रख सकते हैं।", "Google sign-in is not connected yet. You can continue your puja."))
-                    } else {
-                        OutlinedButton(onClick={run {
-                            account.signInWithGoogle(context, "")
-                            if (account.signedIn) {
-                                destination=DevotionPage.PROFILE
-                                account.sync()
-                                if(shareAfterLogin) {shareAfterLogin=false;share()}
-                            }
-                        }},enabled=!busy,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),border=BorderStroke(1.dp,Color(0xFF747775)),colors=ButtonDefaults.outlinedButtonColors(containerColor=Color.White,contentColor=Color(0xFF1F1F1F))) {
-                            Image(painterResource(R.drawable.google_sign_in_logo),contentDescription=null,modifier=Modifier.size(20.dp))
-                            Spacer(Modifier.width(10.dp))
-                            Text(tr("Google से साइन इन करें","Sign in with Google"))
-                        }
+                    OutlinedButton(onClick={signIn()},enabled=!busy,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),shape=RoundedCornerShape(17.dp),border=BorderStroke(1.dp,Color(0xFF747775)),colors=ButtonDefaults.outlinedButtonColors(containerColor=Color.White,contentColor=Color(0xFF1F1F1F))) {
+                        Image(painterResource(R.drawable.google_sign_in_logo),contentDescription=null,modifier=Modifier.size(20.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text(tr("Google से साइन इन करें","Sign in with Google"))
                     }
                 }
+                Text(tr("बिना साइन इन किए भी पूजा मुफ़्त है।", "Puja is free, even without signing in."),fontSize=14.sp)
             }
-            if(account.signedIn) {
+            if(account.signedIn && !focused) {
                 if(account.pending) Text(tr("आज की पूजा सहेजने के लिए ताज़ा करें।","Today's puja is waiting to sync."),color=RitualGold)
                 OutlinedButton(onClick={run {account.sync()}},enabled=!busy,modifier=Modifier.fillMaxWidth()) {Icon(Icons.Outlined.Refresh,null);Spacer(Modifier.width(8.dp));Text(tr("प्रगति ताज़ा करें","Refresh progress"))}
             }
-            if(busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-            if(message.isNotEmpty()) Text(message,color=MaterialTheme.colorScheme.error)
+            if(busy) {
+                LinearProgressIndicator(Modifier.fillMaxWidth())
+                Text(busyLabel,fontSize=14.sp,modifier=Modifier.semantics {liveRegion=LiveRegionMode.Polite})
+            }
+            if(message.isNotEmpty()) Surface(color=if(messageIsError) MaterialTheme.colorScheme.errorContainer else Color(0xFFF2E5D2),shape=RoundedCornerShape(16.dp)) {
+                Text(message,color=if(messageIsError) MaterialTheme.colorScheme.error else RitualInk,modifier=Modifier.fillMaxWidth().padding(14.dp).semantics {liveRegion=LiveRegionMode.Polite})
+            }
             TextButton(onClick=onDismiss,modifier=Modifier.fillMaxWidth()) {Text(tr("पूजा पर वापस जाएँ","Return to puja"))}
             }
         }

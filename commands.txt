@@ -1,6 +1,11 @@
- cd /Users/bhuwanjoshi/work/worship/backend
-MOCK_MODE=true go run ./cmd/server
+# Google sign-in using the configured staging backend:
+cd /Users/bhuwanjoshi/work/worship/android
+./gradlew :app:installDebug
 
+# Optional local backend (run in a separate terminal):
+cd /Users/bhuwanjoshi/work/worship/backend
+GOOGLE_CLIENT_ID=653836355193-vvbqtr7f50p3ct29c3id30pt8doak8is.apps.googleusercontent.com MOCK_MODE=false go run ./cmd/server
 
+# Point the emulator at that local backend:
 cd /Users/bhuwanjoshi/work/worship/android
 ./gradlew :app:installDebug -PaccountApiUrl=http://10.0.2.2:8080
