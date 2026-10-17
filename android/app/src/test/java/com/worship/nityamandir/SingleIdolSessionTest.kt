@@ -8,7 +8,6 @@ class SingleIdolSessionTest {
         session=session.copy(bathed=setOf(0)).next()
         session=session.copy(tilak=setOf(0)).next()
         session=session.copy(flowers=setOf(0)).next()
-        session=session.copy(bellRung=true).next()
         session=session.copy(conchBlown=true).next()
         session=session.copy(prasadOffered=true).next()
         session=session.copy(aartiComplete=true).next()

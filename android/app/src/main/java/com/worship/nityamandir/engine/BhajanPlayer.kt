@@ -147,8 +147,12 @@ class BhajanPlayer(context: Context) {
         }
         scope.launch {
             while (isActive) {
-                if (playing) syncProgress()
-                delay(500)
+                if (playing) {
+                    syncProgress()
+                    delay(500)
+                } else {
+                    delay(2500)
+                }
             }
         }
     }

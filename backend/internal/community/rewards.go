@@ -67,7 +67,7 @@ func (s *Server) initRewards() {
 }
 
 func coinCost(category, item string) int {
-	if item == "original" {
+	if item == "original" || (category == "shrine" && item == "marble") {
 		return 0
 	}
 	switch category {

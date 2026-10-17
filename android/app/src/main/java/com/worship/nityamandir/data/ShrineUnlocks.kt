@@ -7,7 +7,7 @@ data class ShrineUnlock(val category: ShrineCategory, val option: ShrineOption, 
 /** Pure discovery rules, independent of Android storage and account JSON. */
 internal object ShrineUnlocks {
     fun cost(category: String, item: String, categoryCost: Int? = null): Int {
-        if (item == "original") return 0
+        if (item == "original" || (category == "shrine" && item == "marble")) return 0
         return categoryCost?.takeIf { it >= 0 } ?: when (category) {
             "shrine" -> 7
             "flowers" -> 2

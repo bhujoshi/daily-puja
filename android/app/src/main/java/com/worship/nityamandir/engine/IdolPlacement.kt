@@ -45,18 +45,8 @@ class IdolPlacement(selection:ShrineSelection) {
         return base.copy(y=base.y+shift*TempleSceneLayout.pickup(progress))
     }
     val prasadFloor = TemplePoint(
-        when(selection["shrine"]) {
-            "carved" -> .22f
-            "marble" -> .26f
-            "ivory" -> .28f
-            else -> .28f
-        },
-        when(selection["shrine"]) {
-            "carved" -> space.floorY + .02f
-            "marble" -> space.floorY + .01f
-            "ivory" -> space.floorY + .01f
-            else -> space.floorY + .015f
-        }
+        .50f,
+        space.lamp.y
     )
     fun prasadPosition(progress:Float):TemplePoint {
         val base=TempleSceneLayout.prasadPosition(progress)

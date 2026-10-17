@@ -33,7 +33,42 @@ private val MusicOrange = Color(0xFFB84308)
 private val MusicInk = Color(0xFF76300C)
 
 @Composable
-fun BhajanMiniPlayer(player: BhajanPlayer, hindi: Boolean, onExpand: () -> Unit, modifier: Modifier = Modifier, showTrackNavigation: Boolean = true) {
+fun BhajanMiniPlayer(player: BhajanPlayer, hindi: Boolean, onExpand: () -> Unit, modifier: Modifier = Modifier, showTrackNavigation: Boolean = true, compact: Boolean = false) {
+    if (compact) {
+        Surface(modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), color = MusicOrange, contentColor = MusicCream) {
+            Row(
+                Modifier
+                    .clickable(onClickLabel = if (hindi) "संगीत प्लेयर खोलें" else "Open music player", onClick = onExpand)
+                    .heightIn(min = 48.dp)
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    when {
+                        player.loading -> if (hindi) "लोड हो रहा है…" else "Loading…"
+                        else -> player.title
+                    },
+                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
+                )
+                IconButton(onClick = player::toggle, modifier = Modifier.size(48.dp)) {
+                    Icon(
+                        if (player.failed) Icons.Default.Refresh else if (player.playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        if(player.failed) {if(hindi) "फिर संगीत चलाएँ" else "Retry music"}
+                        else if(player.playing) {if(hindi) "संगीत रोकें" else "Pause music"}
+                        else {if(hindi) "संगीत चलाएँ" else "Play music"}
+                    )
+                }
+                IconButton(onClick = player::remove, modifier = Modifier.size(48.dp)) {
+                    Icon(Icons.Default.Close, if (hindi) "संगीत हटाएँ" else "Remove music player")
+                }
+            }
+        }
+        return
+    }
     Surface(modifier.fillMaxWidth(), shape=RoundedCornerShape(20.dp), color=MusicOrange, contentColor=MusicCream) {
         Row(Modifier.clickable(onClickLabel=if(hindi) "संगीत प्लेयर खोलें" else "Open music player",onClick=onExpand).padding(10.dp), verticalAlignment=Alignment.CenterVertically) {
             Icon(Icons.Default.MusicNote,null,tint=Color(0xFFFFD46C))

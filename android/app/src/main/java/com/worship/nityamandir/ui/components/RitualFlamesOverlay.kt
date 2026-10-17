@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import com.worship.nityamandir.engine.*
+import kotlinx.coroutines.isActive
 import kotlin.math.sin
 
 /** Screen-space flames stay attached to the moving wick, with independent, smooth flicker. */
@@ -17,17 +18,14 @@ import kotlin.math.sin
 fun RitualFlamesOverlay(oilLit: Boolean, aartiLit: Boolean, lamp: TemplePoint, oilPoint:TemplePoint=TempleSceneLayout.oil, traditional:Boolean=false, brass:Boolean=false, oilWick:TemplePoint?=null) {
     if(!oilLit && !aartiLit) return
     var seconds by remember { mutableFloatStateOf(0f) }
-    val lifecycle=LocalLifecycleOwner.current.lifecycle
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            val start=withFrameNanos { it }-(seconds*1_000_000_000L).toLong()
-            var lastFrame=0L
-            while(true) withFrameNanos { now ->
-                // Decorative light needs only 30 updates/second, including on 120 Hz screens.
-                if(now-lastFrame >= 33_000_000L) {
-                    seconds=(now-start)/1_000_000_000f
-                    lastFrame=now
-                }
+            val startMs = android.os.SystemClock.uptimeMillis() - (seconds * 1000f).toLong()
+            while (isActive) {
+                // Decorative flame flicker runs smoothly at 30 FPS while allowing CPU to sleep between ticks.
+                kotlinx.coroutines.delay(33)
+                seconds = (android.os.SystemClock.uptimeMillis() - startMs) / 1000f
             }
         }
     }
@@ -57,8 +55,8 @@ fun RitualFlamesOverlay(oilLit: Boolean, aartiLit: Boolean, lamp: TemplePoint, o
         if(oilLit) flame(oilWick ?: TemplePoint(oilPoint.x,oilPoint.y-(if(brass) .125f else .06f*1.6f*TempleSceneLayout.LAMP_SCALE)),0f,1.5f)
         if(aartiLit) {
             if(traditional) {
-                listOf(-.028f,0f,.028f).forEachIndexed {index,x -> flame(TemplePoint(lamp.x+x,lamp.y-.035f),1.71f+index,scale=.65f,flicker=.25f)}
-            } else flame(TempleSceneLayout.aartiWick(lamp),1.71f,flicker=.25f)
+                listOf(-.028f,0f,.028f).forEachIndexed {index,x -> flame(TemplePoint(lamp.x+x*TempleSceneLayout.AARTI_SCALE,lamp.y-.035f*TempleSceneLayout.AARTI_SCALE),1.71f+index,scale=.65f*TempleSceneLayout.AARTI_SCALE,flicker=.25f)}
+            } else flame(TempleSceneLayout.aartiWick(lamp),1.71f,scale=TempleSceneLayout.AARTI_SCALE,flicker=.25f)
         }
     }
 }

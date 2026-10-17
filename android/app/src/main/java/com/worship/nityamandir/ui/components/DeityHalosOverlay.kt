@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import com.worship.nityamandir.engine.TemplePoint
 import com.worship.nityamandir.engine.TempleViewport
+import kotlinx.coroutines.isActive
 import kotlin.math.sin
 import kotlin.math.hypot
 
@@ -28,14 +29,13 @@ fun DeityHalosOverlay(single: Boolean = false, altarOffset:Float=0f, heads:List<
     val lifecycle=LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            val start=withFrameNanos { it }-(seconds*1_000_000_000L).toLong()
-            var lastFrame=0L
-            while(true) withFrameNanos { now ->
-                // Decorative light needs only 30 updates/second, including on 120 Hz screens.
-                if(now-lastFrame >= 33_000_000L) {
-                    seconds=(now-start)/1_000_000_000f
-                    lastFrame=now
-                }
+            val startMs = android.os.SystemClock.uptimeMillis() - (seconds * 1000f).toLong()
+            while (isActive) {
+                // Outward light wave expands during the first 4.0s (30 FPS);
+                // after that, light clears and a subtle 4.5s breathing shimmer remains (~15 FPS).
+                val interval = if (seconds < 4.0f) 33L else 66L
+                kotlinx.coroutines.delay(interval)
+                seconds = (android.os.SystemClock.uptimeMillis() - startMs) / 1000f
             }
         }
     }

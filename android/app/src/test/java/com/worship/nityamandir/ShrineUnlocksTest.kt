@@ -11,7 +11,7 @@ class ShrineUnlocksTest {
         id, id, id, options.map { ShrineOption(it, it, it, "", "image", "") }
     )
     private val categories = listOf(
-        category("shrine", "original", "marble", "ivory"),
+        category("shrine", "marble", "ivory", "carved"),
         category("flowers", "original", "rose", "ivory"),
         category("idols", "original", "shiva"),
         category("lamp", "original", "brass")
@@ -21,8 +21,8 @@ class ShrineUnlocksTest {
     }
 
     @Test fun newUnlocksIncludeOnlyOwnedPaidItemsThatHaveNotBeenSeen() {
-        val owned = setOf("shrine:marble", "flowers:rose", "idols:shiva", "lamp:brass", "shrine:original")
-        val fresh = ShrineUnlocks.newUnlocks(categories, setOf("shrine:marble"), owns(owned))
+        val owned = setOf("shrine:ivory", "flowers:rose", "idols:shiva", "lamp:brass", "shrine:marble")
+        val fresh = ShrineUnlocks.newUnlocks(categories, setOf("shrine:ivory"), owns(owned))
         assertEquals(listOf("flowers:rose"), fresh.map { it.id })
         assertEquals(2, fresh.single().cost)
         assertEquals("flowers", fresh.single().category.id)
@@ -35,23 +35,23 @@ class ShrineUnlocksTest {
         assertTrue(ShrineUnlocks.availableUnlocks(categories, 1, owned).isEmpty())
         assertEquals(listOf("flowers:ivory"), ShrineUnlocks.availableUnlocks(categories, 2, owned).map { it.id })
         assertEquals(listOf("flowers:ivory"), ShrineUnlocks.availableUnlocks(categories, 6, owned).map { it.id })
-        assertEquals(listOf("shrine:marble", "shrine:ivory", "flowers:ivory"),
+        assertEquals(listOf("shrine:ivory", "shrine:carved", "flowers:ivory"),
             ShrineUnlocks.availableUnlocks(categories, 7, owned).map { it.id })
         assertTrue(ShrineUnlocks.availableUnlocks(categories, 100, { _, _ -> true }).isEmpty())
     }
 
     @Test fun viewingUnlocksRetainsHistoryAndLeavesFuturePurchasesNew() {
         val previous = setOf("shrine:retired", "flowers:rose")
-        val owned = setOf("shrine:marble", "flowers:rose", "idols:shiva")
+        val owned = setOf("shrine:ivory", "flowers:rose", "idols:shiva")
         val seen = ShrineUnlocks.seenAfterViewing(categories, previous, owns(owned))
-        assertEquals(previous + "shrine:marble", seen)
+        assertEquals(previous + "shrine:ivory", seen)
         assertTrue(ShrineUnlocks.newUnlocks(categories, seen, owns(owned)).isEmpty())
-        assertEquals(listOf("shrine:ivory"),
-            ShrineUnlocks.newUnlocks(categories, seen, owns(owned + "shrine:ivory")).map { it.id })
+        assertEquals(listOf("shrine:carved"),
+            ShrineUnlocks.newUnlocks(categories, seen, owns(owned + "shrine:carved")).map { it.id })
     }
 
     @Test fun purchaseAcknowledgementOnlyMarksSuccessfullyOwnedPaidItem() {
-        val seen = setOf("shrine:marble")
+        val seen = setOf("shrine:ivory")
         assertEquals(seen, ShrineUnlocks.seenAfterUnlock(seen, "flowers", "rose", owns = false, cost = 2))
         assertEquals(seen, ShrineUnlocks.seenAfterUnlock(seen, "idols", "shiva", owns = true, cost = 0))
         assertEquals(seen + "flowers:rose",
@@ -65,27 +65,29 @@ class ShrineUnlocksTest {
         val firstKey = ShrineUnlocks.seenPreferenceKey("first")!!
         val secondKey = ShrineUnlocks.seenPreferenceKey("second")!!
         assertNotEquals(firstKey, secondKey)
-        val stored = mapOf(firstKey to setOf("shrine:marble"))
-        val firstNew = ShrineUnlocks.newUnlocks(categories, stored[firstKey].orEmpty(), owns(setOf("shrine:marble")))
-        val secondNew = ShrineUnlocks.newUnlocks(categories, stored[secondKey].orEmpty(), owns(setOf("shrine:marble")))
+        val stored = mapOf(firstKey to setOf("shrine:ivory"))
+        val firstNew = ShrineUnlocks.newUnlocks(categories, stored[firstKey].orEmpty(), owns(setOf("shrine:ivory")))
+        val secondNew = ShrineUnlocks.newUnlocks(categories, stored[secondKey].orEmpty(), owns(setOf("shrine:ivory")))
         assertTrue(firstNew.isEmpty())
-        assertEquals(listOf("shrine:marble"), secondNew.map { it.id })
+        assertEquals(listOf("shrine:ivory"), secondNew.map { it.id })
         assertEquals(firstKey, ShrineUnlocks.seenPreferenceKey("first"))
     }
 
     @Test fun serverPricingOverridesFallbackAndFreeItemsNeverCreateBadges() {
-        assertEquals(7, ShrineUnlocks.cost("shrine", "marble"))
+        assertEquals(0, ShrineUnlocks.cost("shrine", "marble"))
+        assertEquals(7, ShrineUnlocks.cost("shrine", "ivory"))
         assertEquals(2, ShrineUnlocks.cost("flowers", "rose"))
         assertEquals(0, ShrineUnlocks.cost("idols", "shiva"))
         assertEquals(0, ShrineUnlocks.cost("shrine", "original", 9))
-        assertEquals(7, ShrineUnlocks.cost("shrine", "marble", -1))
+        assertEquals(0, ShrineUnlocks.cost("shrine", "marble", 9))
+        assertEquals(7, ShrineUnlocks.cost("shrine", "ivory", -1))
         val pricing: (String, String) -> Int = { category, item ->
             ShrineUnlocks.cost(category, item, mapOf("shrine" to 4, "flowers" to 0)[category])
         }
         assertTrue(ShrineUnlocks.availableUnlocks(categories, 3, { _, _ -> false }, pricing).isEmpty())
-        assertEquals(listOf("shrine:marble", "shrine:ivory"),
+        assertEquals(listOf("shrine:ivory", "shrine:carved"),
             ShrineUnlocks.availableUnlocks(categories, 4, { _, _ -> false }, pricing).map { it.id })
-        assertEquals(listOf("shrine:marble", "shrine:ivory"),
+        assertEquals(listOf("shrine:ivory", "shrine:carved"),
             ShrineUnlocks.newUnlocks(categories, emptySet(), { _, _ -> true }, pricing).map { it.id })
     }
 }

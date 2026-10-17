@@ -1,0 +1,21 @@
+package com.worship.nityamandir.ui.components
+
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import com.worship.nityamandir.R
+
+/** Decorative next to a label; supply a description when the icon stands alone. */
+@Composable
+fun WhatsAppIcon(modifier: Modifier = Modifier, contentDescription: String? = null) {
+    Icon(
+        painter = painterResource(R.drawable.ic_whatsapp),
+        contentDescription = contentDescription,
+        modifier = modifier.size(22.dp),
+        tint = Color(0xFF146B3A)
+    )
+}

@@ -1,9 +1,70 @@
 # Android release builds
 
 Application ID: `com.pavitramandir.app`  
-Version: `1.0.8` (version code `9`)
+Version: `1.0.13` (version code `14`)
 
 ## Latest release verification
+
+Version 1.0.13 increments the Android version for this release build. The
+versioned APK and AAB, with SHA-256 checksums, are stored in
+`android/app/build/outputs/releases/1.0.13/`.
+
+## Version 1.0.12 verification
+
+Version 1.0.12 shortens decoration actions to Preview, Unlock, and Apply. Locked
+item cards show a lock and price; tapping the card selects it. The selected total
+sits outside the action button, and purchase confirmation retains the full cost
+and balance. Guest sign-in still opens only after tapping Unlock.
+
+Verification covers the 17 isolated decoration and main-screen flows, release
+lint, and the 53 release unit tests. Signed and development APKs with SHA-256
+checksums are stored in `android/app/build/outputs/releases/1.0.12/`.
+
+## Version 1.0.11 verification
+
+Version 1.0.11 keeps priced Unlock actions consistent across guest and signed-in
+accounts. Sign-in or coin guidance opens after tapping. WhatsApp actions use the
+WhatsApp mark, and the main menu uses a hamburger icon. The compact puja dock
+shows the current numbered step and a brief instruction above the existing action.
+
+Verification covers 53 release unit tests, 17 isolated emulator flow checks,
+release lint, guest sign-in handoff, step progression, and compact dock bounds
+with larger text. Signed and development APKs are stored with SHA-256 checksums in
+`android/app/build/outputs/releases/1.0.11/`. No store publication was performed.
+
+## Version 1.0.10 verification
+
+Version 1.0.10 simplifies Mandir Sajaye with a compact preview action bar,
+a single-line music player, inline wallet controls, and shorter item rows.
+Flowers use visible checkboxes and a selection count, with feedback when trying
+to remove the last variety. Opening music preserves the decoration draft and tab.
+
+The release APK uses the existing signing key. All 53 release unit tests, 14
+isolated emulator flow tests, and release lint passed. Small-screen checks include
+320dp width with 1.3× text, music visible, multiple flowers, and purchase/apply.
+The preview action area measures about 108dp and each compact music row 48dp
+on the small-screen emulator configuration.
+
+Signed and development APKs with SHA-256 checksums are stored in
+`android/app/build/outputs/releases/1.0.10/`. No store publication was performed.
+
+## Version 1.0.9 verification
+
+Version 1.0.9 adds the missing Apply action to the full-screen Mandir Sajaye
+preview. Owned items can be applied there; paid items use the existing unlock
+confirmation before applying. Both chooser and preview share the same current
+selection and saving action. Saving errors remain visible in the preview.
+
+The signed APK was built with the existing release key, and its certificate
+matches version 1.0.8. All 53 release unit tests, ten isolated emulator flow tests,
+and release lint passed. The real-screen regression also verifies the open main
+altar changes, reopening the chooser retains the item, and activity recreation
+restores the saved choice. This fix requires no backend change.
+
+The installable update and SHA-256 checksum are stored locally in
+`android/app/build/outputs/releases/1.0.9/`. No store publication was performed.
+
+## Version 1.0.8 verification
 
 Version 1.0.8 includes Mandir Sajaye purchase confirmations, preservation of
 selected flowers, profile unlock notices, and serialized account updates.

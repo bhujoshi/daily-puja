@@ -41,13 +41,10 @@ class WorshipSessionTest {
     }
 
     @Test fun prasadAdvancesDirectlyToAarti() {
-        assertEquals(8,WorshipStep.values().size)
+        assertEquals(7,WorshipStep.values().size)
         assertEquals(WorshipStep.AARTI,WorshipSession(step=WorshipStep.PRASAD,prasadOffered=true).next().step)
     }
-    @Test fun bellAndConchWaitForTheirAnimations() {
-        val bell=WorshipSession(step=WorshipStep.BELL)
-        assertEquals(bell,bell.next())
-        assertEquals(WorshipStep.CONCH,bell.copy(bellRung=true).next().step)
+    @Test fun conchWaitsForItsAnimation() {
         val conch=WorshipSession(step=WorshipStep.CONCH)
         assertEquals(conch,conch.next())
         assertEquals(WorshipStep.PRASAD,conch.copy(conchBlown=true).next().step)
@@ -73,6 +70,6 @@ class WorshipSessionTest {
     @Test fun offeringsNeedBothDeitiesBeforeContinuing() {
         val one=WorshipSession(step=WorshipStep.FLOWERS,flowers=setOf(0))
         assertEquals(one,one.next())
-        assertEquals(WorshipStep.BELL,one.copy(flowers=setOf(0,1)).next().step)
+        assertEquals(WorshipStep.CONCH,one.copy(flowers=setOf(0,1)).next().step)
     }
 }

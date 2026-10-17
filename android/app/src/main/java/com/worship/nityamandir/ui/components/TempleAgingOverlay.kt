@@ -16,6 +16,7 @@ import kotlin.math.*
 /** Dust follows each shrine's recess and ledge; swipes reveal the surface locally. */
 @Composable
 fun ShrineAgingOverlay(viewport:TempleViewport,dust:Float,webs:Float,space:ShrineSpace,idol:IdolPlacement,cleaned:List<TemplePoint>) {
+    if (dust <= 0.001f && webs <= 0.001f && cleaned.isEmpty()) return
     Canvas(Modifier.fillMaxSize().zIndex(1f)) {
         val u=viewport.imageWidth
         fun at(x:Float,y:Float)=viewport.pixel(TemplePoint(x,y)).let {Offset(it.x,it.y)}
@@ -46,26 +47,28 @@ fun ShrineAgingOverlay(viewport:TempleViewport,dust:Float,webs:Float,space:Shrin
                     repeat(6) {i -> val a=ray(i,extent);val b=ray(i+1,extent);val mid=origin+((a+b)*.5f-origin)*.92f;quadraticBezierTo(mid.x,mid.y,b.x,b.y)}
                 };drawPath(path,silk,style=Stroke(u*.0006f))}
             }
-            val interior=Path().apply {
-                val l=at(space.left,space.archTop);val r=at(space.right,space.altarY+.035f)
-                addRect(androidx.compose.ui.geometry.Rect(l,r))
-            }
-            clipPath(interior) {
-                repeat(100) {i ->
-                    val x=space.left+(i*37%101)/101f*span
-                    val y=space.archTop+(i*53%103)/103f*height
-                    val center=at(x,y);val radius=u*(.012f+(i%6)*.006f)
-                    drawCircle(Brush.radialGradient(listOf(Color(0xFF81735E).copy(alpha=dust*(.12f+(i%4)*.03f)),Color.Transparent),center,radius),radius,center)
+            if (dust > 0.001f) {
+                val interior=Path().apply {
+                    val l=at(space.left,space.archTop);val r=at(space.right,space.altarY+.035f)
+                    addRect(androidx.compose.ui.geometry.Rect(l,r))
                 }
-                repeat(1700) {i ->
-                    if((i%101)/101f<dust) {
-                        val x=space.left+(i*73%1699)/1699f*span
-                        val y=space.archTop+(i*137%1693)/1693f*height
-                        drawOval(Color(0xFF796A54).copy(alpha=dust*(.20f+(i%5)*.04f)),at(x,y),Size(u*.0011f,u*.0008f))
+                clipPath(interior) {
+                    repeat(100) {i ->
+                        val x=space.left+(i*37%101)/101f*span
+                        val y=space.archTop+(i*53%103)/103f*height
+                        val center=at(x,y);val radius=u*(.012f+(i%6)*.006f)
+                        drawCircle(Brush.radialGradient(listOf(Color(0xFF81735E).copy(alpha=dust*(.12f+(i%4)*.03f)),Color.Transparent),center,radius),radius,center)
                     }
+                    repeat(1700) {i ->
+                        if((i%101)/101f<dust) {
+                            val x=space.left+(i*73%1699)/1699f*span
+                            val y=space.archTop+(i*137%1693)/1693f*height
+                            drawOval(Color(0xFF796A54).copy(alpha=dust*(.20f+(i%5)*.04f)),at(x,y),Size(u*.0011f,u*.0008f))
+                        }
+                    }
+                    // A narrow dust deposit rests on the horizontal shelf.
+                    drawRect(Brush.verticalGradient(listOf(Color.Transparent,Color(0xFFB3A183).copy(alpha=dust*.6f),Color.Transparent),u*(space.altarY-.003f),u*(space.altarY+.025f)),at(space.left,space.altarY-.003f),Size(u*span,u*.028f))
                 }
-                // A narrow dust deposit rests on the horizontal shelf.
-                drawRect(Brush.verticalGradient(listOf(Color.Transparent,Color(0xFFB3A183).copy(alpha=dust*.6f),Color.Transparent),u*(space.altarY-.003f),u*(space.altarY+.025f)),at(space.left,space.altarY-.003f),Size(u*span,u*.028f))
             }
             // Separate deposits follow the idols and every object on the lower altar.
             dustPatch(TemplePoint(.5f,idol.top+idol.height*.48f),idol.width*.88f,idol.height*.86f,.65f)

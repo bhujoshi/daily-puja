@@ -22,7 +22,7 @@ class ModelAssetsTest {
             if(name.endsWith(".glb")) listOf(path) else if(!name.contains('.')) models(path) else emptyList()
         }
         val paths=models("shrine")
-        assertEquals("Audit all shipped models, including procedural and legacy props",17,paths.size)
+        assertEquals("Audit all shipped models, including procedural and legacy props",18,paths.size)
         instrumentation.runOnMainSync {
             val egl=SceneView.createEglContext()
             val engine=SceneView.createEngine(egl)

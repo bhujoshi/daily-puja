@@ -8,22 +8,36 @@ class TempleViewport(val width: Float, val height: Float) {
     val imageWidth = max(width, height / IMAGE_RATIO) * ZOOM
     val left = (width-imageWidth)/2f
     fun pixel(point: TemplePoint) = TemplePoint(left+point.x*imageWidth,point.y*imageWidth)
+    /** Keep the whole item inside the visible crop, with the same anchor for its tap target. */
+    fun keepInsideHorizontalBounds(point: TemplePoint, halfWidth: Float, padding: Float): TemplePoint {
+        val inset = halfWidth + padding / imageWidth
+        val minX = -left / imageWidth + inset
+        val maxX = (width-left) / imageWidth - inset
+        return point.copy(x=if(minX<=maxX) point.x.coerceIn(minX,maxX) else .5f)
+    }
     companion object { const val ZOOM = 1.08f; const val IMAGE_RATIO = 1672f / 940f }
 }
 
 object TempleSceneLayout {
     const val LAMP_SCALE = .5f
     const val OIL_SIZE = .225f * 1.5f * 1.6f * LAMP_SCALE
-    const val PLATE_SIZE = .46f * 1.6f * 1.5f
-    const val AARTI_WIDTH = .36f * LAMP_SCALE
-    const val AARTI_HEIGHT = .45f * LAMP_SCALE
+    const val PLATE_SIZE = .46f * 1.6f * 1.25f
+    const val AARTI_SCALE = 1.25f
+    const val AARTI_WIDTH = .36f * LAMP_SCALE * AARTI_SCALE
+    const val AARTI_HEIGHT = .45f * LAMP_SCALE * AARTI_SCALE
     val oil = TemplePoint(.505f,.665f)
     val plate = TemplePoint(.50f,1.14f)
-    val conch = TemplePoint(.28f,1.06f)
-    const val CONCH_SIZE = .34f
+    val conch = TemplePoint(.26f,.94f)
+    const val CONCH_SCALE = 1.5f
+    const val CONCH_SIZE = .34f * CONCH_SCALE
+    const val CONCH_WIDTH = .15f * CONCH_SCALE
+    const val CONCH_HEIGHT = .24f * CONCH_SCALE
     const val CONCH_REST_DEPTH = .58f
     const val FLOWER_COUNT = 10
-    val bell = TemplePoint(.15f,.98f)
+    val bell = TemplePoint(.50f,.94f)
+    const val BELL_SIZE = .22f
+    // A sphere around the fitted model contains its bounds throughout the ringing swing.
+    val bellHalfWidth = BELL_SIZE * sqrt(3f) / 8f
     const val AARTI_MODEL_SIZE = AARTI_WIDTH * 2f
     const val AARTI_DEPTH = 1.6f
     // The camera is at Z=4.5. Keep carried objects ahead of the full flower beds
@@ -38,11 +52,11 @@ object TempleSceneLayout {
         val yaw = AARTI_YAW * PI.toFloat() / 180f
         val tilt = AARTI_TILT * PI.toFloat() / 180f
         // Keep the flame slightly above the bowl, both in motion and at rest.
-        val x = -.052f
-        val y = .070f
+        val x = -.052f * AARTI_SCALE
+        val y = .070f * AARTI_SCALE
         return TemplePoint(lamp.x+x*cos(yaw),lamp.y-(y*cos(tilt)+x*sin(yaw)*sin(tilt)))
     }
-    val aartiRest = TemplePoint(.79f,1.08f)
+    val aartiRest = TemplePoint(.79f,1.03f)
     fun feet(deity: Int, petal: Int = 0) = TemplePoint((if(deity==0) .405f else .604f)+(petal-2f)*.015f,.689f)
     fun plateFlower(index: Int): TemplePoint {
         // Natural tiered devotional thali:
@@ -68,10 +82,10 @@ object TempleSceneLayout {
             }
         }
     }
-    const val PRASAD_SIZE = .18f
+    const val PRASAD_SIZE = .14f
     const val PRASAD_DEPTH = 1.45f
-    val prasadRest = TemplePoint(.66f,1.08f)
-    val prasadFloor = TemplePoint(.28f,.915f)
+    val prasadRest = TemplePoint(.66f,1.03f)
+    val prasadFloor = TemplePoint(.30f,.88f)
 
     /** Lift, offer one clockwise circle, then set the bowl on the floor. */
     fun prasadPosition(progress: Float): TemplePoint {

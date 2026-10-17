@@ -83,8 +83,20 @@ fun MandirAltarView(
     cleanedAreas:List<TemplePoint> = emptyList(),
     showModels:Boolean = true
 ) {
-    val sceneView=remember { arrayOfNulls<io.github.sceneview.SceneView>(1) }
     val context = LocalContext.current
+    val sceneView=remember { arrayOfNulls<io.github.sceneview.SceneView>(1) }
+    var sceneViewInstance by remember { mutableStateOf<io.github.sceneview.SceneView?>(null) }
+    val frameCallback = remember(sceneViewInstance) {
+        sceneViewInstance?.let { sv ->
+            try {
+                val field = io.github.sceneview.SceneView::class.java.getDeclaredField("frameCallback")
+                field.isAccessible = true
+                field.get(sv) as? android.view.Choreographer.FrameCallback
+            } catch (_: Throwable) {
+                null
+            }
+        }
+    }
     val eglContext=remember {io.github.sceneview.SceneView.createEglContext()}
     val engine=remember {io.github.sceneview.SceneView.createEngine(eglContext)}
     val loader=remember {io.github.sceneview.loaders.ModelLoader(engine,context)}
@@ -94,7 +106,8 @@ fun MandirAltarView(
     val idolPlacement=remember(selection) {IdolPlacement(selection)}
     val oilPoint=idolPlacement.space.lamp
     var oilWick by remember {mutableStateOf(oilPoint)}
-    val conchYaw=if(selection["shankh"]=="original") -90f else 0f
+    // Turn the long shell across the cradle, with a diagonal view of its open rim.
+    val conchYaw = if(selection["shankh"]=="original") -50f else 0f
     val bathTargetNow by rememberUpdatedState(bathTarget)
     val bathTime by rememberUpdatedState(bathProgress)
     var lotaNode by remember {mutableStateOf<ModelNode?>(null)}
@@ -115,6 +128,7 @@ fun MandirAltarView(
     val offerings = remember { mutableListOf<ModelNode>() }
     val offeringScales = remember { mutableListOf<Scale>() }
     var conchRestScale by remember { mutableStateOf(Scale(1f)) }
+    var prasadRestScale by remember { mutableStateOf(Scale(1f)) }
     var aartiNode by remember { mutableStateOf<ModelNode?>(null) }
     var bellNode by remember { mutableStateOf<ModelNode?>(null) }
     var conchNode by remember { mutableStateOf<ModelNode?>(null) }
@@ -129,7 +143,16 @@ fun MandirAltarView(
         (0 until TempleSceneLayout.FLOWER_COUNT).map(TempleSceneLayout::plateFlower),
         (0 until TempleSceneLayout.FLOWER_COUNT).map(TempleSceneLayout::flowerSize),.15f)}
     val frameDirty = remember { booleanArrayOf(true) }
-    SideEffect { frameDirty[0] = true }
+    val settlingFrames = remember { intArrayOf(3) }
+    val requestRender = {
+        frameDirty[0] = true
+        settlingFrames[0] = 3
+        frameCallback?.let { cb ->
+            android.view.Choreographer.getInstance().removeFrameCallback(cb)
+            android.view.Choreographer.getInstance().postFrameCallback(cb)
+        }
+    }
+    SideEffect { requestRender() }
 
     LaunchedEffect(loader) {
         // Instances share geometry and textures; replenishing the plate must not reload GLBs.
@@ -160,9 +183,12 @@ fun MandirAltarView(
                 Rotation(y=TempleSceneLayout.AARTI_YAW).toQuaternion()
         }
         bellNode=model("shrine/accessories/bell.glb",TempleSceneLayout.bell,.22f,10f)
-        conchNode=model(catalog.option("shankh",selection).path,TempleSceneLayout.conch,TempleSceneLayout.CONCH_SIZE,0f,TempleSceneLayout.CONCH_REST_DEPTH).apply {
+        model("shrine/accessories/shankh_stand.glb",TempleSceneLayout.conch,TempleSceneLayout.CONCH_SIZE,12f,TempleSceneLayout.CONCH_REST_DEPTH).apply {
+            rotation=Rotation(x=12f,y=conchYaw)
+        }
+        conchNode=model(catalog.option("shankh",selection).path,TempleSceneLayout.conch,TempleSceneLayout.CONCH_SIZE,12f,TempleSceneLayout.CONCH_REST_DEPTH).apply {
             conchRestScale=scale
-            rotation=Rotation(y=conchYaw)
+            rotation=Rotation(x=12f,y=conchYaw)
         }
         // A textured scene node shares depth ordering with the plate's SurfaceView.
         // A Compose Image above Scene can still be covered by its separate surface.
@@ -178,6 +204,7 @@ fun MandirAltarView(
                 isTouchable=false;nodes.add(this)
             }
         }
+        prasadRestScale=prasadNode?.scale ?: Scale(1f)
         yield()
         repeat(TempleSceneLayout.FLOWER_COUNT) { i ->
             flowers.add(model(flowerPaths[i%flowerPaths.size],TempleSceneLayout.plateFlower(i),TempleSceneLayout.flowerSize(i),45f+(i%4)*8f,plateDepths[i]).apply {
@@ -212,7 +239,7 @@ fun MandirAltarView(
             node.alignBounds()
             nodes.add(node);offerings.add(node);offeringScales.add(node.scale);offeringAngles.add(offering.rotation)
         }
-        frameDirty[0]=true
+        requestRender()
     }
 
     LaunchedEffect(flowerFlights.map {it.id},session.offeredFlowers.size,modelsReady) {
@@ -275,23 +302,37 @@ fun MandirAltarView(
                 }
             }
             shadow(oilPoint,.12f,.028f)
-            shadow(TempleSceneLayout.plate.copy(y=TempleSceneLayout.plate.y+.05f),.51f,.14f)
+            shadow(TempleSceneLayout.plate.copy(y=TempleSceneLayout.plate.y+.045f),.43f,.12f)
             shadow(TempleSceneLayout.bell.copy(y=TempleSceneLayout.bell.y+.05f),.11f,.024f)
-            shadow(TempleSceneLayout.conch.copy(y=TempleSceneLayout.conch.y+.04f),.18f,.045f)
+            shadow(TempleSceneLayout.conch.copy(y=TempleSceneLayout.conch.y+.095f),.18f,.035f)
             val prasadShadowPoint = when {
                 prasadActive -> idolPlacement.prasadPosition(prasadProgress)
                 session.prasadOffered -> idolPlacement.prasadFloor
                 else -> TempleSceneLayout.prasadRest
             }
-            shadow(prasadShadowPoint.copy(y=prasadShadowPoint.y+.04f),.14f,.035f)
-            shadow(TempleSceneLayout.aartiRest.copy(y=TempleSceneLayout.aartiRest.y+.04f),.15f,.035f)
+            val prasadShadowProgress = if(prasadActive) prasadProgress else if(session.prasadOffered) 1f else 0f
+            val prasadSettle = ((prasadShadowProgress - .78f) / .22f).coerceIn(0f, 1f)
+            val prasadShadowScale = 1f - .30f * prasadSettle
+            shadow(prasadShadowPoint.copy(y=prasadShadowPoint.y+.035f*prasadShadowScale),.12f*prasadShadowScale,.030f*prasadShadowScale)
+            shadow(TempleSceneLayout.aartiRest.copy(y=TempleSceneLayout.aartiRest.y+.04f),.15f*TempleSceneLayout.AARTI_SCALE,.035f*TempleSceneLayout.AARTI_SCALE)
         }
         if(showModels) Scene(Modifier.fillMaxSize(),engine=engine,modelLoader=loader,cameraNode=camera,cameraManipulator=null,childNodes=nodes,isOpaque=false,
-            onViewCreated={sceneView[0]=this},
+            onViewCreated={
+                sceneView[0]=this
+                sceneViewInstance=this
+                (context as? android.app.Activity)?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            },
             onFrame=frame@{ _ ->
                 val moving=flightsNow.isNotEmpty() || bathTargetNow!=null ||
                     prasadActive || conchActive || aartiActive || bellActive
-                if(!moving && !frameDirty[0]) return@frame
+                if(moving) settlingFrames[0]=3
+                if(!moving && !frameDirty[0] && settlingFrames[0]<=0) {
+                    frameCallback?.let { cb ->
+                        android.view.Choreographer.getInstance().removeFrameCallback(cb)
+                    }
+                    return@frame
+                }
+                if(!moving && settlingFrames[0]>0) settlingFrames[0]--
                 frameDirty[0]=moving
                 val halfWidth=viewport.width/viewport.imageWidth
                 camera.setProjection(Camera.Projection.ORTHO,-halfWidth.toDouble(),halfWidth.toDouble(),(1-2*viewport.height/viewport.imageWidth).toDouble(),1.0,.1,10.0)
@@ -327,6 +368,10 @@ fun MandirAltarView(
                     }
                 }
                 prasadNode?.apply {
+                    val progress = if(prasadActive) prasadTime else if(prasadOffered) 1f else 0f
+                    val settle = ((progress - .78f) / .22f).coerceIn(0f, 1f)
+                    val scaleFactor = 1f - .30f * settle
+                    scale = Scale(prasadRestScale.x * scaleFactor, prasadRestScale.y * scaleFactor, prasadRestScale.z * scaleFactor)
                     val point=when {
                         prasadActive -> idolPlacement.prasadPosition(prasadTime)
                         prasadOffered -> idolPlacement.prasadFloor
@@ -342,8 +387,8 @@ fun MandirAltarView(
                     val point=TempleSceneLayout.conchPosition(progress)
                     placePosition(Position(2*point.x-1,1-2*point.y,
                         if(conchActive) TempleSceneLayout.ACTIVE_RITUAL_DEPTH else TempleSceneLayout.CONCH_REST_DEPTH))
-                    // Upright spiral face while sounding; exactly opposite on the plate.
-                    rotation=Rotation(y=conchYaw+180f*TempleSceneLayout.conchTurn(progress))
+                    // Upright spiral face while sounding; resting sacredly in stand at rest.
+                    rotation=Rotation(x=12f*(1f-lift),y=conchYaw+180f*TempleSceneLayout.conchTurn(progress))
                 }
 
                 aartiNode?.apply {
@@ -365,9 +410,9 @@ fun MandirAltarView(
             offered=session.prasadOffered && !prasadRunning,
             visible=showModels && modelsReady
         )
-        if(session.aartiComplete && !aartiRunning) DeityHalosOverlay(heads=idolPlacement.heads)
+        if(showModels && session.aartiComplete && !aartiRunning) DeityHalosOverlay(heads=idolPlacement.heads)
         val aartiPoint=if(aartiRunning) idolPlacement.aartiPosition(aartiProgress) else TempleSceneLayout.aartiRest
-        Box(Modifier.fillMaxSize().zIndex(10f)) {
+        if(showModels) Box(Modifier.fillMaxSize().zIndex(10f)) {
             RitualFlamesOverlay(session.lit,session.aartiLit,aartiPoint,oilPoint=oilPoint,traditional=selection["aarti"]!="original",brass=selection["lamp"]!="original",oilWick=oilWick)
         }
         WaterFlowOverlay(bathTarget,bathProgress,placement=idolPlacement)
@@ -406,7 +451,7 @@ fun MandirAltarView(
                         )
                     }.clickable(onClickLabel="पुष्प ${i+1} · Offer flower ${i+1}") {onFlowerClick(i)})
         }
-        Box(target(TemplePoint(TempleSceneLayout.conch.x-.075f,TempleSceneLayout.conch.y-.12f),.15f,.24f).clickable(onClickLabel="शंख · Sound conch",onClick=onConchClick))
+        Box(target(TemplePoint(TempleSceneLayout.conch.x-TempleSceneLayout.CONCH_WIDTH/2f,TempleSceneLayout.conch.y-TempleSceneLayout.CONCH_HEIGHT/2f),TempleSceneLayout.CONCH_WIDTH,TempleSceneLayout.CONCH_HEIGHT).clickable(onClickLabel="शंख · Sound conch",onClick=onConchClick))
         val currentPrasadPoint = when {
             prasadActive -> idolPlacement.prasadPosition(prasadProgress)
             session.prasadOffered -> idolPlacement.prasadFloor

@@ -197,7 +197,8 @@ fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCus
             if(player.current!=null || player.loading) BhajanMiniPlayer(player,hindi,onMusic,Modifier.padding(horizontal=24.dp,vertical=8.dp))
             Column(Modifier.fillMaxWidth().weight(1f,fill=false).verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                Icon(if(sharing) Icons.Outlined.Share else if(destination==DevotionPage.PACKAGE) Icons.Outlined.AutoAwesome else Icons.Outlined.AccountCircle,null,tint=RitualGold,modifier=Modifier.size(32.dp))
+                if(sharing) WhatsAppIcon(Modifier.size(32.dp))
+                else Icon(if(destination==DevotionPage.PACKAGE) Icons.Outlined.AutoAwesome else Icons.Outlined.AccountCircle,null,tint=RitualGold,modifier=Modifier.size(32.dp))
                 Text(if(sharing) tr("मित्र को आमंत्रित करें","Invite a friend") else if(signingIn) tr("साइन इन करें","Sign in") else if(destination==DevotionPage.PACKAGE) tr("सिक्के कमाएँ","Earn coins") else tr("मेरी प्रोफ़ाइल","My profile"),fontSize=25.sp,fontWeight=FontWeight.SemiBold)
             }
             if(sharing) {
@@ -210,7 +211,7 @@ fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCus
                     }
                 }
                 if(account.googleAccount) {
-                    RitualChoice(tr("WhatsApp पर साझा करें", "Share on WhatsApp"),false,{run(tr("निमंत्रण तैयार हो रहा है…", "Preparing your invitation…")) {share()}},Modifier.fillMaxWidth(),enabled=!busy)
+                    RitualChoice(tr("WhatsApp पर साझा करें", "Share on WhatsApp"),false,{run(tr("निमंत्रण तैयार हो रहा है…", "Preparing your invitation…")) {share()}},Modifier.fillMaxWidth(),enabled=!busy,leadingIcon={WhatsAppIcon()})
                     TextButton(onClick={destination=DevotionPage.PROFILE;message=""},enabled=!busy) {Text(tr("मेरी प्रोफ़ाइल देखें", "View my profile"))}
                 }
             }
@@ -219,7 +220,7 @@ fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCus
                 Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     Text(tr("${account.coins} सिक्के", "${account.coins} coins"),fontSize=28.sp,fontWeight=FontWeight.SemiBold)
                     Text(tr("पूरी पूजा · दिन में 1 सिक्का\nमित्र का नया इंस्टॉल और Google लॉगिन · 1 सिक्का", "Daily puja · 1 coin per day\nFriend installs and signs in with Google · 1 coin each"))
-                    val shrineCost=account.cost("shrine","marble")
+                    val shrineCost=account.cost("shrine","ivory")
                     val flowerCost=account.cost("flowers","rose")
                     Text(tr("मंदिर · $shrineCost सिक्के प्रति रूप   फूल · $flowerCost सिक्के प्रति किस्म", "Shrine · $shrineCost coins each   Flower · $flowerCost coins each"),fontSize=14.sp)
                     Text(tr("शंख, आरती, प्रसाद, मूर्तियाँ और दीपक मुफ़्त हैं।", "Shankh, aarti, prasad, idols and oil lamps are free."),fontSize=14.sp)
@@ -231,7 +232,7 @@ fun DevotionSheet(account:DevotionAccount,hindi:Boolean,onDismiss:()->Unit,onCus
                 destination=DevotionPage.SHARE
                 if(account.googleAccount) run(tr("निमंत्रण तैयार हो रहा है…", "Preparing your invitation…")) {share()}
                 else {shareAfterLogin=true;message=""}
-            },Modifier.fillMaxWidth(),enabled=!busy)
+            },Modifier.fillMaxWidth(),enabled=!busy,leadingIcon={WhatsAppIcon()})
             }
             if(destination==DevotionPage.PACKAGE && !focused) {
                 DevotionStreak(account.streakDays,hindi)

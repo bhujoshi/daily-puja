@@ -54,24 +54,24 @@ func TestCoinWalletAndIndividualUnlocks(t *testing.T) {
 		// Include missed days: coins must accumulate independently of streaks.
 		now = now.Add(48 * time.Hour)
 	}
-	for _, item := range []string{"marble", "marble"} {
+	for _, item := range []string{"ivory", "ivory"} {
 		code, profile := call(s, "POST", "coins/unlock", token, `{"category":"shrine","item":"`+item+`"}`)
 		if code != 200 || profile["coins"] != float64(2) {
 			t.Fatal("double debit", code, profile)
 		}
 	}
-	if code, _ := call(s, "POST", "coins/unlock", token, `{"category":"shrine","item":"ivory"}`); code != 409 {
+	if code, _ := call(s, "POST", "coins/unlock", token, `{"category":"shrine","item":"carved"}`); code != 409 {
 		t.Fatal("overspending", code)
 	}
 	code, profile := call(s, "POST", "coins/unlock", token, `{"category":"flowers","item":"rose"}`)
 	if code != 200 || profile["coins"] != float64(0) || profile["unlocked"] != false {
 		t.Fatal(code, profile)
 	}
-	selection := `{"selections":{"shrine":"marble","idols":"shiva","flowers":"original,rose","lamp":"brass","shankh":"ivory","aarti":"traditional","prasad":"halwa"}}`
+	selection := `{"selections":{"shrine":"ivory","idols":"shiva","flowers":"original,rose","lamp":"brass","shankh":"ivory","aarti":"traditional","prasad":"halwa"}}`
 	if code, _ := call(s, "PUT", "shrine", token, selection); code != 200 {
 		t.Fatal(code)
 	}
-	if code, _ := call(s, "PUT", "shrine", token, strings.Replace(selection, `"marble"`, `"carved"`, 1)); code != 403 {
+	if code, _ := call(s, "PUT", "shrine", token, strings.Replace(selection, `"ivory"`, `"carved"`, 1)); code != 403 {
 		t.Fatal("unowned shrine accepted", code)
 	}
 	if code, _ := call(s, "PUT", "shrine", token, strings.Replace(selection, `original,rose`, `rose,orchid`, 1)); code != 403 {
@@ -85,7 +85,7 @@ func TestCoinWalletAndIndividualUnlocks(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, profile = call(restored, "GET", "me", token, "")
-	if profile["coins"] != float64(0) || profile["owned"].(map[string]any)["shrine:marble"] != true || profile["selections"].(map[string]any)["flowers"] != "original,rose" {
+	if profile["coins"] != float64(0) || profile["owned"].(map[string]any)["shrine:ivory"] != true || profile["selections"].(map[string]any)["flowers"] != "original,rose" {
 		t.Fatal(profile)
 	}
 }
@@ -98,6 +98,42 @@ func TestFreeRitualVariantsWithoutPackage(t *testing.T) {
 	code, profile := call(s, "PUT", "shrine", token, selection)
 	if code != 200 || profile["coins"] != float64(0) || profile["unlocked"] != false {
 		t.Fatal(code, profile)
+	}
+}
+
+func TestDefaultMarbleShrineNeedsNoCoinPurchase(t *testing.T) {
+	s, _ := New(filepath.Join(t.TempDir(), "accounts.json"))
+	_, auth := call(s, "POST", "register", "", `{"email":"marble@example.com","password":"long-password"}`)
+	token := auth["token"].(string)
+	selection := `{"selections":{"shrine":"marble","idols":"durga","flowers":"original","lamp":"brass","shankh":"ivory","aarti":"traditional","prasad":"laddu"}}`
+	code, profile := call(s, "PUT", "shrine", token, selection)
+	if code != 200 || profile["coins"] != float64(0) || profile["unlocked"] != false {
+		t.Fatal("default shrine blocked a free selection", code, profile)
+	}
+	// Even a legacy client sending an explicit unlock must not debit the wallet.
+	s.db.Accounts["marble@example.com"].Coins = 7
+	code, profile = call(s, "POST", "coins/unlock", token, `{"category":"shrine","item":"marble"}`)
+	if code != 200 || profile["coins"] != float64(7) || profile["owned"].(map[string]any)["shrine:marble"] == true {
+		t.Fatal("free default consumed coins", code, profile)
+	}
+}
+
+func TestPaidFlowerCanBeAppliedWithDefaultMarbleShrine(t *testing.T) {
+	s, _ := New(filepath.Join(t.TempDir(), "accounts.json"))
+	_, auth := call(s, "POST", "register", "", `{"email":"flower@example.com","password":"long-password"}`)
+	token := auth["token"].(string)
+	s.db.Accounts["flower@example.com"].Coins = 2
+	selection := `{"selections":{"shrine":"marble","idols":"original","flowers":"original,rose","lamp":"original","shankh":"original","aarti":"original","prasad":"original"}}`
+	if code, _ := call(s, "PUT", "shrine", token, selection); code != 403 {
+		t.Fatal("unowned flower accepted", code)
+	}
+	code, profile := call(s, "POST", "coins/unlock", token, `{"category":"flowers","item":"rose"}`)
+	if code != 200 || profile["coins"] != float64(0) || profile["owned"].(map[string]any)["flowers:rose"] != true {
+		t.Fatal("flower purchase failed", code, profile)
+	}
+	code, profile = call(s, "PUT", "shrine", token, selection)
+	if code != 200 || profile["selections"].(map[string]any)["flowers"] != "original,rose" {
+		t.Fatal("purchased flower could not be applied", code, profile)
 	}
 }
 
@@ -190,16 +226,16 @@ func TestCoinMutationRollbackAndConcurrentUnlock(t *testing.T) {
 	s.db.Accounts["race@example.com"].Coins = 7
 	path := s.path
 	s.path = t.TempDir()
-	if code, _ := call(s, "POST", "coins/unlock", token, `{"category":"shrine","item":"marble"}`); code != 503 {
+	if code, _ := call(s, "POST", "coins/unlock", token, `{"category":"shrine","item":"carved"}`); code != 503 {
 		t.Fatal(code)
 	}
-	if a := s.db.Accounts["race@example.com"]; a.Coins != 7 || a.Owned["shrine:marble"] {
+	if a := s.db.Accounts["race@example.com"]; a.Coins != 7 || a.Owned["shrine:carved"] {
 		t.Fatal("failed persistence debited wallet", a)
 	}
 	s.path = path
 	var wg sync.WaitGroup
 	codes := make(chan int, 2)
-	for _, item := range []string{"marble", "ivory"} {
+	for _, item := range []string{"carved", "ivory"} {
 		wg.Add(1)
 		go func(item string) {
 			defer wg.Done()

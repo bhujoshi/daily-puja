@@ -6,7 +6,7 @@ import org.json.JSONObject
 data class ShrineOption(val id:String,val en:String,val hi:String,val path:String,val kind:String,val thumbnail:String)
 data class ShrineCategory(val id:String,val en:String,val hi:String,val options:List<ShrineOption>)
 data class ShrineSelection(val values:Map<String,String> = emptyMap()) {
-    operator fun get(category:String)=values[category] ?: "original"
+    operator fun get(category:String)=values[category]?.takeIf { category != "shrine" || (it != "original" && it != "wood") } ?: if(category=="shrine") "marble" else "original"
     fun with(category:String,id:String)=copy(values=values+(category to id))
     /** Choosing an unlocked flower adds it without toggling an existing choice off. */
     fun selectItem(category:String,id:String)=if(category=="flowers")
@@ -18,9 +18,9 @@ data class ShrineSelection(val values:Map<String,String> = emptyMap()) {
         val next=if(id in ids) ids-id else ids+id
         return if(next.isEmpty()) this else with("flowers",next.joinToString(","))
     }
-    val original get()=values.values.all {it=="original"}
+    val original get()=values.values.all {it=="original" || it=="marble"}
     // Measured altar surfaces in the prepared portrait backgrounds, in image-width units.
-    val altarOffset get()=when(this["shrine"]) {"marble" -> -.040f; "ivory" -> -.080f; "carved" -> -.055f; else -> 0f}
+    val altarOffset get()=when(this["shrine"]) {"marble" -> -.040f; "ivory" -> -.080f; "carved" -> -.055f; else -> -.040f}
     val deityCount get()=if(this["idols"] in listOf("original","ganesh_hanuman")) 2 else 1
     fun deityNames(hindi:Boolean):List<String> = when(this["idols"]) {
         "ganesh_hanuman" -> if(hindi) listOf("गणेश जी","हनुमान जी") else listOf("Ganesha","Hanuman")

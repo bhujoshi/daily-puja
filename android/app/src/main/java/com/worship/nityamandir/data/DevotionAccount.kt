@@ -242,7 +242,7 @@ class DevotionAccount(context: Context) {
             // A background refresh queued for the previous session has no work in a new account.
             if (!signedIn || token != expectedToken) return@withLock
             if(pending) {
-                cache(request("activity/puja", "POST", JSONObject().put("steps",org.json.JSONArray(listOf("LIGHT","BATH","TILAK","FLOWERS","BELL","CONCH","PRASAD","AARTI")))))
+                cache(request("activity/puja", "POST", JSONObject().put("steps",org.json.JSONArray(listOf("LIGHT","BATH","TILAK","FLOWERS","CONCH","PRASAD","AARTI")))))
                 prefs.edit().remove("pending_day").apply()
             } else cache(request("me"))
             if (googleAccount) referral.pending()?.let { claim ->

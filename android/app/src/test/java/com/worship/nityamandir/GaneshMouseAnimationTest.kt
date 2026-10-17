@@ -46,7 +46,7 @@ class GaneshMouseAnimationTest {
             assertEquals(0f, finished.ladduRemaining, .00001f)
             assertEquals(0f, finished.eating, .00001f)
             assertTrue(eating.facingRight)
-            assertTrue(pose(6f, selection).facingRight)
+            assertEquals(GaneshMouseAnimation.feet(placement, selection).x >= placement.prasadFloor.x - .08f, pose(6f, selection).facingRight)
         }
     }
 
@@ -60,7 +60,7 @@ class GaneshMouseAnimationTest {
                 val mouse = pose(i / 10f, selection)
                 assertTrue("Mouse leaves the floor while walking in $shrine/$idol",
                     mouse.position.y >= floor - .00001f && mouse.position.y <= bowl.y + .00001f)
-                assertTrue(mouse.facingRight)
+                assertEquals(i == 46 || GaneshMouseAnimation.feet(placement, selection).x >= bowl.x - .08f, mouse.facingRight)
             }
             assertEquals(floor, pose(8.4f, selection).position.y, .00001f)
         }

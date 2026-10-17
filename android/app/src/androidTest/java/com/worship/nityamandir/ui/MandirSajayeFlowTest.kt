@@ -2,8 +2,17 @@ package com.worship.nityamandir.ui
 
 import android.content.Context
 import android.content.ContextWrapper
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.MutableState
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import com.worship.nityamandir.BuildConfig
 import com.worship.nityamandir.data.DevotionAccount
@@ -38,6 +47,7 @@ class MandirSajayeFlowTest {
     private lateinit var player: BhajanPlayer
     private val routed = AtomicReference<ShrineSelection?>()
     private val applied = AtomicReference<ShrineSelection?>()
+    private val musicDraft = AtomicReference<ShrineSelection?>()
 
     @Before fun isolateServiceAndPreferences() {
         val target = InstrumentationRegistry.getInstrumentation().targetContext
@@ -56,12 +66,12 @@ class MandirSajayeFlowTest {
         if (::context.isInitialized) context.clear()
     }
 
-    private fun fixture(coins: Int, signedIn: Boolean = true, marbleOwned: Boolean = false) {
+    private fun fixture(coins: Int, signedIn: Boolean = true, ivoryOwned: Boolean = false) {
         val profile = JSONObject().put("id", "fixture-${UUID.randomUUID()}")
             .put("coins", coins).put("google_account", false).put("email", "fixture@example.invalid")
-            .put("owned", JSONObject().apply { if (marbleOwned) put("shrine:marble", true) })
+            .put("owned", JSONObject().apply { if (ivoryOwned) put("shrine:ivory", true) })
             .put("coin_costs", JSONObject().put("shrine", 7).put("flowers", 2))
-            .put("selections", JSONObject().put("shrine", "original"))
+            .put("selections", JSONObject().put("shrine", "marble"))
             .put("days", JSONArray()).put("history", JSONArray())
             .put("share_count", 0).put("referrals", 0)
         origin.setProfile(profile)
@@ -82,54 +92,119 @@ class MandirSajayeFlowTest {
         assertEquals(signedIn, account.signedIn)
     }
 
-    private fun showCustomizer() {
+    private fun showCustomizer(narrowWithLargeText: Boolean = false) {
         compose.setContent {
-            ShrineControlsTheme {
-                ShrineCustomizer(account, ShrineSelection(), false, {},
-                    onAccount = { routed.set(it) }, onApplied = { applied.set(it) },
-                    player = player, onMusic = {})
+            // Dialog content inherits this density too: exercise a 320dp-wide viewport at 1.3x text.
+            val density = if (narrowWithLargeText) {
+                Density(context.resources.displayMetrics.widthPixels / 320f, fontScale = 1.3f)
+            } else LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides density) {
+                ShrineControlsTheme {
+                    ShrineCustomizer(account, ShrineSelection(), false, {},
+                        onAccount = { routed.set(it) }, onApplied = { applied.set(it) },
+                        player = player, onMusic = { musicDraft.set(it) })
+                }
             }
         }
     }
 
-    private fun selectMarbleAndRequestUnlock() {
-        compose.onNodeWithText("Marble arch").performScrollTo().performClick()
-        compose.onNodeWithText("Marble arch").assertIsSelected()
-        compose.onNodeWithText("Unlock selection · 7 coins").performClick()
+    /** Show a deterministic active player without starting a service, audio, or network requests. */
+    private fun showFixtureMusic() {
+        compose.runOnIdle {
+            // A cancellation callback from release can still reset loading/failed. A current
+            // track keeps the mini player present regardless of those transient flags.
+            @Suppress("UNCHECKED_CAST")
+            val current = BhajanPlayer::class.java.getDeclaredField("current\$delegate")
+                .apply { isAccessible = true }.get(player) as MutableState<BhajanPlayer.Track?>
+            current.value = BhajanPlayer.Track("Fixture bhajan", "https://example.invalid/fixture.mp3", "fixture")
+        }
+    }
+
+    private fun selectIvoryAndRequestUnlock() {
+        compose.onNodeWithText("Ivory alcove").performScrollTo().performClick()
+        compose.onNodeWithText("Ivory alcove").assertIsSelected()
+        compose.onNodeWithText("Cost: 7 coins").assertIsDisplayed()
+        compose.onNode(hasTestTag("mandir-selection-action") and hasText("Unlock")).performClick()
         compose.onNodeWithText("Unlock items?").assertIsDisplayed()
-        compose.onNodeWithText("Cost: 7 coins", substring = true).assertIsDisplayed()
+        val confirmationDialog = isDialog() and hasAnyDescendant(hasText("Unlock items?"))
+        compose.onNode(hasText("Cost: 7 coins", substring = true) and hasAnyAncestor(confirmationDialog))
+            .assertIsDisplayed()
     }
 
     @Test fun cancellingUnlockDoesNotSpendCoinsOrApplyTheDesign() {
         fixture(coins = 9)
         showCustomizer()
-        selectMarbleAndRequestUnlock()
+        selectIvoryAndRequestUnlock()
         compose.onNodeWithText("Cancel").performClick()
         compose.onNodeWithText("Unlock items?").assertDoesNotExist()
-        compose.onNodeWithText("Marble arch").assertIsSelected()
+        compose.onNodeWithText("Ivory alcove").assertIsSelected()
         compose.runOnIdle {
             assertEquals(9, account.coins)
-            assertFalse(account.owns("shrine", "marble"))
+            assertFalse(account.owns("shrine", "ivory"))
             assertNull(applied.get())
         }
         assertEquals(0, origin.unlockRequests.get())
         assertEquals(0, origin.saveRequests.get())
     }
 
-    @Test fun confirmingUnlockSpendsOnceSelectsMarbleAndAllowsApply() {
+    @Test fun confirmingUnlockSpendsOnceSelectsIvoryAndAllowsApply() {
         fixture(coins = 9)
         showCustomizer()
-        selectMarbleAndRequestUnlock()
+        selectIvoryAndRequestUnlock()
         val confirmationDialog = isDialog() and hasAnyDescendant(hasText("Unlock items?"))
-        compose.onNode(hasText("Unlock · 7 coins") and hasAnyAncestor(confirmationDialog)).performClick()
-        compose.waitUntil(5_000) { account.coins == 2 && account.owns("shrine", "marble") }
-        compose.onNodeWithText("2 coins").assertIsDisplayed()
-        compose.onNodeWithText("Marble arch").assertIsSelected()
+        compose.onNode(hasText("Unlock") and hasAnyAncestor(confirmationDialog)).performClick()
+        compose.waitUntil(5_000) { account.coins == 2 && account.owns("shrine", "ivory") }
+        compose.onNodeWithContentDescription("2 coins · Earn coins").assertIsDisplayed()
+        compose.onNodeWithText("Ivory alcove").assertIsSelected()
         compose.runOnIdle { assertNull(applied.get()) }
-        compose.onNodeWithText("Apply this temple").performClick()
+        compose.onNode(hasTestTag("mandir-selection-action") and hasText("Apply")).performClick()
         compose.waitUntil(5_000) { applied.get() != null }
-        assertEquals("marble", applied.get()!!["shrine"])
-        compose.runOnIdle { assertEquals("marble", account.selection()["shrine"]) }
+        assertEquals("ivory", applied.get()!!["shrine"])
+        compose.runOnIdle { assertEquals("ivory", account.selection()["shrine"]) }
+        assertEquals(1, origin.unlockRequests.get())
+        assertEquals(1, origin.saveRequests.get())
+        assertEquals(2, origin.coins())
+    }
+
+    @Test fun freeIdolCanBeAppliedDirectlyFromPreviewWithoutSigningIn() {
+        fixture(coins = 0, signedIn = false)
+        showCustomizer()
+        compose.onNodeWithText("Idols").performScrollTo().performClick()
+        compose.onNodeWithText("Shiva").performScrollTo().performClick()
+        compose.onNodeWithText("Preview").performClick()
+        compose.onNode(hasTestTag("mandir-preview-action") and hasText("Apply"))
+            .assertIsDisplayed().performClick()
+        compose.waitUntil(5_000) { applied.get() != null }
+        assertEquals("shiva", applied.get()!!["idols"])
+        compose.runOnIdle { assertEquals("shiva", account.selection()["idols"]) }
+        compose.onNodeWithContentDescription("Back to choices").assertDoesNotExist()
+        assertEquals(0, origin.requests.get())
+    }
+
+    @Test fun paidShrineCanBeUnlockedAndAppliedStartingFromPreview() {
+        fixture(coins = 9)
+        showCustomizer()
+        compose.onNodeWithText("Ivory alcove").performScrollTo().performClick()
+        compose.onNodeWithText("Preview").performClick()
+        compose.onNode(hasTestTag("mandir-preview-action") and hasText("Unlock"))
+            .assertIsDisplayed().performClick()
+        compose.onNodeWithContentDescription("Back to choices").assertDoesNotExist()
+        compose.onNodeWithText("Unlock items?").assertIsDisplayed()
+        confirmUnlock(7)
+        compose.waitUntil(5_000) { account.owns("shrine", "ivory") }
+        compose.onNodeWithText("Preview").performClick()
+        compose.onNode(hasTestTag("mandir-preview-action") and hasText("Apply"))
+            .assertIsDisplayed().assertIsEnabled().performClick()
+        try {
+            // Software rendering can block the emulator main thread for several seconds
+            // while rebuilding the scene after the purchase dialog.
+            compose.waitUntil(15_000) { applied.get() != null }
+        } catch (failure: ComposeTimeoutException) {
+            throw AssertionError("Paid preview did not apply: save requests=${origin.saveRequests.get()}, " +
+                "balance=${account.coins}, owns ivory=${account.owns("shrine", "ivory")}.\n" +
+                compose.onNodeWithTag("mandir-preview-actions", useUnmergedTree = true).printToString(), failure)
+        }
+        assertEquals("ivory", applied.get()!!["shrine"])
         assertEquals(1, origin.unlockRequests.get())
         assertEquals(1, origin.saveRequests.get())
         assertEquals(2, origin.coins())
@@ -144,27 +219,121 @@ class MandirSajayeFlowTest {
 
     private fun assertOriginalOrchidAndRoseSelected() {
         listOf("Sunflower & peony", "Orchid", "Rose").forEach {
-            compose.onNodeWithText(it).assertIsSelected()
+            compose.onNodeWithText(it).assertIsOn()
+                .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
         }
+    }
+
+    @Test fun flowersAreCheckBoxesAndKeepAtLeastOneVariety() {
+        fixture(coins = 0, signedIn = false)
+        showCustomizer()
+        compose.onNodeWithText("Flowers").performScrollTo().performClick()
+        compose.onNodeWithText("Select multiple · 1 selected").assertIsDisplayed()
+        compose.onNodeWithText("Sunflower & peony").assertIsOn()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
+        compose.onNodeWithText("Orchid").assertIsOff()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
+        compose.onNodeWithText("Orchid").performScrollTo().performClick().assertIsOn()
+        compose.onNodeWithText("Select multiple · 2 selected").assertIsDisplayed()
+        compose.onNodeWithText("Sunflower & peony").performScrollTo().performClick().assertIsOff()
+        compose.onNodeWithText("Orchid").performScrollTo().assertIsOn().performClick().assertIsOn()
+        compose.onNodeWithText("Select multiple · 1 selected").assertIsDisplayed()
+        compose.onNodeWithText("Keep at least one flower variety.").assertIsDisplayed()
+        // The remaining selection can be replaced, and an unowned choice can be removed normally.
+        compose.onNodeWithText("Sunflower & peony").performScrollTo().performClick().assertIsOn()
+        compose.onNodeWithText("Orchid").performScrollTo().performClick().assertIsOff()
+        compose.onNode(hasTestTag("mandir-selection-action") and hasText("Apply")).performClick()
+        compose.waitUntil(5_000) { applied.get() != null }
+        assertEquals(listOf("original"), applied.get()!!.flowerIds)
+        assertEquals(0, origin.requests.get())
+    }
+
+    @Test fun previewActionsStayCompactAndMusicRemainsAvailable() {
+        fixture(coins = 0, signedIn = false)
+        showFixtureMusic()
+        showCustomizer()
+        assertCompactHeight("mandir-choice-music", 56)
+        compose.onNodeWithText("Flowers").performScrollTo().performClick()
+        compose.onNodeWithText("Select multiple · 1 selected").assertIsDisplayed()
+        captureLayout("mandir-flowers-compact")
+        compose.onNodeWithText("Preview").performClick()
+        assertCompactHeight("mandir-preview-actions", 120)
+        assertCompactHeight("mandir-preview-music", 56)
+        captureLayout("mandir-preview-compact")
+        compose.onNode(hasTestTag("mandir-preview-action") and hasText("Apply")).assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back to choices").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Preview").assertIsDisplayed()
+        compose.runOnIdle { assertNull(applied.get()) }
+        assertEquals(0, origin.requests.get())
+    }
+
+    private fun assertCompactHeight(tag: String, maximumDp: Int) {
+        val bounds = compose.onNodeWithTag(tag).assertIsDisplayed().getUnclippedBoundsInRoot()
+        val height = bounds.bottom - bounds.top
+        android.util.Log.i("MandirLayout", "$tag height=$height")
+        assertTrue("$tag occupies $height; expected at most ${maximumDp}dp", height <= maximumDp.dp)
+    }
+
+    private fun captureLayout(name: String) {
+        // Capture native SceneView and popup windows together for visual review.
+        compose.waitForIdle()
+        // Native rendering is independent of Compose's test clock.
+        Thread.sleep(if(name.contains("preview")) 3_000 else 500)
+        val output = InstrumentationRegistry.getInstrumentation().uiAutomation
+            .executeShellCommand("screencap -p /sdcard/Download/$name.png")
+        android.os.ParcelFileDescriptor.AutoCloseInputStream(output).use { it.readBytes() }
+    }
+
+    @Test fun previewAndApplyRemainVisibleWithMusicOnNarrowScreenAndLargerText() {
+        fixture(coins = 0, signedIn = false)
+        showFixtureMusic()
+        showCustomizer(narrowWithLargeText = true)
+        compose.onNodeWithText("Preview").assertIsDisplayed().performClick()
+        compose.onNodeWithTag("mandir-preview-music").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back to choices").assertIsDisplayed()
+        compose.onNode(hasTestTag("mandir-preview-action") and hasText("Apply"))
+            .assertIsDisplayed().performClick()
+        compose.waitUntil(5_000) { applied.get() != null }
+        compose.onNodeWithContentDescription("Back to choices").assertDoesNotExist()
+        assertEquals(0, origin.requests.get())
+    }
+
+    @Test fun openingMusicFromPreviewKeepsTheMultiFlowerDraft() {
+        fixture(coins = 0, signedIn = false)
+        showFixtureMusic()
+        showCustomizer()
+        selectOrchidAndRose()
+        compose.onNodeWithText("Preview").performClick()
+        compose.onNode(SemanticsMatcher("Open music player action") {
+            it.config.getOrNull(SemanticsActions.OnClick)?.label == "Open music player"
+        } and hasAnyAncestor(isPopup())).performClick()
+        compose.onNodeWithContentDescription("Back to choices").assertDoesNotExist()
+        compose.runOnIdle {
+            assertEquals(listOf("original", "orchid", "rose"), musicDraft.get()!!.flowerIds)
+            assertNull(applied.get())
+        }
+        assertEquals(0, origin.requests.get())
     }
 
     private fun confirmUnlock(cost: Int) {
         val confirmationDialog = isDialog() and hasAnyDescendant(hasText("Unlock items?"))
-        compose.onNode(hasText("Unlock · $cost coins") and hasAnyAncestor(confirmationDialog)).performClick()
+        compose.onNode(hasText("Cost: $cost coins", substring = true) and hasAnyAncestor(confirmationDialog))
+            .assertIsDisplayed()
+        compose.onNode(hasText("Unlock") and hasAnyAncestor(confirmationDialog)).performClick()
     }
 
     @Test fun batchFlowerUnlockChargesFourCoinsAndKeepsAllSelectedFlowers() {
         fixture(coins = 10)
         showCustomizer()
         selectOrchidAndRose()
-        compose.onNodeWithText("Unlock selection · 4 coins").performClick()
-        compose.onNodeWithText("Cost: 4 coins", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Cost: 4 coins").assertIsDisplayed()
+        compose.onNode(hasTestTag("mandir-selection-action") and hasText("Unlock")).performClick()
         confirmUnlock(4)
         compose.waitUntil(5_000) {
             account.coins == 6 && account.owns("flowers", "orchid") && account.owns("flowers", "rose")
         }
         assertOriginalOrchidAndRoseSelected()
-        compose.onNodeWithText("Apply this temple").performClick()
+        compose.onNode(hasTestTag("mandir-selection-action") and hasText("Apply")).performClick()
         compose.waitUntil(5_000) { applied.get() != null }
         assertEquals(listOf("original", "orchid", "rose"), applied.get()!!.flowerIds)
         compose.runOnIdle { assertEquals(applied.get()!!.flowerIds, account.selection().flowerIds) }
@@ -180,7 +349,7 @@ class MandirSajayeFlowTest {
         origin.failNextUnlock("flowers:rose")
         showCustomizer()
         selectOrchidAndRose()
-        compose.onNodeWithText("Unlock selection · 4 coins").performClick()
+        compose.onNode(hasTestTag("mandir-selection-action") and hasText("Unlock")).performClick()
         confirmUnlock(4)
         compose.waitUntil(5_000) {
             compose.onAllNodesWithText("Could not complete this action.", substring = true).fetchSemanticsNodes().isNotEmpty()
@@ -193,13 +362,15 @@ class MandirSajayeFlowTest {
             assertNull(applied.get())
         }
         assertOriginalOrchidAndRoseSelected()
-        compose.onNodeWithText("Unlock selection · 2 coins").performClick()
-        compose.onNodeWithText("Cost: 2 coins", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("Your balance: 8 coins", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Cost: 2 coins").assertIsDisplayed()
+        compose.onNode(hasTestTag("mandir-selection-action") and hasText("Unlock")).performClick()
+        val confirmationDialog = isDialog() and hasAnyDescendant(hasText("Unlock items?"))
+        compose.onNode(hasText("Your balance: 8 coins", substring = true) and hasAnyAncestor(confirmationDialog))
+            .assertIsDisplayed()
         confirmUnlock(2)
         compose.waitUntil(5_000) { account.coins == 6 && account.owns("flowers", "rose") }
         assertOriginalOrchidAndRoseSelected()
-        compose.onNodeWithText("Apply this temple").performClick()
+        compose.onNode(hasTestTag("mandir-selection-action") and hasText("Apply")).performClick()
         compose.waitUntil(5_000) { applied.get() != null }
         assertEquals(listOf("original", "orchid", "rose"), applied.get()!!.flowerIds)
         assertEquals(3, origin.unlockRequests.get())
@@ -212,12 +383,14 @@ class MandirSajayeFlowTest {
     @Test fun insufficientCoinsRoutesToEarningWithTheRequestedDesign() {
         fixture(coins = 1)
         showCustomizer()
-        compose.onNode(hasText("Earn coins") and hasAnyAncestor(hasText("Marble arch")))
-            .performScrollTo().performClick()
+        compose.onNodeWithText("Ivory alcove").performScrollTo().performClick().assertIsSelected()
+        compose.onNodeWithText("Cost: 7 coins").assertIsDisplayed()
+        compose.runOnIdle { assertNull(routed.get()) }
+        compose.onNode(hasTestTag("mandir-selection-action") and hasText("Unlock")).performClick()
         compose.runOnIdle {
-            assertEquals("marble", routed.get()!!["shrine"])
+            assertEquals("ivory", routed.get()!!["shrine"])
             assertEquals(1, account.coins)
-            assertFalse(account.owns("shrine", "marble"))
+            assertFalse(account.owns("shrine", "ivory"))
         }
         compose.onNodeWithText("Unlock items?").assertDoesNotExist()
         assertEquals(0, origin.requests.get())
@@ -227,18 +400,45 @@ class MandirSajayeFlowTest {
     @Test fun guestRoutesToSignInWithTheRequestedDesignWithoutNetwork() {
         fixture(coins = 0, signedIn = false)
         showCustomizer()
-        compose.onNode(hasText("Sign in to unlock") and hasAnyAncestor(hasText("Marble arch")))
-            .performScrollTo().performClick()
+        compose.onNodeWithText("Ivory alcove").performScrollTo().performClick().assertIsSelected()
+        compose.onNodeWithText("Cost: 7 coins").assertIsDisplayed()
+        compose.runOnIdle { assertNull(routed.get()) }
+        compose.onNode(hasTestTag("mandir-selection-action") and hasText("Unlock")).performClick()
         compose.runOnIdle {
             assertFalse(account.signedIn)
-            assertEquals("marble", routed.get()!!["shrine"])
+            assertEquals("ivory", routed.get()!!["shrine"])
         }
         assertEquals(0, origin.requests.get())
         assertNull(applied.get())
     }
 
+    @Test fun guestPreviewKeepsUnlockLabelAndRoutesToSignInOnlyAfterTapping() {
+        fixture(coins = 0, signedIn = false)
+        showCustomizer()
+        compose.onNodeWithText("Ivory alcove").performScrollTo().performClick()
+        compose.onNode(hasTestTag("mandir-selection-action") and hasText("Unlock")).assertIsDisplayed()
+        compose.onNodeWithText("Cost: 7 coins").assertIsDisplayed()
+        compose.onNodeWithText("Unlock selection", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("Sign in to unlock").assertDoesNotExist()
+        captureLayout("mandir-locked-choice-simple")
+        compose.runOnIdle { assertNull(routed.get()) }
+        compose.onNodeWithText("Preview").performClick()
+        compose.onNode(hasTestTag("mandir-preview-action") and hasText("Unlock")).assertIsDisplayed()
+        compose.onNode(hasText("Cost: 7 coins") and hasAnyAncestor(hasTestTag("mandir-preview-actions")))
+            .assertIsDisplayed()
+        captureLayout("mandir-locked-preview-simple")
+        compose.onNodeWithTag("mandir-preview-action").performClick()
+        compose.runOnIdle {
+            assertEquals("ivory", routed.get()!!["shrine"])
+            assertFalse(account.signedIn)
+            assertNull(applied.get())
+        }
+        compose.onNodeWithText("Unlock items?").assertDoesNotExist()
+        assertEquals(0, origin.requests.get())
+    }
+
     @Test fun profileShowsNewOwnedItemAndOpensMandirSajayeDirectly() {
-        fixture(coins = 0, marbleOwned = true)
+        fixture(coins = 0, ivoryOwned = true)
         val opened = AtomicInteger()
         compose.setContent {
             ShrineControlsTheme {
@@ -251,11 +451,11 @@ class MandirSajayeFlowTest {
                 compose.onAllNodes(hasText("Mandir Sajaye") and isEnabled()).fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("1 newly unlocked item is ready").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Marble arch").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Ivory alcove").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Mandir Sajaye").performScrollTo().assertIsEnabled().performClick()
         assertEquals(1, opened.get())
         compose.onNodeWithText("View coins & unlocks").assertDoesNotExist()
-        compose.runOnIdle { assertEquals("marble", account.newUnlocks(ShrineCatalog(context)).single().option.id) }
+        compose.runOnIdle { assertEquals("ivory", account.newUnlocks(ShrineCatalog(context)).single().option.id) }
         assertEquals(0, origin.unlockRequests.get())
     }
 

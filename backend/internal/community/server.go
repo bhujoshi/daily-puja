@@ -375,16 +375,29 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			reply(w, 200, map[string]bool{"deleted": true})
 		}
 	case path == "activity/puja" && r.Method == "POST":
-		expected := []string{"LIGHT", "BATH", "TILAK", "FLOWERS", "BELL", "CONCH", "PRASAD", "AARTI"}
-		if len(body.Steps) != len(expected) {
-			fail(w, 400, "Complete all eight puja steps")
-			return
-		}
-		for i, v := range expected {
-			if body.Steps[i] != v {
-				fail(w, 400, "Invalid puja steps")
-				return
+		valid := false
+		if len(body.Steps) == 7 {
+			expected := []string{"LIGHT", "BATH", "TILAK", "FLOWERS", "CONCH", "PRASAD", "AARTI"}
+			valid = true
+			for i, v := range expected {
+				if body.Steps[i] != v {
+					valid = false
+					break
+				}
 			}
+		} else if len(body.Steps) == 8 {
+			expected := []string{"LIGHT", "BATH", "TILAK", "FLOWERS", "BELL", "CONCH", "PRASAD", "AARTI"}
+			valid = true
+			for i, v := range expected {
+				if body.Steps[i] != v {
+					valid = false
+					break
+				}
+			}
+		}
+		if !valid {
+			fail(w, 400, "Complete all puja steps")
+			return
 		}
 		today := s.now().In(india).Format("2006-01-02")
 		for _, d := range a.Days {

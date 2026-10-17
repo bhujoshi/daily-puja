@@ -9,8 +9,8 @@ object ShrineCleaning {
     }
     private val foregroundSamples=listOf(
         TemplePoint(.24f,.88f),TemplePoint(.50f,.83f),TemplePoint(.76f,.88f),
-        TemplePoint(.15f,.98f),TemplePoint(.28f,1.06f),TemplePoint(.50f,1.08f),
-        TemplePoint(.50f,1.14f),TemplePoint(.66f,1.08f),TemplePoint(.79f,1.08f)
+        TemplePoint(.22f,.94f),TemplePoint(.27f,1.01f),TemplePoint(.50f,1.08f),
+        TemplePoint(.66f,1.03f),TemplePoint(.79f,1.03f)
     )
     fun samples(space:ShrineSpace):List<TemplePoint> = shrineSamples(space)+foregroundSamples
     fun contains(space:ShrineSpace,point:TemplePoint):Boolean = space.contains(point) ||

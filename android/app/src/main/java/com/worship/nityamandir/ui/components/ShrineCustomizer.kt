@@ -7,6 +7,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Toll
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -15,8 +18,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -29,7 +35,7 @@ import kotlinx.coroutines.CancellationException
 
 @Composable
 fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boolean,onDismiss:()->Unit,onAccount:(ShrineSelection)->Unit,onApplied:(ShrineSelection)->Unit,
-    player:BhajanPlayer,onMusic:()->Unit) {
+    player:BhajanPlayer,onMusic:(ShrineSelection)->Unit) {
     val context=LocalContext.current
     val catalog=remember {ShrineCatalog(context)}
     var draft by remember {mutableStateOf(catalog.normalize(current))}
@@ -67,75 +73,97 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
         }.map {ShrineUnlock(category,it,account.cost(category.id,it.id))}
     }
     val selectedCost=selectedUnlocks.sumOf {it.cost}
+    val selectionActionLabel=if(busy) tr("रुकें…","Wait…")
+        else if(selectedUnlocks.isEmpty()) tr("लगाएँ","Apply")
+        else tr("अनलॉक","Unlock")
+    val selectionActionIcon:(@Composable ()->Unit)?=if(selectedUnlocks.isEmpty()) null else {
+        {Icon(Icons.Outlined.Lock,null,Modifier.size(18.dp))}
+    }
+    val selectionHint=if(selectedUnlocks.isEmpty()) tr("लगाने पर नई पूजा शुरू होगी।","Starts a new puja when applied.")
+        else tr("कीमत: $selectedCost सिक्के","Cost: $selectedCost coins")
+    val applyOrUnlock:()->Unit = action@{
+        if(busy) return@action
+        if(selectedUnlocks.isNotEmpty()) {
+            // Leave the scene preview before opening account or purchase dialogs.
+            showPreview=false
+            requestUnlock(selectedUnlocks)
+        } else {
+            busy=true;error="";message=""
+            scope.launch {
+                try {
+                    account.saveSelection(draft)
+                    showPreview=false
+                    onApplied(draft)
+                }
+                catch(e:CancellationException) {throw e}
+                catch(e:Exception) {error=failure(e)}
+                finally {busy=false}
+            }
+        }
+    }
     Dialog(onDismissRequest={if(!busy) onDismiss()},properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Surface(Modifier.fillMaxSize(),color=Color(0xFFFFF7EC)) {
-            Column(Modifier.safeDrawingPadding().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                if(player.current!=null || player.loading) BhajanMiniPlayer(player,hindi,onMusic)
+            Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal=12.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                    Text(tr("मंदिर सजाएँ","Mandir Sajaye"),Modifier.weight(1f),fontSize=23.sp,fontWeight=FontWeight.SemiBold)
-                    TextButton(onClick=onDismiss,enabled=!busy) {Text(tr("बंद करें","Close"))}
-                }
-                Surface(color=Color(0xFFF2E5D2),shape=RoundedCornerShape(16.dp)) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal=14.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        Icon(Icons.Outlined.Toll,null,tint=RitualGold)
-                        Text(tr("${account.coins} सिक्के","${account.coins} coins"),Modifier.weight(1f),fontSize=18.sp,fontWeight=FontWeight.SemiBold)
-                        TextButton(onClick={onAccount(draft)},enabled=!busy) {Text(if(account.signedIn) tr("सिक्के कमाएँ","Earn coins") else tr("साइन इन करें","Sign in"))}
+                    Text(tr("मंदिर सजाएँ","Mandir Sajaye"),Modifier.weight(1f),fontSize=20.sp,fontWeight=FontWeight.SemiBold)
+                    TextButton(onClick={onAccount(draft)},enabled=!busy,modifier=Modifier.semantics {
+                        contentDescription=if(account.signedIn) tr("${account.coins} सिक्के · सिक्के कमाएँ","${account.coins} coins · Earn coins")
+                            else tr("${account.coins} सिक्के · साइन इन करें","${account.coins} coins · Sign in")
+                    }) {
+                        Icon(Icons.Outlined.Toll,null,tint=RitualGold,modifier=Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("${account.coins}",fontSize=14.sp)
                     }
+                    IconButton(onClick=onDismiss,enabled=!busy) {Icon(Icons.Outlined.Close,tr("बंद करें","Close"))}
                 }
-                Text(tr("लागू करने पर नई पूजा शुरू होगी।", "Applying a design starts a fresh puja."),fontSize=14.sp)
+                Column(Modifier.weight(1f).verticalScroll(optionsScroll),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                if(player.current!=null || player.loading) BhajanMiniPlayer(player,hindi,{onMusic(draft)},Modifier.testTag("mandir-choice-music"),compact=true)
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     catalog.categories.forEach {category ->
                         FilterChip(selected=categoryId==category.id,onClick={categoryId=category.id},enabled=!busy,label={Text(if(hindi) category.hi else category.en)})
                     }
                 }
                 val category=catalog.categories.first {it.id==categoryId}
-                if(categoryId=="flowers") Text(tr("जितनी चाहें फूलों की किस्में चुनें (कम से कम एक)।","Choose as many flower varieties as you like (at least one)."))
-                Column(Modifier.weight(1f).verticalScroll(optionsScroll),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                if(categoryId=="flowers") Text(tr("कई किस्में चुनें · ${draft.flowerIds.size} चुनी गईं","Select multiple · ${draft.flowerIds.size} selected"),fontSize=14.sp)
+                Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     category.options.forEach {option ->
                         val selected=if(category.id=="flowers") option.id in draft.flowerIds else draft[category.id]==option.id
                         val owned=account.owns(category.id,option.id)
                         val cost=account.cost(category.id,option.id)
-                        Surface(onClick={draft=if(category.id=="flowers") draft.toggleFlower(option.id) else draft.with(category.id,option.id);error="";message=""},enabled=!busy,shape=RoundedCornerShape(16.dp),color=if(selected) Color(0xFFF1DFC1) else Color.White,border=BorderStroke(if(selected) 2.dp else 1.dp,if(selected) RitualGold else Color(0xFFE4D7C6)),modifier=Modifier.fillMaxWidth().semantics {this.selected=selected}) {
-                            Row(Modifier.padding(12.dp),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                        Surface(onClick={
+                            error="";message=""
+                            if(category.id=="flowers" && selected && draft.flowerIds.size==1) message=tr("कम से कम एक फूल की किस्म रखें।","Keep at least one flower variety.")
+                            else draft=if(category.id=="flowers") draft.toggleFlower(option.id) else draft.with(category.id,option.id)
+                        },enabled=!busy,shape=RoundedCornerShape(16.dp),color=if(selected) Color(0xFFF1DFC1) else Color.White,border=BorderStroke(if(selected) 2.dp else 1.dp,if(selected) RitualGold else Color(0xFFE4D7C6)),modifier=Modifier.fillMaxWidth().semantics {
+                            this.selected=selected
+                            if(category.id=="flowers") {role=Role.Checkbox;toggleableState=if(selected) ToggleableState.On else ToggleableState.Off}
+                        }) {
+                            Row(Modifier.padding(10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                                 val bitmap=remember(option.thumbnail) {context.assets.open(option.thumbnail).use {BitmapFactory.decodeStream(it)}.asImageBitmap()}
-                                Image(bitmap,null,Modifier.size(84.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFF6EBDD)),contentScale=ContentScale.Fit)
+                                Image(bitmap,null,Modifier.size(64.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFF6EBDD)),contentScale=ContentScale.Fit)
                                 Column(Modifier.weight(1f)) {
-                                    Text(label(option),fontSize=18.sp,fontWeight=FontWeight.Medium)
-                                    Text(if(selected && !owned) tr("पूर्वावलोकन के लिए चुना","Selected for preview") else if(selected) tr("चुना हुआ","Selected") else tr("चुनने के लिए छुएँ","Tap to choose"),fontSize=14.sp)
-                                    Text(if(cost==0) tr("मुफ़्त","Free") else if(owned) tr("अनलॉक है","Unlocked") else tr("$cost सिक्के","$cost coins"),color=RitualGold,fontSize=14.sp)
-                                    if("${category.id}:${option.id}" in newUnlockKeys) Text(tr("नया अनलॉक","New unlock"),color=RitualGold,fontWeight=FontWeight.SemiBold,fontSize=13.sp)
-                                    if(!owned) {
-                                        val shortage=(cost-account.coins).coerceAtLeast(0)
-                                        if(account.signedIn && shortage>0) Text(tr("$shortage सिक्के और चाहिए","Need $shortage more coins"),fontSize=13.sp)
-                                        OutlinedButton(onClick={requestUnlock(listOf(ShrineUnlock(category,option,cost)))},enabled=!busy) {
-                                            Text(if(!account.signedIn) tr("अनलॉक के लिए साइन इन करें","Sign in to unlock") else if(shortage>0) tr("सिक्के कमाएँ","Earn coins") else tr("अनलॉक · $cost सिक्के","Unlock · $cost coins"))
-                                        }
+                                    Text(label(option),fontSize=16.sp,fontWeight=FontWeight.Medium)
+                                    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                                        if(!owned) Icon(Icons.Outlined.Lock,tr("लॉक है","Locked"),Modifier.size(14.dp),tint=RitualGold)
+                                        Text(if(!owned) tr("$cost सिक्के","$cost coins") else if(cost==0) tr("मुफ़्त","Free") else tr("अनलॉक है","Unlocked"),color=RitualGold,fontSize=14.sp)
                                     }
+                                    if("${category.id}:${option.id}" in newUnlockKeys) Text(tr("नया अनलॉक","New unlock"),color=RitualGold,fontWeight=FontWeight.SemiBold,fontSize=13.sp)
                                 }
+                                if(category.id=="flowers") Checkbox(checked=selected,onCheckedChange=null,modifier=Modifier.size(24.dp))
+                                else RadioButton(selected=selected,onClick=null,modifier=Modifier.size(24.dp))
                             }
                         }
                     }
                 }
-                OutlinedButton(onClick={showPreview=true},enabled=!busy,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)) {Text(tr("पूरे मंदिर में देखें","Preview in the temple"))}
-                if(selectedUnlocks.isNotEmpty()) Text(tr("चुने हुए आइटम अनलॉक करें · $selectedCost सिक्के","Unlock selected items · $selectedCost coins"),fontSize=14.sp)
+                }
                 if(busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 if(error.isNotEmpty()) Text(error,color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics {liveRegion=LiveRegionMode.Polite})
                 if(message.isNotEmpty()) Text(message,color=RitualInk,modifier=Modifier.semantics {liveRegion=LiveRegionMode.Polite})
-                RitualChoice(if(busy) tr("कृपया प्रतीक्षा करें…","Please wait…") else if(selectedUnlocks.isEmpty()) tr("इस मंदिर को लागू करें","Apply this temple")
-                    else if(!account.signedIn) tr("अनलॉक के लिए साइन इन करें","Sign in to unlock")
-                    else if(account.coins<selectedCost) tr("${selectedCost-account.coins} सिक्के और कमाएँ","Earn ${selectedCost-account.coins} more coins")
-                    else tr("चुने हुए आइटम अनलॉक करें · $selectedCost सिक्के","Unlock selection · $selectedCost coins"),false,{
-                    if(selectedUnlocks.isNotEmpty()) requestUnlock(selectedUnlocks)
-                    else {
-                        busy=true;error="";message=""
-                        scope.launch {
-                            try {account.saveSelection(draft);onApplied(draft)}
-                            catch(e:CancellationException) {throw e}
-                            catch(e:Exception) {error=failure(e)}
-                            finally {busy=false}
-                        }
-                    }
-                },Modifier.fillMaxWidth(),enabled=!busy)
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
+                    RitualChoice(tr("देखें","Preview"),false,{showPreview=true},Modifier.weight(1f),enabled=!busy)
+                    RitualChoice(selectionActionLabel,false,applyOrUnlock,Modifier.weight(1f).testTag("mandir-selection-action"),enabled=!busy,leadingIcon=selectionActionIcon)
+                }
+                Text(selectionHint,fontSize=12.sp)
             }
         }
     }
@@ -159,15 +187,15 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                             if(!account.owns(item.category.id,item.option.id)) account.unlock(item.category.id,item.option.id)
                             draft=draft.selectItem(item.category.id,item.option.id)
                         }
-                        message=tr("अनलॉक हो गया। अपने मंदिर पर लागू करें।","Unlocked and selected. Apply it to your temple.")
+                        message=tr("अनलॉक हो गया · लगाने के लिए तैयार","Unlocked · ready to use")
                     } catch(e:CancellationException) {throw e}
                     catch(e:Exception) {error=failure(e)}
                     finally {busy=false}
                 }
-            }) {Text(tr("अनलॉक · $cost सिक्के","Unlock · $cost coins"))}},
+            }) {Icon(Icons.Outlined.Lock,null,Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(tr("अनलॉक","Unlock"))}},
             dismissButton={TextButton(onClick={pendingUnlocks=emptyList()}) {Text(tr("वापस","Cancel"))}})
     }
-    if(showPreview) Dialog(onDismissRequest={showPreview=false},properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    if(showPreview) Dialog(onDismissRequest={if(!busy) showPreview=false},properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Box(Modifier.fillMaxSize().background(Color(0xFFFFF7EC))) {
             key(draft) {MandirAltarView(
                 session=WorshipSession(deityCount=draft.deityCount),dustLevel=0f,flowerWitherFactor=0f,bathTarget=null,bathProgress=0f,
@@ -176,15 +204,22 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                 onFlowerClick={},onConchClick={},onAartiClick={},selection=draft)}
             // Popup stays above SceneView's surface.
             androidx.compose.ui.window.Popup(alignment=Alignment.BottomCenter) {
-                Surface(color=Color(0xFFFFF7EC),shape=RoundedCornerShape(20.dp),modifier=Modifier.navigationBarsPadding().padding(20.dp)) {
-                    Column(Modifier.padding(16.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-                        Text(tr("पूर्वावलोकन · अभी सहेजा नहीं गया","Preview · not saved yet"),fontSize=18.sp)
-                        Button(onClick={showPreview=false},modifier=Modifier.heightIn(min=52.dp)) {Text(tr("चुनाव पर वापस जाएँ","Back to choices"))}
+                Surface(color=Color(0xFFFFF7EC),shape=RoundedCornerShape(20.dp),modifier=Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=12.dp,vertical=8.dp)) {
+                    Column(Modifier.testTag("mandir-preview-actions").padding(10.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                        if(busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                        if(error.isNotEmpty()) Text(error,color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics {liveRegion=LiveRegionMode.Polite})
+                        RitualChoice(selectionActionLabel,false,applyOrUnlock,Modifier.fillMaxWidth().testTag("mandir-preview-action"),enabled=!busy,leadingIcon=selectionActionIcon)
+                        Text(selectionHint,Modifier.fillMaxWidth(),fontSize=12.sp,textAlign=TextAlign.Center)
                     }
                 }
             }
-            if(player.current!=null || player.loading) androidx.compose.ui.window.Popup(alignment=Alignment.TopCenter) {
-                BhajanMiniPlayer(player,hindi,{showPreview=false;onMusic()},Modifier.statusBarsPadding().padding(16.dp))
+            androidx.compose.ui.window.Popup(alignment=Alignment.TopCenter) {
+                Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    Surface(shape=RoundedCornerShape(16.dp),color=Color(0xFFFFF7EC)) {
+                        IconButton(onClick={showPreview=false},enabled=!busy) {Icon(Icons.AutoMirrored.Outlined.ArrowBack,tr("चुनाव पर वापस जाएँ","Back to choices"))}
+                    }
+                    if(player.current!=null || player.loading) BhajanMiniPlayer(player,hindi,{showPreview=false;onMusic(draft)},Modifier.weight(1f).testTag("mandir-preview-music"),compact=true)
+                }
             }
         }
     }

@@ -32,6 +32,8 @@ class ShrineSelectionTest {
                 assertEquals(TempleSceneLayout.aartiRest,placement.aartiPosition(1f))
                 assertEquals(TempleSceneLayout.prasadRest,placement.prasadPosition(0f))
                 assertEquals(placement.prasadFloor.y,placement.prasadPosition(1f).y,.0001f)
+                assertEquals(placement.space.lamp.y,placement.prasadFloor.y,.0001f)
+                assertEquals(.50f,placement.prasadFloor.x,.0001f)
                 assertTrue(placement.prasadFloor.y>placement.space.floorY)
                 placement.heads.forEachIndexed {i,head ->
                     assertTrue(head.x in placement.left..(placement.left+placement.width))
@@ -46,5 +48,30 @@ class ShrineSelectionTest {
                 }
             }
         }
+    }
+
+    @Test fun ritualItemsPreserveScalesAndConsistentBoundsAcrossLayouts() {
+        assertEquals(1.5f, TempleSceneLayout.CONCH_SCALE, 0.0001f)
+        assertEquals(.34f * 1.5f, TempleSceneLayout.CONCH_SIZE, 0.0001f)
+        assertEquals(.15f * 1.5f, TempleSceneLayout.CONCH_WIDTH, 0.0001f)
+        assertEquals(.24f * 1.5f, TempleSceneLayout.CONCH_HEIGHT, 0.0001f)
+
+        assertEquals(1.25f, TempleSceneLayout.AARTI_SCALE, 0.0001f)
+        assertEquals(.36f * TempleSceneLayout.LAMP_SCALE * 1.25f, TempleSceneLayout.AARTI_WIDTH, 0.0001f)
+        assertEquals(.45f * TempleSceneLayout.LAMP_SCALE * 1.25f, TempleSceneLayout.AARTI_HEIGHT, 0.0001f)
+
+        assertEquals(.50f, TempleSceneLayout.bell.x, 0.0001f)
+        assertEquals(.94f, TempleSceneLayout.bell.y, 0.0001f)
+        assertEquals(.26f, TempleSceneLayout.conch.x, 0.0001f)
+        assertEquals(.94f, TempleSceneLayout.conch.y, 0.0001f)
+        assertEquals(.30f, TempleSceneLayout.prasadFloor.x, 0.0001f)
+        assertEquals(.88f, TempleSceneLayout.prasadFloor.y, 0.0001f)
+        assertEquals(.14f, TempleSceneLayout.PRASAD_SIZE, 0.0001f)
+
+        // Verify bell stays fully inside viewport even on an ultra-tall 21:9 display
+        val tallViewport = com.worship.nityamandir.engine.TempleViewport(1080f, 2520f)
+        val bellPixel = tallViewport.pixel(TempleSceneLayout.bell)
+        val bellRadiusPixels = tallViewport.imageWidth * TempleSceneLayout.bellHalfWidth
+        assertTrue("Bell left edge must be inside screen", bellPixel.x - bellRadiusPixels > 0f)
     }
 }

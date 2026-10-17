@@ -68,17 +68,30 @@ Execute via Gradle:
 #### Mandir Sajaye purchase flows
 
 With a local Android emulator running, verify the chooser, coin purchase confirmation,
-selection saving, guest/low-balance handoffs, and profile unlock notices:
+selection saving, guest sign-in, insufficient coins, profile unlock notices,
+and applying a preview to the real main altar:
 
 ```bash
 ./gradlew connectedDebugAndroidTest -PisolatedVerification=true \
   -PaccountApiUrl=http://127.0.0.1:8189 \
-  -Pandroid.testInstrumentationRunnerArguments.class=com.worship.nityamandir.ui.MandirSajayeFlowTest
+  -Pandroid.testInstrumentationRunnerArguments.class=com.worship.nityamandir.ui.MandirSajayeFlowTest,com.worship.nityamandir.ui.MandirPreviewApplyTest
 ```
 
 These tests start a temporary coin service inside the emulator and use separate
 preferences. They require the isolated verification application and the exact
 loopback URL above; other configurations skip them. They never use a remote account.
+The real-screen test temporarily prepares a guest in the verification app,
+then restores its preferences. It verifies that preview Apply changes the active
+altar and the choice survives reopening the chooser and recreating the activity.
+Layout coverage includes compact preview actions, the music player, a 320dp
+viewport with 1.3× text, and keeping the flower draft when opening music.
+Flower checks verify checkbox semantics, selecting several varieties, removing
+individual varieties, and retaining at least one.
+Guest unlock checks verify the short Unlock action and separate price remain
+visible until tapped, then open sign-in without spending coins. Cards select the
+item; the footer performs Unlock or Apply. Real-screen tests also verify
+numbered puja guidance advances from lighting to bathing and the dock stays compact
+with larger text.
 The normal unit suite covers unlock availability, account-specific acknowledgements,
 server pricing, and selecting purchased flowers without removing existing choices.
 

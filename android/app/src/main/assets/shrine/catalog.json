@@ -23,14 +23,6 @@
       "label_hi": "मंदिर",
       "options": [
         {
-          "id": "original",
-          "label_en": "Wooden mandir",
-          "label_hi": "लकड़ी का मंदिर",
-          "path": "shrine/backgrounds/wood.png",
-          "kind": "image",
-          "thumbnail": "shrine/backgrounds/wood.png"
-        },
-        {
           "id": "marble",
           "label_en": "Marble arch",
           "label_hi": "संगमरमर मंदिर",

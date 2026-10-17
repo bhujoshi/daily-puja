@@ -2,28 +2,28 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Outfit:wght@300;400;500;600;700&family=Tiro+Devanagari+Hindi:ital@0;1&display=swap');
 
 :root {
-  /* Sacred Color Palette */
-  --saffron: #FF8C00;
-  --deep-saffron: #E65200;
-  --gold: #FFD700;
-  --brass: #D4AF37;
-  --vermilion: #B81C1C;
-  --silk-red: #8C0000;
-  --marigold: #FF7000;
-  --lotus-pink: #F06192;
+  /* Sacred Color Palette (Garbhagriha Chiaroscuro) */
+  --saffron: #FF9E2C;
+  --deep-saffron: #D85816;
+  --gold: #D8AF52;
+  --brass: #C5A059;
+  --vermilion: #A82424;
+  --silk-red: #6B1212;
+  --marigold: #FF7A18;
+  --lotus-pink: #E26A8D;
   
   /* Wood & Temple Architecture Colors */
-  --sanctum-dark: #0A0403;
-  --teak-dark: #160A06;
-  --teak-wood: #26120B;
-  --teak-card: rgba(30, 14, 8, 0.75);
+  --sanctum-dark: #0D0B0A;
+  --teak-dark: #140D0A;
+  --teak-wood: #22140F;
+  --teak-card: rgba(34, 20, 15, 0.78);
   
   /* Text & Accents */
-  --text-primary: #FFF7E7;
-  --text-secondary: #D9CFC7;
+  --text-primary: #FFFDF8;
+  --text-secondary: #CFC2B2;
   --text-muted: #9E9088;
-  --border-gold: rgba(212, 175, 55, 0.3);
-  --border-gold-glow: rgba(255, 215, 0, 0.6);
+  --border-gold: rgba(216, 175, 82, 0.3);
+  --border-gold-glow: rgba(216, 175, 82, 0.6);
 
   /* Typography */
   --font-serif: 'Cinzel', serif;

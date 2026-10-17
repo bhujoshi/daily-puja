@@ -6,7 +6,6 @@ enum class WorshipStep(val hi: String, val en: String) {
     BATH("देव स्नान", "Sacred bathing"),
     TILAK("तिलक अर्पण", "Apply tilak"),
     FLOWERS("पुष्प अर्पण", "Offer flowers"),
-    BELL("घंटी नाद", "Ring the bell"),
     CONCH("शंख नाद", "Sound the conch"),
     PRASAD("प्रसाद अर्पण", "Offer prasad"),
     AARTI("दीप से आरती", "Aarti with the diya")
@@ -39,7 +38,6 @@ data class WorshipSession(
         WorshipStep.BATH -> bathed.containsAll((0 until deityCount).toList())
         WorshipStep.TILAK -> tilak.containsAll((0 until deityCount).toList())
         WorshipStep.FLOWERS -> flowers.containsAll((0 until deityCount).toList())
-        WorshipStep.BELL -> bellRung
         WorshipStep.CONCH -> conchBlown
         WorshipStep.PRASAD -> prasadOffered
         WorshipStep.AARTI -> aartiComplete

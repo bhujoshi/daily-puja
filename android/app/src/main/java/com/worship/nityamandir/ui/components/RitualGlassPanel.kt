@@ -22,11 +22,12 @@ import androidx.compose.ui.graphics.asImageBitmap
 import android.graphics.BitmapFactory
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.unit.*
+import androidx.compose.ui.text.font.FontWeight
 import com.worship.nityamandir.R
 import com.worship.nityamandir.engine.TempleViewport
 
-val RitualInk=Color(0xFF47352C)
-val RitualGold=Color(0xFF986D3C)
+val RitualInk=Color(0xFF261C16)
+val RitualGold=Color(0xFFB3833B)
 
 /** Samples the actual carpet beneath the dock, then adds frosting and reflective edges. */
 @Composable
@@ -44,8 +45,8 @@ fun RitualGlassPanel(
         else remember(backgroundPath) {context.assets.open(backgroundPath).use {BitmapFactory.decodeStream(it)}.asImageBitmap()}
     var origin by remember { mutableStateOf(Offset.Zero) }
     Box(modifier.onGloballyPositioned {val location=IntArray(2);hostView.getLocationOnScreen(location);origin=it.positionInRoot()+Offset(location[0].toFloat(),location[1].toFloat())-sceneOrigin}
-        .shadow(14.dp,shape,ambientColor=Color(0x55462A10),spotColor=Color(0x55462A10))
-        .clip(shape).border(1.dp,Brush.linearGradient(listOf(Color(0xF2FFFFFF),Color(0x55FFFFFF),Color(0xDDFFFFFF))),shape)) {
+        .shadow(16.dp,shape,ambientColor=Color(0x661A1108),spotColor=Color(0x661A1108))
+        .clip(shape).border(1.dp,Brush.linearGradient(listOf(Color(0xFFFAF4E8),Color(0x80D8AF52),Color(0xFFF2E6D0))),shape)) {
         if(sceneSize.width>0 && sceneSize.height>0) Canvas(Modifier.matchParentSize().blur(18.dp)) {
             val viewport=TempleViewport(sceneSize.width.toFloat(),sceneSize.height.toFloat())
             val factor=backdrop.width/viewport.imageWidth
@@ -55,15 +56,18 @@ fun RitualGlassPanel(
             val h=(size.height*factor).toInt().coerceIn(1,backdrop.height-y)
             drawImage(backdrop,srcOffset=IntOffset(x,y),srcSize=IntSize(w,h),dstSize=IntSize(size.width.toInt(),size.height.toInt()))
         }
-        Box(Modifier.matchParentSize().background(Brush.linearGradient(listOf(Color(0xE6FFFFFF),Color(0xC7FFF3DF),Color(0xDDFFFFFF)))))
+        Box(Modifier.matchParentSize().background(Brush.linearGradient(listOf(Color(0xF5FFFDF8),Color(0xEEFAF3E6),Color(0xF5FFFDF8)))))
         Column(Modifier.padding(horizontal=16.dp,vertical=14.dp),verticalArrangement=Arrangement.spacedBy(9.dp),content=content)
     }
 }
 
 @Composable
-fun RitualChoice(label:String,selected:Boolean,onClick:()->Unit,modifier:Modifier=Modifier,enabled:Boolean=true) {
+fun RitualChoice(label:String,selected:Boolean,onClick:()->Unit,modifier:Modifier=Modifier,enabled:Boolean=true,leadingIcon:(@Composable ()->Unit)?=null) {
     OutlinedButton(onClick,modifier.heightIn(min=52.dp),enabled=enabled,shape=RoundedCornerShape(17.dp),
-        border=androidx.compose.foundation.BorderStroke(1.dp,if(selected) Color(0xFFBDA17B) else Color(0xB8CFC5B9)),
-        colors=ButtonDefaults.outlinedButtonColors(containerColor=if(selected) Color(0xDDF0E2CC) else Color(0x62FFFFFF),contentColor=RitualInk,disabledContentColor=Color(0xFF887B6D)),
-        contentPadding=PaddingValues(horizontal=10.dp,vertical=8.dp)) { Text(if(selected) "✓ $label" else label,fontSize=16.sp) }
+        border=androidx.compose.foundation.BorderStroke(if(selected) 1.5.dp else 1.dp,if(selected) RitualGold else Color(0x66B3833B)),
+        colors=ButtonDefaults.outlinedButtonColors(containerColor=if(selected) Color(0xFFF0E0C8) else Color(0x99FFFFFF),contentColor=RitualInk,disabledContentColor=Color(0xFF887B6D)),
+        contentPadding=PaddingValues(horizontal=10.dp,vertical=8.dp)) {
+        if(leadingIcon!=null) {leadingIcon();Spacer(Modifier.width(8.dp))}
+        Text(if(selected) "✓ $label" else label,fontSize=16.sp,fontWeight=if(selected) FontWeight.SemiBold else FontWeight.Medium)
+    }
 }
