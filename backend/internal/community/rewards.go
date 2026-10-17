@@ -73,6 +73,8 @@ func coinCost(category, item string) int {
 	switch category {
 	case "shrine":
 		return 7
+	case "garland":
+		return 4
 	case "flowers":
 		return 2
 	default:

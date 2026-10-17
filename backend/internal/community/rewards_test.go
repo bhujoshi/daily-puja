@@ -137,6 +137,26 @@ func TestPaidFlowerCanBeAppliedWithDefaultMarbleShrine(t *testing.T) {
 	}
 }
 
+func TestGarlandUnlockForFourCoins(t *testing.T) {
+	s, _ := New(filepath.Join(t.TempDir(), "accounts.json"))
+	_, auth := call(s, "POST", "register", "", `{"email":"garland@example.com","password":"long-password"}`)
+	token := auth["token"].(string)
+	s.db.Accounts["garland@example.com"].Coins = 4
+	selection := `{"selections":{"shrine":"marble","idols":"original","garland":"lotus","flowers":"original","lamp":"original","shankh":"original","aarti":"original","prasad":"original"}}`
+	if code, _ := call(s, "PUT", "shrine", token, selection); code != 403 {
+		t.Fatal("unowned garland accepted", code)
+	}
+	code, profile := call(s, "POST", "coins/unlock", token, `{"category":"garland","item":"lotus"}`)
+	if code != 200 || profile["coins"] != float64(0) || profile["owned"].(map[string]any)["garland:lotus"] != true {
+		t.Fatal("garland purchase failed", code, profile)
+	}
+	code, profile = call(s, "PUT", "shrine", token, selection)
+	if code != 200 || profile["selections"].(map[string]any)["garland"] != "lotus" {
+		t.Fatal("purchased garland could not be applied", code, profile)
+	}
+}
+
+
 func TestGoogleSharingAndInstallRewards(t *testing.T) {
 	s, _ := New(filepath.Join(t.TempDir(), "accounts.json"))
 	now := time.Date(2026, 10, 11, 12, 0, 0, 0, time.UTC)

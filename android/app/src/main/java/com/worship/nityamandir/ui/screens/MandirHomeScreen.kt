@@ -10,6 +10,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -18,17 +19,27 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Popup
 import com.worship.nityamandir.engine.*
 import com.worship.nityamandir.ui.components.*
@@ -326,9 +337,10 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                     if(hasMusic) {
                         BhajanMiniPlayer(bhajan,hindi,{musicSheet=true},Modifier.weight(1f),showTrackNavigation=false,compact=true)
                     }
-                    Surface(Modifier.size(48.dp),shape=RoundedCornerShape(16.dp),color=cream,contentColor=RitualInk,shadowElevation=4.dp,border=BorderStroke(1.dp,Color(0x33D8AF52))) {
-                        IconButton(onClick={menu=true},modifier=Modifier.fillMaxSize()) {Icon(Icons.Outlined.Menu,tr("मंदिर विकल्प","Temple options"))}
-                    }
+                    SacredMenuButton(
+                        onClick={menu=true},
+                        contentDescription=tr("मंदिर विकल्प","Temple options")
+                    )
                 }
             }
         }
@@ -342,19 +354,273 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
         if(musicSheet) BhajanPlayerSheet(bhajan,hindi,{musicSheet=false})
         ShrineControlsTheme {
             MandirNavigationDrawer(menu,{menu=false},hindi) {
-                if(bhajan.current != null || bhajan.loading) BhajanMiniPlayer(bhajan,hindi,{menu=false;musicSheet=true})
-                DropdownMenuItem(leadingIcon={Icon(Icons.Outlined.AccountCircle,null)},text={Text(tr("मेरी प्रोफ़ाइल","My profile"))},onClick={menu=false;devotionPage=DevotionPage.PROFILE;devotionSheet=true})
-                DropdownMenuItem(leadingIcon={WhatsAppIcon()},text={Text(tr("WhatsApp पर साझा करें","Share on WhatsApp"))},onClick={menu=false;devotionPage=DevotionPage.SHARE;devotionSheet=true})
-                DropdownMenuItem(leadingIcon={Icon(Icons.Outlined.AutoAwesome,null)},text={Text(tr("मंदिर सजाएँ","Mandir Sajaye"))},enabled=!busy,onClick={menu=false;customizerDraft=null;customizer=true})
-                HorizontalDivider()
-                DropdownMenuItem(leadingIcon={Icon(Icons.Outlined.MusicNote,null)},text={Text(tr("संगीत प्लेयर खोलें","Open music player"))},onClick={menu=false;musicSheet=true})
-                DropdownMenuItem(leadingIcon={Icon(Icons.Outlined.Translate,null)},text={Text(if(hindi) "English" else "हिंदी")},onClick={hindi=!hindi;prefs.edit().putBoolean("hindi",hindi).apply();menu=false})
-                if(BuildConfig.DEBUG) DropdownMenuItem(leadingIcon={Icon(Icons.Outlined.Schedule,null)},text={Text(tr("एक दिन आगे बढ़ाएँ (परीक्षण)","Pass a day (test)"))},enabled=!busy,onClick={
-                    timeOffset+=AgingEngine.DAY_MS
-                    now=System.currentTimeMillis()+timeOffset
-                    prefs.edit().putLong("agingOffset",timeOffset).apply()
-                    wipe=0f;cleanedAreas.clear();menu=false
-                })
+                if(bhajan.current != null || bhajan.loading) {
+                    BhajanMiniPlayer(bhajan,hindi,{menu=false;musicSheet=true})
+                    Spacer(Modifier.height(4.dp))
+                }
+                // Profile & Devotion Coins Card
+                SacredDrawerCard(
+                    title=tr("मेरी प्रोफ़ाइल","My profile"),
+                    subtitle=if(account.signedIn) tr("भक्ति खाता जुड़ा है","Devotion account active") else tr("प्रगति और सिक्के सहेजें","Save progress & coins"),
+                    leadingIcon={Icon(Icons.Outlined.AccountCircle,null,tint=RitualGold,modifier=Modifier.size(24.dp))},
+                    trailingContent={
+                        Surface(
+                            shape=RoundedCornerShape(50),
+                            color=Color(0xFFF3E2C3),
+                            border=BorderStroke(1.dp,Color(0x66B3833B))
+                        ) {
+                            Row(
+                                Modifier.padding(horizontal=10.dp,vertical=4.dp),
+                                verticalAlignment=Alignment.CenterVertically,
+                                horizontalArrangement=Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(Icons.Outlined.Toll,null,tint=RitualGold,modifier=Modifier.size(15.dp))
+                                Text("${account.coins}",fontSize=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold,color=RitualInk)
+                            }
+                        }
+                    },
+                    onClick={menu=false;devotionPage=DevotionPage.PROFILE;devotionSheet=true}
+                )
+
+                // Featured Customization Card: Mandir Sajaye
+                SacredDrawerCard(
+                    title=tr("मंदिर सजाएँ","Mandir Sajaye"),
+                    subtitle=tr("मूर्तियाँ, फूल और दीपक बदलें","Customize idols, flowers & lamps"),
+                    leadingIcon={Icon(Icons.Outlined.AutoAwesome,null,tint=Color(0xFF9C6514),modifier=Modifier.size(22.dp))},
+                    featured=true,
+                    enabled=!busy,
+                    onClick={menu=false;customizerDraft=null;customizer=true}
+                )
+
+                // Music Player Card
+                SacredDrawerCard(
+                    title=tr("संगीत प्लेयर खोलें","Open music player"),
+                    subtitle=tr("भजन और आरती सुनें","Listen to bhajans & aarti"),
+                    leadingIcon={Icon(Icons.Outlined.MusicNote,null,tint=RitualGold,modifier=Modifier.size(22.dp))},
+                    onClick={menu=false;musicSheet=true}
+                )
+
+                // WhatsApp Share Card
+                SacredDrawerCard(
+                    title=tr("WhatsApp पर साझा करें","Share on WhatsApp"),
+                    subtitle=tr("परिवार और मित्रों को आमंत्रित करें","Invite family & friends"),
+                    leadingIcon={WhatsAppIcon()},
+                    onClick={menu=false;devotionPage=DevotionPage.SHARE;devotionSheet=true}
+                )
+
+                // Direct Language Toggle Pill Row
+                SacredDrawerCard(
+                    title=if(hindi) "English" else "हिंदी",
+                    subtitle=if(hindi) "Switch app language to English" else "ऐप की भाषा हिंदी में बदलें",
+                    leadingIcon={Icon(Icons.Outlined.Translate,null,tint=RitualGold,modifier=Modifier.size(22.dp))},
+                    trailingContent={
+                        Surface(
+                            shape=RoundedCornerShape(50),
+                            color=Color(0xFFEDE0CE),
+                            border=BorderStroke(1.dp,Color(0x55B3833B))
+                        ) {
+                            Row(Modifier.padding(2.dp),verticalAlignment=Alignment.CenterVertically) {
+                                Surface(
+                                    shape=RoundedCornerShape(50),
+                                    color=if(hindi) RitualInk else Color.Transparent,
+                                    contentColor=if(hindi) cream else RitualInk
+                                ) {
+                                    Text("हिं",Modifier.padding(horizontal=8.dp,vertical=3.dp),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
+                                }
+                                Surface(
+                                    shape=RoundedCornerShape(50),
+                                    color=if(!hindi) RitualInk else Color.Transparent,
+                                    contentColor=if(!hindi) cream else RitualInk
+                                ) {
+                                    Text("EN",Modifier.padding(horizontal=8.dp,vertical=3.dp),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
+                                }
+                            }
+                        }
+                    },
+                    onClick={hindi=!hindi;prefs.edit().putBoolean("hindi",hindi).apply();menu=false}
+                )
+
+                if(BuildConfig.DEBUG) {
+                    SacredDrawerCard(
+                        title=tr("एक दिन आगे बढ़ाएँ (परीक्षण)","Pass a day (test)"),
+                        subtitle=tr("मंदिर की सफ़ाई अवस्था जाँचें","Test temple cleaning state"),
+                        leadingIcon={Icon(Icons.Outlined.Schedule,null,tint=RitualGold,modifier=Modifier.size(22.dp))},
+                        enabled=!busy,
+                        onClick={
+                            timeOffset+=AgingEngine.DAY_MS
+                            now=System.currentTimeMillis()+timeOffset
+                            prefs.edit().putLong("agingOffset",timeOffset).apply()
+                            wipe=0f;cleanedAreas.clear();menu=false
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Translucent frosted-brass temple medallion button replacing the plain boxy hamburger icon. */
+@Composable
+private fun SacredMenuButton(onClick: () -> Unit, contentDescription: String, modifier: Modifier = Modifier) {
+    val shape = CircleShape
+    Surface(
+        onClick = onClick,
+        modifier = modifier
+            .size(48.dp)
+            .shadow(10.dp, shape, ambientColor = Color(0x661A1108), spotColor = Color(0x661A1108))
+            .semantics {
+                this.contentDescription = contentDescription
+            },
+        shape = shape,
+        color = Color.Transparent,
+        contentColor = RitualInk,
+        border = BorderStroke(
+            1.5.dp,
+            Brush.linearGradient(
+                listOf(Color(0xFFF7E2A4), Color(0xFFB3833B), Color(0xFFE5C168), Color(0xFF8F6324))
+            )
+        )
+    ) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.radialGradient(
+                        listOf(Color(0xF5FFFDF9), Color(0xECFAF0DF), Color(0xE0EAD8BE))
+                    )
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Canvas(Modifier.fillMaxSize()) {
+                val cx = size.width / 2f
+                val cy = size.height / 2f
+                val r = size.minDimension / 2f
+                // Subtle inner brass filigree ring
+                drawCircle(
+                    color = Color(0x44B3833B),
+                    radius = r - 4.dp.toPx(),
+                    center = Offset(cx, cy),
+                    style = Stroke(width = 1.dp.toPx())
+                )
+                // Four cardinal golden bindu accents on the inner ring
+                val dotR = 1.3.dp.toPx()
+                val ringR = r - 4.dp.toPx()
+                listOf(
+                    Offset(cx, cy - ringR),
+                    Offset(cx, cy + ringR),
+                    Offset(cx - ringR, cy),
+                    Offset(cx + ringR, cy)
+                ).forEach { pt ->
+                    drawCircle(Color(0xFFB3833B), radius = dotR, center = pt)
+                }
+
+                // Sacred Kalash / Lotus finial crest above the three ritual lines
+                val crestPath = Path().apply {
+                    moveTo(cx, cy - 9.5.dp.toPx())
+                    quadraticBezierTo(cx + 3.5.dp.toPx(), cy - 6.5.dp.toPx(), cx, cy - 5.dp.toPx())
+                    quadraticBezierTo(cx - 3.5.dp.toPx(), cy - 6.5.dp.toPx(), cx, cy - 9.5.dp.toPx())
+                    close()
+                }
+                drawPath(crestPath, Color(0xFFB3833B))
+
+                // Three refined ceremonial menu bars with tapered proportions
+                val stroke = 2.1.dp.toPx()
+                val cap = StrokeCap.Round
+                // Top bar
+                drawLine(
+                    color = RitualInk,
+                    start = Offset(cx - 7.5.dp.toPx(), cy - 2.dp.toPx()),
+                    end = Offset(cx + 7.5.dp.toPx(), cy - 2.dp.toPx()),
+                    strokeWidth = stroke,
+                    cap = cap
+                )
+                // Middle wider bar with golden tips
+                drawLine(
+                    color = Color(0xFF8C5E1A),
+                    start = Offset(cx - 9.5.dp.toPx(), cy + 2.8.dp.toPx()),
+                    end = Offset(cx + 9.5.dp.toPx(), cy + 2.8.dp.toPx()),
+                    strokeWidth = stroke,
+                    cap = cap
+                )
+                // Bottom bar
+                drawLine(
+                    color = RitualInk,
+                    start = Offset(cx - 6.5.dp.toPx(), cy + 7.6.dp.toPx()),
+                    end = Offset(cx + 6.5.dp.toPx(), cy + 7.6.dp.toPx()),
+                    strokeWidth = stroke,
+                    cap = cap
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SacredDrawerCard(
+    title: String,
+    subtitle: String,
+    leadingIcon: @Composable () -> Unit,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    featured: Boolean = false,
+    trailingContent: (@Composable () -> Unit)? = null
+) {
+    val bgBrush = if (featured) {
+        Brush.horizontalGradient(listOf(Color(0xFFFDF3E1), Color(0xFFF5E1BE)))
+    } else {
+        Brush.horizontalGradient(listOf(Color(0xFFFFFDF9), Color(0xFFF8EFE2)))
+    }
+    val borderColor = if (featured) Color(0xFFB3833B) else Color(0x44B3833B)
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = Color.Transparent,
+        border = BorderStroke(if (featured) 1.5.dp else 1.dp, borderColor),
+        shadowElevation = if (featured) 2.dp else 0.dp
+    ) {
+        Row(
+            Modifier
+                .background(bgBrush)
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Surface(
+                Modifier.size(42.dp),
+                shape = RoundedCornerShape(13.dp),
+                color = if (featured) Color(0xFFEED3A1) else Color(0xFFF3E7D3),
+                border = BorderStroke(1.dp, Color(0x40B3833B))
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    leadingIcon()
+                }
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = title,
+                    fontSize = 16.sp,
+                    fontWeight = if (featured) FontWeight.Bold else FontWeight.SemiBold,
+                    color = if (enabled) RitualInk else Color(0xFF8C8074)
+                )
+                Text(
+                    text = subtitle,
+                    fontSize = 12.sp,
+                    color = Color(0xFF6E5D4F),
+                    maxLines = 1
+                )
+            }
+            if (trailingContent != null) {
+                trailingContent()
+            } else {
+                Icon(
+                    Icons.Outlined.ChevronRight,
+                    contentDescription = null,
+                    tint = Color(0xFF9E7B42),
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
@@ -364,16 +630,81 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
 @Composable
 private fun MandirNavigationDrawer(open: Boolean, onDismiss: () -> Unit, hindi: Boolean, content: @Composable ColumnScope.() -> Unit) {
     if (!open) return
-    androidx.compose.ui.window.Dialog(onDismissRequest=onDismiss,
-        properties=androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth=false)) {
-        Box(Modifier.fillMaxSize().clickable(onClick=onDismiss), contentAlignment=Alignment.CenterEnd) {
-            Surface(Modifier.fillMaxHeight().widthIn(max=380.dp).fillMaxWidth().clickable { },
-                color=Color(0xFFFFF7EC), shape=RoundedCornerShape(topStart=24.dp,bottomStart=24.dp)) {
-                Column(Modifier.systemBarsPadding().verticalScroll(rememberScrollState()).padding(12.dp)) {
-                    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                        Text(if(hindi) "मंदिर विकल्प" else "Temple options",Modifier.weight(1f),fontSize=20.sp)
-                        IconButton(onClick=onDismiss) {Icon(Icons.Outlined.Close,if(hindi) "बंद करें" else "Close navigation drawer")}
+    Dialog(onDismissRequest=onDismiss,
+        properties=DialogProperties(usePlatformDefaultWidth=false)) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color(0x660D0B0A))
+                .clickable(onClick = onDismiss),
+            contentAlignment = Alignment.CenterEnd
+        ) {
+            val drawerShape = RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp)
+            Surface(
+                Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = 360.dp)
+                    .fillMaxWidth(0.88f)
+                    .clickable(enabled = false) { },
+                color = Color(0xFFFAF6EE),
+                shape = drawerShape,
+                shadowElevation = 20.dp,
+                border = BorderStroke(
+                    1.5.dp,
+                    Brush.verticalGradient(listOf(Color(0xFFE8C878), Color(0xFFB3833B), Color(0xFFE8C878)))
+                )
+            ) {
+                Column(
+                    Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color(0xFFFFFDF8), Color(0xFFFAF3E6), Color(0xFFF3E7D3))
+                            )
+                        )
+                        .systemBarsPadding()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Sacred Header with ornamental subtitle & close button
+                    Row(
+                        Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = if (hindi) "ॐ · पवित्र मंदिर" else "OM · PAVITRA MANDIR",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = RitualGold,
+                                letterSpacing = 1.sp
+                            )
+                            Text(
+                                text = if (hindi) "मंदिर विकल्प" else "Temple options",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Serif,
+                                color = RitualInk
+                            )
+                        }
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0xFFF3E7D3),
+                            border = BorderStroke(1.dp, Color(0x55B3833B)),
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            IconButton(onClick = onDismiss, modifier = Modifier.fillMaxSize()) {
+                                Icon(
+                                    Icons.Outlined.Close,
+                                    contentDescription = if (hindi) "बंद करें" else "Close navigation drawer",
+                                    tint = RitualInk,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
                     }
+                    HorizontalDivider(color = Color(0x33B3833B), thickness = 1.dp)
                     content()
                 }
             }

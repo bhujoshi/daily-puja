@@ -65,7 +65,7 @@ object GaneshMouseAnimation {
             hop = hop,
             bow = smooth(interval(seconds, HOP_END, 10.05f)) *
                 (1f - smooth(interval(seconds, 10.55f, 11f))),
-            facingRight = seconds <= EATING_END || foot.x >= bowl.x,
+            facingRight = true,
             phaseSeconds = seconds
         )
     }

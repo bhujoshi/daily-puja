@@ -157,7 +157,7 @@ func streak(a *Account, now time.Time) int {
 	return n
 }
 func (s *Server) profile(a *Account) any {
-	return map[string]any{"id": a.ID, "phone": a.Phone, "history": a.History, "mock_payments": s.MockMode, "email": a.Email, "invite_code": a.Invite, "days": a.Days, "streak": streak(a, s.now()), "unlocked": a.Unlocked, "referrals": a.Referrals, "selections": a.Selections, "streak_target": 7, "referral_target": 1, "coins": a.Coins, "owned": a.Owned, "share_count": a.ShareCount, "google_account": a.GoogleSubject != "", "coin_costs": map[string]int{"shrine": 7, "flowers": 2}}
+	return map[string]any{"id": a.ID, "phone": a.Phone, "history": a.History, "mock_payments": s.MockMode, "email": a.Email, "invite_code": a.Invite, "days": a.Days, "streak": streak(a, s.now()), "unlocked": a.Unlocked, "referrals": a.Referrals, "selections": a.Selections, "streak_target": 7, "referral_target": 1, "coins": a.Coins, "owned": a.Owned, "share_count": a.ShareCount, "google_account": a.GoogleSubject != "", "coin_costs": map[string]int{"shrine": 7, "garland": 4, "flowers": 2}}
 }
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/api/v2/")
@@ -414,9 +414,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			reply(w, 200, s.profile(a))
 		}
 	case path == "shrine" && r.Method == "PUT":
-		// Accept the old six-category client by supplying the original oil lamp.
-		if _, ok := body.Selections["lamp"]; !ok && len(body.Selections) == 6 {
+		// Accept older six- or seven-category clients by supplying default lamp and garland.
+		if _, ok := body.Selections["lamp"]; !ok && len(body.Selections) >= 6 {
 			body.Selections["lamp"] = "original"
+		}
+		if _, ok := body.Selections["garland"]; !ok && len(body.Selections) >= 7 {
+			body.Selections["garland"] = "original"
 		}
 		if !validSelections(body.Selections) {
 			fail(w, 400, "Choose an available item in every category")

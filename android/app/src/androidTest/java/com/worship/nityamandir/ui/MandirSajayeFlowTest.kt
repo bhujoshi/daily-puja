@@ -70,7 +70,7 @@ class MandirSajayeFlowTest {
         val profile = JSONObject().put("id", "fixture-${UUID.randomUUID()}")
             .put("coins", coins).put("google_account", false).put("email", "fixture@example.invalid")
             .put("owned", JSONObject().apply { if (ivoryOwned) put("shrine:ivory", true) })
-            .put("coin_costs", JSONObject().put("shrine", 7).put("flowers", 2))
+            .put("coin_costs", JSONObject().put("shrine", 7).put("garland", 4).put("flowers", 2))
             .put("selections", JSONObject().put("shrine", "marble"))
             .put("days", JSONArray()).put("history", JSONArray())
             .put("share_count", 0).put("referrals", 0)
@@ -503,7 +503,12 @@ class MandirSajayeFlowTest {
                     }
                     val owned = profile.getJSONObject("owned")
                     if (!owned.optBoolean(id)) {
-                        val cost = if (category == "shrine") 7 else if (category == "flowers") 2 else 0
+                        val cost = when (category) {
+                            "shrine" -> 7
+                            "garland" -> 4
+                            "flowers" -> 2
+                            else -> 0
+                        }
                         if (profile.getInt("coins") < cost) return 409 to JSONObject().put("error", "Not enough coins")
                         profile.put("coins", profile.getInt("coins") - cost)
                         owned.put(id, true)

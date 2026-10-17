@@ -10,6 +10,7 @@ internal object ShrineUnlocks {
         if (item == "original" || (category == "shrine" && item == "marble")) return 0
         return categoryCost?.takeIf { it >= 0 } ?: when (category) {
             "shrine" -> 7
+            "garland" -> 4
             "flowers" -> 2
             else -> 0
         }

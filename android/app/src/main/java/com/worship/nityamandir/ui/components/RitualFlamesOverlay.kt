@@ -52,11 +52,28 @@ fun RitualFlamesOverlay(oilLit: Boolean, aartiLit: Boolean, lamp: TemplePoint, o
             drawOval(Color(0xAA689AF0),base-Offset(width*.35f,height*.10f),androidx.compose.ui.geometry.Size(width*.7f,height*.12f))
             drawLine(Color(0xFF482819),base+Offset(0f,unit*.004f),base-Offset(0f,unit*.004f),unit*.0025f,StrokeCap.Round)
         }
-        if(oilLit) flame(oilWick ?: TemplePoint(oilPoint.x,oilPoint.y-(if(brass) .125f else .06f*1.6f*TempleSceneLayout.LAMP_SCALE)),0f,1.5f)
-        if(aartiLit) {
+        if(oilLit) flame(oilWick ?: TemplePoint(oilPoint.x,oilPoint.y-(if(brass) .125f else .11f)),0f,1.35f)
+        if(aartiLit || oilLit) {
+            val aartiScale = if(aartiLit) TempleSceneLayout.AARTI_SCALE else TempleSceneLayout.AARTI_SCALE * .85f
             if(traditional) {
-                listOf(-.028f,0f,.028f).forEachIndexed {index,x -> flame(TemplePoint(lamp.x+x*TempleSceneLayout.AARTI_SCALE,lamp.y-.035f*TempleSceneLayout.AARTI_SCALE),1.71f+index,scale=.65f*TempleSceneLayout.AARTI_SCALE,flicker=.25f)}
-            } else flame(TempleSceneLayout.aartiWick(lamp),1.71f,scale=TempleSceneLayout.AARTI_SCALE,flicker=.25f)
+                listOf(
+                    TemplePoint(-.037f, -.056f),
+                    TemplePoint(-.018f, -.038f),
+                    TemplePoint(0f, -.074f),
+                    TemplePoint(.018f, -.038f),
+                    TemplePoint(.037f, -.056f)
+                ).forEachIndexed {index,offset ->
+                    flame(
+                        TemplePoint(
+                            lamp.x+offset.x*TempleSceneLayout.AARTI_SCALE,
+                            lamp.y+offset.y*TempleSceneLayout.AARTI_SCALE
+                        ),
+                        1.71f+index*.7f,
+                        scale=.58f*aartiScale,
+                        flicker=.25f
+                    )
+                }
+            } else flame(TempleSceneLayout.aartiWick(lamp),1.71f,scale=aartiScale,flicker=.25f)
         }
     }
 }

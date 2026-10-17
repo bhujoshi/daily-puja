@@ -51,22 +51,22 @@ class ShrineSelectionTest {
     }
 
     @Test fun ritualItemsPreserveScalesAndConsistentBoundsAcrossLayouts() {
-        assertEquals(1.5f, TempleSceneLayout.CONCH_SCALE, 0.0001f)
-        assertEquals(.34f * 1.5f, TempleSceneLayout.CONCH_SIZE, 0.0001f)
-        assertEquals(.15f * 1.5f, TempleSceneLayout.CONCH_WIDTH, 0.0001f)
-        assertEquals(.24f * 1.5f, TempleSceneLayout.CONCH_HEIGHT, 0.0001f)
+        assertEquals(1.15f, TempleSceneLayout.CONCH_SCALE, 0.0001f)
+        assertEquals(.26f * 1.15f, TempleSceneLayout.CONCH_SIZE, 0.0001f)
+        assertEquals(.16f * 1.15f, TempleSceneLayout.CONCH_WIDTH, 0.0001f)
+        assertEquals(.20f * 1.15f, TempleSceneLayout.CONCH_HEIGHT, 0.0001f)
 
         assertEquals(1.25f, TempleSceneLayout.AARTI_SCALE, 0.0001f)
-        assertEquals(.36f * TempleSceneLayout.LAMP_SCALE * 1.25f, TempleSceneLayout.AARTI_WIDTH, 0.0001f)
-        assertEquals(.45f * TempleSceneLayout.LAMP_SCALE * 1.25f, TempleSceneLayout.AARTI_HEIGHT, 0.0001f)
+        assertEquals(.15f * 1.25f, TempleSceneLayout.AARTI_WIDTH, 0.0001f)
+        assertEquals(.135f * 1.25f, TempleSceneLayout.AARTI_HEIGHT, 0.0001f)
 
-        assertEquals(.50f, TempleSceneLayout.bell.x, 0.0001f)
-        assertEquals(.94f, TempleSceneLayout.bell.y, 0.0001f)
-        assertEquals(.26f, TempleSceneLayout.conch.x, 0.0001f)
-        assertEquals(.94f, TempleSceneLayout.conch.y, 0.0001f)
-        assertEquals(.30f, TempleSceneLayout.prasadFloor.x, 0.0001f)
+        assertEquals(.22f, TempleSceneLayout.bell.x, 0.0001f)
+        assertEquals(.93f, TempleSceneLayout.bell.y, 0.0001f)
+        assertEquals(.625f, TempleSceneLayout.conch.x, 0.0001f)
+        assertEquals(1.125f, TempleSceneLayout.conch.y, 0.0001f)
+        assertEquals(.50f, TempleSceneLayout.prasadFloor.x, 0.0001f)
         assertEquals(.88f, TempleSceneLayout.prasadFloor.y, 0.0001f)
-        assertEquals(.14f, TempleSceneLayout.PRASAD_SIZE, 0.0001f)
+        assertEquals(.155f, TempleSceneLayout.PRASAD_SIZE, 0.0001f)
 
         // Verify bell stays fully inside viewport even on an ultra-tall 21:9 display
         val tallViewport = com.worship.nityamandir.engine.TempleViewport(1080f, 2520f)

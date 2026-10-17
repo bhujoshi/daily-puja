@@ -76,6 +76,8 @@ class ShrineUnlocksTest {
     @Test fun serverPricingOverridesFallbackAndFreeItemsNeverCreateBadges() {
         assertEquals(0, ShrineUnlocks.cost("shrine", "marble"))
         assertEquals(7, ShrineUnlocks.cost("shrine", "ivory"))
+        assertEquals(0, ShrineUnlocks.cost("garland", "original"))
+        assertEquals(4, ShrineUnlocks.cost("garland", "lotus"))
         assertEquals(2, ShrineUnlocks.cost("flowers", "rose"))
         assertEquals(0, ShrineUnlocks.cost("idols", "shiva"))
         assertEquals(0, ShrineUnlocks.cost("shrine", "original", 9))

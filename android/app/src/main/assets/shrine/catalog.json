@@ -7,6 +7,7 @@
   "referral_install_coins": 1,
   "coin_costs": {
     "shrine": 7,
+    "garland": 4,
     "flowers": 2
   },
   "free_categories": [
@@ -100,6 +101,45 @@
           "path": "shrine/idols/ram_darbar.png",
           "kind": "image",
           "thumbnail": "shrine/idols/ram_darbar.png"
+        }
+      ]
+    },
+    {
+      "id": "garland",
+      "label_en": "Garland",
+      "label_hi": "माला",
+      "options": [
+        {
+          "id": "original",
+          "label_en": "Marigold garland",
+          "label_hi": "गेंदे की माला",
+          "path": "shrine/garlands/marigold.png",
+          "kind": "image",
+          "thumbnail": "shrine/garlands/marigold.png"
+        },
+        {
+          "id": "rose",
+          "label_en": "Rose & jasmine",
+          "label_hi": "गुलाब और चमेली की माला",
+          "path": "shrine/garlands/rose_jasmine.png",
+          "kind": "image",
+          "thumbnail": "shrine/garlands/rose_jasmine.png"
+        },
+        {
+          "id": "lotus",
+          "label_en": "Lotus & pearl",
+          "label_hi": "कमल और मोती की माला",
+          "path": "shrine/garlands/lotus_pearl.png",
+          "kind": "image",
+          "thumbnail": "shrine/garlands/lotus_pearl.png"
+        },
+        {
+          "id": "mogra",
+          "label_en": "Mogra & saffron",
+          "label_hi": "मोगरा और केसर माला",
+          "path": "shrine/garlands/mogra.png",
+          "kind": "image",
+          "thumbnail": "shrine/garlands/mogra.png"
         }
       ]
     },

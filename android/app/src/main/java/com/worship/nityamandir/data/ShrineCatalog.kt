@@ -52,6 +52,17 @@ class ShrineCatalog(context:Context) {
             else options.firstOrNull {it.id==id}?.let {listOf(it.path)} ?: emptyList()
         }.distinct()
     }
+    fun flowerSpritePaths(selection:ShrineSelection):List<String> {
+        val options=categories.first {it.id=="flowers"}.options
+        return selection.flowerIds.flatMap {id ->
+            if(id=="original") listOf(
+                "shrine/flowers/sunflower.png",
+                "shrine/flowers/marigold_yellow.png",
+                "shrine/flowers/peony.png"
+            )
+            else options.firstOrNull {it.id==id}?.let {listOf(it.thumbnail)} ?: emptyList()
+        }.distinct()
+    }
     fun normalize(selection:ShrineSelection)=ShrineSelection(categories.associate {category ->
         category.id to if(category.id=="flowers") {
             selection.flowerIds.filter {id -> category.options.any {it.id==id}}.ifEmpty {listOf("original")}.joinToString(",")

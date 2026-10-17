@@ -40,7 +40,17 @@ func validSelections(selections map[string]string) bool {
 	var catalog struct {
 		Categories []CatalogCategory `json:"categories"`
 	}
-	if json.Unmarshal(catalogJSON, &catalog) != nil || len(selections) != len(catalog.Categories) {
+	if json.Unmarshal(catalogJSON, &catalog) != nil {
+		return false
+	}
+	if _, ok := selections["garland"]; !ok && len(selections) == len(catalog.Categories)-1 {
+		copied := map[string]string{"garland": "original"}
+		for k, v := range selections {
+			copied[k] = v
+		}
+		selections = copied
+	}
+	if len(selections) != len(catalog.Categories) {
 		return false
 	}
 	for _, category := range catalog.Categories {

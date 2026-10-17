@@ -13,11 +13,21 @@ category('idols','Idols','मूर्तियाँ',[
  picture('original','Ganesha & Lakshmi','गणेश जी और लक्ष्मी जी','idols','original'),
  picture('ganesh_hanuman','Ganesha & Hanuman','गणेश जी और हनुमान जी','idols','ganesh_hanuman'),
  picture('shiva','Shiva','शिव जी','idols','shiva'),picture('lakshmi','Lakshmi','लक्ष्मी जी','idols','lakshmi'),picture('durga','Durga','दुर्गा माँ','idols','durga'),picture('ram_darbar','Ram Darbar','राम दरबार','idols','ram_darbar')])
+category('garland','Garland','माला',[
+ picture('original','Marigold garland','गेंदे की माला','garlands','marigold'),
+ picture('rose','Rose & jasmine','गुलाब और चमेली की माला','garlands','rose_jasmine'),
+ picture('lotus','Lotus & pearl','कमल और मोती की माला','garlands','lotus_pearl'),
+ picture('mogra','Mogra & saffron','मोगरा और केसर माला','garlands','mogra')])
 category('flowers','Flowers','फूल',[model('original','Sunflower & peony','सूरजमुखी और पियोनी','flowers','sunflower')]+[model(n,e,h,'flowers',n) for n,e,h in [('orchid','Orchid','ऑर्किड'),('rose','Rose','गुलाब'),('azalea','Azalea','अज़ेलिया'),('bouquet','Lily','लिली')]])
 category('lamp','Oil lamp','दीपक',[model('original','Golden lamp','सुनहरा दीपक','lamps','golden_oil'),model('brass','Brass diya','पीतल का दीया','lamps','brass_diya')])
 category('shankh','Shankh','शंख',[model('original','Classic shankh','पारंपरिक शंख','shankh','classic'),model('ivory','Ivory shankh','श्वेत शंख','shankh','ivory')])
 category('aarti','Aarti lamp','आरती दीप',[model('original','Golden aarti','सुनहरी आरती','aarti','golden'),model('traditional','Traditional aarti','पारंपरिक आरती','aarti','traditional')])
 category('prasad','Prasad','प्रसाद',[picture('original','Laddu bowl','लड्डू का कटोरा','prasad','laddu_bowl'),picture('halwa','Halwa','हलवा','prasad','halwa'),model('laddu','Tirupati laddu','तिरुपति लड्डू','prasad','laddu')])
-data=dict(version=2,package_id='personal-mandir',purchase_available=False,asset_variants_available=True,daily_puja_coins=1,referral_install_coins=1,coin_costs=dict(shrine=7,flowers=2),free_categories=['idols','lamp','shankh','aarti','prasad'],categories=categories)
-for p in ['shared_assets/catalog/catalog.json','android/app/src/main/assets/shrine/catalog.json','backend/internal/community/catalog.json']:
+data=dict(version=2,package_id='personal-mandir',purchase_available=False,asset_variants_available=True,daily_puja_coins=1,referral_install_coins=1,coin_costs=dict(shrine=7,garland=4,flowers=2),free_categories=['idols','lamp','shankh','aarti','prasad'],categories=categories)
+for p in ['shared_assets/catalog/catalog.json','backend/internal/community/catalog.json']:
  (root/p).parent.mkdir(parents=True,exist_ok=True);(root/p).write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
+android_categories=[dict(c,options=[o for o in c['options'] if o['id']!='original']) if c['id']=='shrine' else c for c in categories]
+android_data=dict(data,categories=android_categories)
+p='android/app/src/main/assets/shrine/catalog.json'
+(root/p).parent.mkdir(parents=True,exist_ok=True);(root/p).write_text(json.dumps(android_data,ensure_ascii=False,indent=2)+'\n')
+

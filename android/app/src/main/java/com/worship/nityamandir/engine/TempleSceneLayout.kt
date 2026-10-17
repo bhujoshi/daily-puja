@@ -21,20 +21,20 @@ class TempleViewport(val width: Float, val height: Float) {
 object TempleSceneLayout {
     const val LAMP_SCALE = .5f
     const val OIL_SIZE = .225f * 1.5f * 1.6f * LAMP_SCALE
-    const val PLATE_SIZE = .46f * 1.6f * 1.25f
+    const val PLATE_SIZE = .52f
     const val AARTI_SCALE = 1.25f
-    const val AARTI_WIDTH = .36f * LAMP_SCALE * AARTI_SCALE
-    const val AARTI_HEIGHT = .45f * LAMP_SCALE * AARTI_SCALE
+    const val AARTI_WIDTH = .15f * AARTI_SCALE
+    const val AARTI_HEIGHT = .135f * AARTI_SCALE
     val oil = TemplePoint(.505f,.665f)
     val plate = TemplePoint(.50f,1.14f)
-    val conch = TemplePoint(.26f,.94f)
-    const val CONCH_SCALE = 1.5f
-    const val CONCH_SIZE = .34f * CONCH_SCALE
-    const val CONCH_WIDTH = .15f * CONCH_SCALE
-    const val CONCH_HEIGHT = .24f * CONCH_SCALE
+    val conch = TemplePoint(.625f,1.125f)
+    const val CONCH_SCALE = 1.15f
+    const val CONCH_SIZE = .26f * CONCH_SCALE
+    const val CONCH_WIDTH = .16f * CONCH_SCALE
+    const val CONCH_HEIGHT = .20f * CONCH_SCALE
     const val CONCH_REST_DEPTH = .58f
     const val FLOWER_COUNT = 10
-    val bell = TemplePoint(.50f,.94f)
+    val bell = TemplePoint(.22f,.93f)
     const val BELL_SIZE = .22f
     // A sphere around the fitted model contains its bounds throughout the ringing swing.
     val bellHalfWidth = BELL_SIZE * sqrt(3f) / 8f
@@ -46,46 +46,39 @@ object TempleSceneLayout {
     const val ACTIVE_RITUAL_DEPTH = 3.4f
     const val AARTI_YAW = -90f
     const val AARTI_TILT = 40f
-    // The GLB's broad bowl points along -X; yaw first, then tilt toward the altar.
-    // Project the same transformed wick into the screen-space flame overlay.
+    // Align the flame with the cotton wick spout at the top-center of the brass diya facing the idols.
     fun aartiWick(lamp: TemplePoint): TemplePoint {
-        val yaw = AARTI_YAW * PI.toFloat() / 180f
-        val tilt = AARTI_TILT * PI.toFloat() / 180f
-        // Keep the flame slightly above the bowl, both in motion and at rest.
-        val x = -.052f * AARTI_SCALE
-        val y = .070f * AARTI_SCALE
-        return TemplePoint(lamp.x+x*cos(yaw),lamp.y-(y*cos(tilt)+x*sin(yaw)*sin(tilt)))
+        return TemplePoint(lamp.x, lamp.y - .090f)
     }
-    val aartiRest = TemplePoint(.79f,1.03f)
+    val aartiRest = TemplePoint(.765f,1.01f)
     fun feet(deity: Int, petal: Int = 0) = TemplePoint((if(deity==0) .405f else .604f)+(petal-2f)*.015f,.689f)
     fun plateFlower(index: Int): TemplePoint {
-        // Natural tiered devotional thali:
-        // Tier 0 (0..5): outer ring resting on the plate bed
-        // Tier 1 (6..8): middle cluster resting on top of the outer ring
-        // Tier 2 (9): peak crowning bloom at the apex
+        // Lush floral crescent along the left and lower-left rim of the brass Puja Thali:
+        // 0..8: vibrant orange & golden-yellow marigold cluster over the betel leaves
+        // 9: crowning crimson hibiscus at the bottom-left beside the laddu bowl
         val cx = plate.x
         val cy = plate.y
         return when (index) {
-            0 -> TemplePoint(cx + .090f, cy)
-            1 -> TemplePoint(cx - .090f, cy)
-            2 -> TemplePoint(cx + .045f, cy + .050f)
-            3 -> TemplePoint(cx - .045f, cy - .050f)
-            4 -> TemplePoint(cx - .045f, cy + .050f)
-            5 -> TemplePoint(cx + .045f, cy - .050f)
-            6 -> TemplePoint(cx + .036f, cy + .013f)
-            7 -> TemplePoint(cx - .036f, cy + .013f)
-            8 -> TemplePoint(cx, cy - .027f)
-            9 -> TemplePoint(cx, cy)
+            0 -> TemplePoint(cx - .138f, cy - .055f)
+            1 -> TemplePoint(cx - .175f, cy - .008f)
+            2 -> TemplePoint(cx - .092f, cy - .022f)
+            3 -> TemplePoint(cx - .135f, cy + .018f)
+            4 -> TemplePoint(cx - .168f, cy + .048f)
+            5 -> TemplePoint(cx - .096f, cy + .034f)
+            6 -> TemplePoint(cx - .126f, cy - .018f)
+            7 -> TemplePoint(cx - .112f, cy + .008f)
+            8 -> TemplePoint(cx - .085f, cy + .062f)
+            9 -> TemplePoint(cx - .128f, cy + .082f)
             else -> {
                 val ang = index * (2f * PI.toFloat() / FLOWER_COUNT)
-                TemplePoint(cx + .065f * cos(ang), cy + .042f * sin(ang))
+                TemplePoint(cx - .125f + .048f * cos(ang), cy + .018f + .038f * sin(ang))
             }
         }
     }
-    const val PRASAD_SIZE = .14f
+    const val PRASAD_SIZE = .155f
     const val PRASAD_DEPTH = 1.45f
-    val prasadRest = TemplePoint(.66f,1.03f)
-    val prasadFloor = TemplePoint(.30f,.88f)
+    val prasadRest = TemplePoint(.50f,1.215f)
+    val prasadFloor = TemplePoint(.50f,.88f)
 
     /** Lift, offer one clockwise circle, then set the bowl on the floor. */
     fun prasadPosition(progress: Float): TemplePoint {
@@ -166,7 +159,7 @@ object TempleSceneLayout {
     fun conchPosition(progress: Float): TemplePoint {
         val lift = pickup(progress)
         val travel = smooth((lift-.3f)/.7f)
-        return TemplePoint(conch.x+.14f*travel, conch.y-.10f*lift-.24f*travel)
+        return TemplePoint(conch.x-.125f*travel, conch.y-.10f*lift-.31f*travel)
     }
 
     fun conchTurn(progress: Float): Float = smooth((pickup(progress)-.3f)/.7f)
