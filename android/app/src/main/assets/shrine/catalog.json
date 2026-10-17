@@ -197,16 +197,16 @@
       "options": [
         {
           "id": "original",
-          "label_en": "Golden lamp",
-          "label_hi": "सुनहरा दीपक",
+          "label_en": "Single diya",
+          "label_hi": "एकमुखी दीपक",
           "path": "shrine/lamps/golden_oil.glb",
           "kind": "model",
           "thumbnail": "shrine/lamps/golden_oil.png"
         },
         {
           "id": "brass",
-          "label_en": "Brass diya",
-          "label_hi": "पीतल का दीया",
+          "label_en": "Panchmukhi diya",
+          "label_hi": "पंचमुखी दीपक",
           "path": "shrine/lamps/brass_diya.glb",
           "kind": "model",
           "thumbnail": "shrine/lamps/brass_diya.png"

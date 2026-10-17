@@ -213,19 +213,21 @@ fun MandirAltarView(
         return flowerBitmaps[index % flowerBitmaps.size]
     }
 
-    val standingLampWidth = if (selection["lamp"] == "brass") .135f else .14f
+    val standingLampWidth = .104f
     val standingLampAspect = lampBitmap.height.toFloat() / lampBitmap.width.toFloat().coerceAtLeast(1f)
     val standingLampHeight = standingLampWidth * standingLampAspect
-    val oilWick = remember(oilPoint, standingLampWidth, standingLampHeight, selection["lamp"]) {
+    val oilWicks = remember(oilPoint, standingLampWidth, standingLampHeight, selection["lamp"]) {
         if (selection["lamp"] == "brass") {
-            TemplePoint(
-                oilPoint.x,
-                oilPoint.y - standingLampHeight * .765f
+            listOf(
+                TemplePoint(oilPoint.x - standingLampWidth * .355f, oilPoint.y - standingLampHeight * .842f),
+                TemplePoint(oilPoint.x - standingLampWidth * .185f, oilPoint.y - standingLampHeight * .846f),
+                TemplePoint(oilPoint.x, oilPoint.y - standingLampHeight * .840f),
+                TemplePoint(oilPoint.x + standingLampWidth * .185f, oilPoint.y - standingLampHeight * .846f),
+                TemplePoint(oilPoint.x + standingLampWidth * .355f, oilPoint.y - standingLampHeight * .842f)
             )
         } else {
-            TemplePoint(
-                oilPoint.x - standingLampWidth * .45f,
-                oilPoint.y - standingLampHeight * .895f
+            listOf(
+                TemplePoint(oilPoint.x - standingLampWidth * .355f, oilPoint.y - standingLampHeight * .842f)
             )
         }
     }
@@ -634,7 +636,8 @@ fun MandirAltarView(
                 oilPoint = oilPoint,
                 traditional = selection["aarti"] != "original",
                 brass = selection["lamp"] != "original",
-                oilWick = oilWick
+                oilWick = oilWicks.firstOrNull(),
+                oilWicks = oilWicks
             )
         }
         WaterFlowOverlay(bathTarget, bathProgress, placement = idolPlacement, modifier = Modifier.zIndex(10.5f))
@@ -669,7 +672,7 @@ fun MandirAltarView(
             )
         }
         Box(
-            target(TemplePoint(oilPoint.x - .06f, oilPoint.y - .18f), .12f, .22f)
+            target(TemplePoint(oilPoint.x - .06f, oilPoint.y - standingLampHeight), .12f, standingLampHeight + .02f)
                 .zIndex(12f)
                 .clickable(onClickLabel = "दीप जलाएँ · Light oil lamp", onClick = onDiyaClick)
         )

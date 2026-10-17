@@ -275,7 +275,17 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                 onClickLabel=tr("मंदिर खोलें","Open temple"),
                 role=androidx.compose.ui.semantics.Role.Button,
                 onClick={entered=true}
-            ))
+            )) {
+                if(!customizer) {
+                    SacredEntrancePrompt(
+                        hindi = hindi,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .navigationBarsPadding()
+                            .padding(horizontal = 24.dp, vertical = 28.dp)
+                    )
+                }
+            }
             else if(curtainMoving) Box(Modifier.matchParentSize().pointerInput(Unit) {
                 awaitPointerEventScope { while(true) { awaitPointerEvent().changes.forEach { it.consume() } } }
             })
@@ -708,6 +718,51 @@ private fun MandirNavigationDrawer(open: Boolean, onDismiss: () -> Unit, hindi: 
                     content()
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SacredEntrancePrompt(hindi: Boolean, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(24.dp)
+    Surface(
+        modifier = modifier
+            .widthIn(max = 360.dp)
+            .fillMaxWidth()
+            .shadow(14.dp, shape, ambientColor = Color(0x661A1108), spotColor = Color(0x661A1108)),
+        shape = shape,
+        color = Color.Transparent,
+        border = BorderStroke(
+            1.5.dp,
+            Brush.linearGradient(
+                listOf(Color(0xFFF7E2A4), Color(0xFFB3833B), Color(0xFFE5C168), Color(0xFF8F6324))
+            )
+        )
+    ) {
+        Column(
+            Modifier
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color(0xF5FFFDF8), Color(0xEEFAF3E6), Color(0xE8F3E7D3))
+                    )
+                )
+                .padding(horizontal = 20.dp, vertical = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = if (hindi) "ॐ · शुद्धि संकल्प" else "OM · SACRED ENTRY",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = RitualGold,
+                letterSpacing = 1.sp
+            )
+            Text(
+                text = if (hindi) "आप स्वच्छ हैं · द्वार खोलने के लिए छुएँ" else "You are clean · Click to open door",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = RitualInk
+            )
         }
     }
 }

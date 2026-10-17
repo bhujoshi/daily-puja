@@ -19,7 +19,7 @@ category('garland','Garland','माला',[
  picture('lotus','Lotus & pearl','कमल और मोती की माला','garlands','lotus_pearl'),
  picture('mogra','Mogra & saffron','मोगरा और केसर माला','garlands','mogra')])
 category('flowers','Flowers','फूल',[model('original','Sunflower & peony','सूरजमुखी और पियोनी','flowers','sunflower')]+[model(n,e,h,'flowers',n) for n,e,h in [('orchid','Orchid','ऑर्किड'),('rose','Rose','गुलाब'),('azalea','Azalea','अज़ेलिया'),('bouquet','Lily','लिली')]])
-category('lamp','Oil lamp','दीपक',[model('original','Golden lamp','सुनहरा दीपक','lamps','golden_oil'),model('brass','Brass diya','पीतल का दीया','lamps','brass_diya')])
+category('lamp','Oil lamp','दीपक',[model('original','Single diya','एकमुखी दीपक','lamps','golden_oil'),model('brass','Panchmukhi diya','पंचमुखी दीपक','lamps','brass_diya')])
 category('shankh','Shankh','शंख',[model('original','Classic shankh','पारंपरिक शंख','shankh','classic'),model('ivory','Ivory shankh','श्वेत शंख','shankh','ivory')])
 category('aarti','Aarti lamp','आरती दीप',[model('original','Golden aarti','सुनहरी आरती','aarti','golden'),model('traditional','Traditional aarti','पारंपरिक आरती','aarti','traditional')])
 category('prasad','Prasad','प्रसाद',[picture('original','Laddu bowl','लड्डू का कटोरा','prasad','laddu_bowl'),picture('halwa','Halwa','हलवा','prasad','halwa'),model('laddu','Tirupati laddu','तिरुपति लड्डू','prasad','laddu')])
