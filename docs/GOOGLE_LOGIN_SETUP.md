@@ -38,8 +38,25 @@ Verified with `:app:signingReport`:
 | --- | --- |
 | Debug | `9B:DE:BC:AC:B7:99:F4:C6:25:53:37:D2:55:2B:0A:CD:8C:CB:F5:61` |
 | Directly installed release | `5D:9B:97:33:C1:36:38:44:F4:DA:B9:EE:A4:5F:66:10:94:90:C4:0F` |
+| Google Play release (Pixel 9, version 1.0.15, verified 2026-10-18) | `6C:85:7B:BE:24:50:44:AE:E3:64:A4:C4:8B:B6:AA:8D:B8:C6:D1:6F` |
 
 For Google Play installs, use Play Console's app signing fingerprint instead.
+The Play fingerprint above was extracted from the installed APK and differs
+from the direct-release/upload certificate. Register it as a separate Android
+OAuth client in the same project as the Web client. On 2026-10-18, inspection
+found only debug and direct-release registrations; the Play registration was
+missing. Do not replace the Web client ID or the existing Android registrations
+to fix this mismatch. Confirm sign-in on a Play-installed build before declaring
+a Play release verified; a sideloaded APK does not test Play's signing identity.
+
+With user approval on 2026-10-18, created **Pavitra Mandir — Google Play** for
+the verified Play SHA-1 above. Google Cloud confirmed creation of Android client
+`653836355193-7nrhj1p08thlcoi3sd60fnb89f4dretg.apps.googleusercontent.com`.
+The existing Web client and Android clients were preserved. Google advises
+5 minutes to a few hours for propagation. End-to-end sign-in on the Play build
+is pending retry after propagation. The creation dialog also reports OAuth
+access restricted to consent-screen test users; this registration does not
+change the project's audience/publishing status.
 
 ## Configure the backend
 
