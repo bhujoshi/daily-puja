@@ -1,9 +1,16 @@
 # Android release builds
 
 Application ID: `com.pavitramandir.app`  
-Version: `1.0.14` (version code `15`)
+Version: `1.0.15` (version code `16`)
 
 ## Latest release verification
+
+Version 1.0.15 updates full-screen dialog window insets and navigation bar
+padding across the Bhajan player, Shrine Customizer, and navigation drawer. The
+signed APK and AAB, with SHA-256 checksums, are stored in
+`android/app/build/outputs/releases/1.0.15/`.
+
+## Version 1.0.14 verification
 
 Version 1.0.14 includes the latest shrine artwork, garland selections, diya lamp
 labels (`Single diya` / `Panchmukhi diya`), and ritual layout updates. The

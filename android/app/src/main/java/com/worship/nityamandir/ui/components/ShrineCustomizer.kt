@@ -101,7 +101,7 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
             }
         }
     }
-    Dialog(onDismissRequest={if(!busy) onDismiss()},properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    Dialog(onDismissRequest={if(!busy) onDismiss()},properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
         Surface(Modifier.fillMaxSize(),color=Color(0xFFFFF7EC)) {
             Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal=12.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
@@ -195,7 +195,7 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
             }) {Icon(Icons.Outlined.Lock,null,Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(tr("अनलॉक","Unlock"))}},
             dismissButton={TextButton(onClick={pendingUnlocks=emptyList()}) {Text(tr("वापस","Cancel"))}})
     }
-    if(showPreview) Dialog(onDismissRequest={if(!busy) showPreview=false},properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    if(showPreview) Dialog(onDismissRequest={if(!busy) showPreview=false},properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
         Box(Modifier.fillMaxSize().background(Color(0xFFFFF7EC))) {
             key(draft) {MandirAltarView(
                 session=WorshipSession(deityCount=draft.deityCount),dustLevel=0f,flowerWitherFactor=0f,bathTarget=null,bathProgress=0f,

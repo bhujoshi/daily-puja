@@ -118,7 +118,7 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
         secondaryContainer = Color(0xFFEACBA7), onSecondaryContainer = MusicInk,
         surface = MusicCream, onSurface = MusicInk, surfaceVariant = Color(0xFFF0E0C5), onSurfaceVariant = MusicInk)) {
         androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss,
-            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
             Surface(Modifier.fillMaxSize(), color = MusicCream) {
                 Column(Modifier.fillMaxSize().systemBarsPadding()) {
                     if (player.current != null || player.loading) BhajanMiniPlayer(player, hindi, onDismiss,
@@ -184,7 +184,7 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
 private fun PlayerControls(player: BhajanPlayer, hindi: Boolean) {
     var drag by remember(player.title) { mutableStateOf<Float?>(null) }
     Surface(color = Color(0xFFF0E0C5), shadowElevation = 8.dp) {
-        Column(Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
+        Column(Modifier.navigationBarsPadding().padding(horizontal = 20.dp, vertical = 10.dp)) {
             Text(player.title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
             if (player.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
             if (player.notice.isNotBlank()) Text(if (hindi) "अनुपलब्ध भजन छोड़कर अगला चला रहे हैं" else player.notice, fontSize = 12.sp)

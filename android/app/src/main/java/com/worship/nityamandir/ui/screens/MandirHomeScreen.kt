@@ -641,7 +641,7 @@ private fun SacredDrawerCard(
 private fun MandirNavigationDrawer(open: Boolean, onDismiss: () -> Unit, hindi: Boolean, content: @Composable ColumnScope.() -> Unit) {
     if (!open) return
     Dialog(onDismissRequest=onDismiss,
-        properties=DialogProperties(usePlatformDefaultWidth=false)) {
+        properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
         Box(
             Modifier
                 .fillMaxSize()
