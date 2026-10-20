@@ -8,19 +8,18 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -42,6 +41,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -55,23 +55,19 @@ import coil.compose.AsyncImage
 import com.worship.nityamandir.engine.BhajanPlayer
 import com.worship.nityamandir.engine.BhajanSearch
 import kotlinx.coroutines.launch
-import java.util.Locale
 
 // Authentic YouTube Dark App Palette
 private val YouTubeBg = Color(0xFF0F0F0F)
 private val YouTubeElevated = Color(0xFF181818)
 private val YouTubeCardBg = Color(0xFF1E1E1E)
 private val YouTubeChipBg = Color(0xFF272727)
-private val YouTubeChipSelected = Color(0xFFF1F1F1)
 private val YouTubeRed = Color(0xFFFF0033)
 private val YouTubeTextPrimary = Color(0xFFF1F1F1)
 private val YouTubeTextSecondary = Color(0xFFAAAAAA)
-private val TempleBrass = Color(0xFFD8AF52)
 private val HoneyKesariya = Color(0xFFFF9E2C)
 
 /**
- * Authentic YouTube play-button badge icon used across the YouTube player, channel avatars,
- * and recommendation feed.
+ * Authentic YouTube play-button badge icon used on channel avatars and feed items.
  */
 @Composable
 private fun YouTubeBadgeIcon(
@@ -123,8 +119,6 @@ private fun YouTubeBadgeIcon(
 
 /**
  * YouTube-style Miniplayer Bar used on the Mandir screen, Customizer, and Drawer.
- * Features a side 16:9 thumbnail preview, track title, Play/Pause, Skip Next, Close,
- * and a signature YouTube Red bottom progress bar.
  */
 @Composable
 fun BhajanMiniPlayer(
@@ -138,7 +132,7 @@ fun BhajanMiniPlayer(
     val activeTrack = player.current ?: player.catalog.firstOrNull()
     val effectiveDuration = player.duration.takeIf { it > 0L } ?: ((activeTrack?.durationSeconds ?: 0L) * 1000L)
     val progress = if (effectiveDuration > 0L) {
-        (player.position.toFloat() / effectiveDuration.toFloat()).coerceIn(0f, 1f)
+        (player.position.toFloat() / effectiveDuration.toFloat()).takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f
     } else 0f
 
     if (compact) {
@@ -162,7 +156,6 @@ fun BhajanMiniPlayer(
                         .padding(start = 6.dp, end = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Side 16:9 mini video thumbnail like YouTube Miniplayer
                     Box(
                         Modifier
                             .size(width = 52.dp, height = 32.dp)
@@ -173,16 +166,10 @@ fun BhajanMiniPlayer(
                             YouTubeStyleThumbnail(
                                 track = activeTrack,
                                 showDuration = false,
+                                useFixedSize = true,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
-                        YouTubeBadgeIcon(
-                            hindi = hindi,
-                            compact = true,
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .size(width = 18.dp, height = 13.dp)
-                        )
                     }
 
                     Text(
@@ -210,13 +197,6 @@ fun BhajanMiniPlayer(
                             } else {
                                 if (hindi) "संगीत चलाएँ" else "Play music"
                             },
-                            tint = YouTubeTextPrimary
-                        )
-                    }
-                    IconButton(onClick = { player.skip(1) }, modifier = Modifier.size(36.dp)) {
-                        Icon(
-                            Icons.Default.SkipNext,
-                            if (hindi) "अगला" else "Next",
                             tint = YouTubeTextPrimary
                         )
                     }
@@ -269,6 +249,7 @@ fun BhajanMiniPlayer(
                         YouTubeStyleThumbnail(
                             track = activeTrack,
                             showDuration = false,
+                            useFixedSize = true,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -336,54 +317,59 @@ fun BhajanMiniPlayer(
 }
 
 /**
- * Clean 16:9 YouTube-style thumbnail used across the video player, side mini-player, and recommendation cards.
+ * Clean 16:9 YouTube-style thumbnail with no tags—only the bottom-right duration pill when requested.
+ * Avoids decoding multi-megabyte temple background/idol PNGs underneath HTTP thumbnails so opening
+ * the player sheet is instantaneous and never triggers OutOfMemoryError.
  */
 @Composable
 private fun YouTubeStyleThumbnail(
     track: BhajanPlayer.Track,
     showDuration: Boolean = true,
-    isNowPlaying: Boolean = false,
+    useFixedSize: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val thumbUrl = remember(track.thumbnail, track.youtubeId) {
+        if (track.thumbnail.startsWith("https://") || track.thumbnail.startsWith("http://")) {
+            track.thumbnail
+        } else if (track.youtubeId.isNotBlank()) {
+            "https://i.ytimg.com/vi/${track.youtubeId}/hqdefault.jpg"
+        } else {
+            ""
+        }
+    }
     Surface(
-        modifier = modifier.aspectRatio(16f / 9f),
-        shape = RoundedCornerShape(12.dp),
+        modifier = if (useFixedSize) modifier else modifier.aspectRatio(16f / 9f),
+        shape = RoundedCornerShape(if (useFixedSize) 6.dp else 12.dp),
         color = YouTubeElevated
     ) {
-        Box(Modifier.fillMaxSize()) {
-            AsyncImage(
-                model = "file:///android_asset/shrine/backgrounds/carved.png",
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-                alpha = 0.45f
-            )
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(
-                                HoneyKesariya.copy(alpha = 0.25f),
-                                YouTubeBg.copy(alpha = 0.78f)
-                            )
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            HoneyKesariya.copy(alpha = 0.22f),
+                            YouTubeBg
                         )
                     )
-            )
-            AsyncImage(
-                model = "file:///android_asset/${track.fallbackAssetArt}",
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxHeight(0.88f)
-                    .align(Alignment.Center),
-                contentScale = ContentScale.Fit
-            )
-            if (track.thumbnail.startsWith("https://") || track.thumbnail.startsWith("http://")) {
+                )
+        ) {
+            if (thumbUrl.isNotBlank()) {
                 AsyncImage(
-                    model = track.thumbnail,
+                    model = thumbUrl,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
+                )
+            } else {
+                val fallbackBitmap = rememberCachedAssetImage(track.fallbackAssetArt, sampleSize = 4)
+                Image(
+                    bitmap = fallbackBitmap,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxHeight(0.85f)
+                        .align(Alignment.Center),
+                    contentScale = ContentScale.Fit
                 )
             }
             Box(
@@ -392,42 +378,13 @@ private fun YouTubeStyleThumbnail(
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
-                                YouTubeBg.copy(alpha = 0.2f),
+                                YouTubeBg.copy(alpha = 0.15f),
                                 Color.Transparent,
-                                YouTubeBg.copy(alpha = 0.65f)
+                                YouTubeBg.copy(alpha = 0.55f)
                             )
                         )
                     )
             )
-
-            if (isNowPlaying) {
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(8.dp),
-                    shape = RoundedCornerShape(4.dp),
-                    color = YouTubeRed
-                ) {
-                    Row(
-                        Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.GraphicEq,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Text(
-                            text = "NOW PLAYING",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                }
-            }
 
             if (showDuration && track.durationSeconds > 0) {
                 Surface(
@@ -450,121 +407,79 @@ private fun YouTubeStyleThumbnail(
     }
 }
 
-private data class FilterChipOption(val id: String, val labelHi: String, val labelEn: String)
-
-private val youtubeFilterChips = listOf(
-    FilterChipOption("all", "सभी (All)", "All"),
-    FilterChipOption("up_next", "अगला (Up next)", "Up next"),
-    FilterChipOption("hanuman", "हनुमान", "Hanuman"),
-    FilterChipOption("shiva", "शिव", "Shiva"),
-    FilterChipOption("ganesh", "गणेश", "Ganesh"),
-    FilterChipOption("rama", "श्री राम", "Shri Ram"),
-    FilterChipOption("krishna", "कृष्ण", "Krishna"),
-    FilterChipOption("durga", "माता दुर्गा", "Durga"),
-    FilterChipOption("aarti", "आरती", "Aarti"),
-    FilterChipOption("chalisa", "चालीसा", "Chalisa")
-)
-
 @Composable
 fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Unit) {
     fun tr(hi: String, en: String) = if (hindi) hi else en
     var searchQuery by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("all") }
+    // `isTypingSearch` is true while the user is typing in the search bar (shows ONLY text suggestions).
+    // Once the user clicks a text suggestion or clicks the Search button, `isTypingSearch` becomes false
+    // and the screen shows the list of video items.
+    var isTypingSearch by remember { mutableStateOf(false) }
+    var committedSearchQuery by remember { mutableStateOf("") }
     var isPlayerMinimizedToSide by remember { mutableStateOf(false) }
     var sidePlayerOnLeft by remember { mutableStateOf(false) }
-    var showAutocompleteDropdown by remember { mutableStateOf(false) }
 
-    val focusManager = LocalFocusManager.current
-    val keyboardController = LocalSoftwareKeyboardController.current
-    val localView = LocalView.current
     val gridState = rememberLazyGridState()
     val coroutineScope = rememberCoroutineScope()
 
-    fun dismissKeyboard() {
-        focusManager.clearFocus(force = true)
-        keyboardController?.hide()
-        runCatching {
-            val imm = localView.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-            imm?.hideSoftInputFromWindow(localView.windowToken, 0)
-        }
-    }
-
     LaunchedEffect(Unit) { player.fetchCatalog() }
 
-    // Live debounced YouTube search + live YouTube autocomplete suggestions when typing
-    LaunchedEffect(searchQuery) {
+    // Fetch live YouTube autocomplete text suggestions while typing
+    LaunchedEffect(searchQuery, isTypingSearch) {
         val q = searchQuery.trim()
-        if (q.isNotEmpty()) {
+        if (q.isNotEmpty() && isTypingSearch) {
             player.fetchYoutubeSuggestions(q)
-            if (q.length >= 2) {
-                kotlinx.coroutines.delay(300)
-                player.searchYoutube(q, autoplayFirst = false)
-            }
-        } else {
+        } else if (q.isEmpty()) {
             player.clearYoutubeSearch()
         }
     }
 
-    // YouTube-first recommendations for the currently playing song (or active search query).
-    // Whenever the next song is played, `player.current` updates and this list immediately
-    // recomputes to show YouTube recommendations for the newly playing song.
+    val activeTrack = player.current
+        ?: player.catalog.firstOrNull { it.isYoutubeOnly }
+        ?: player.catalog.firstOrNull()
+
+    // Dynamic video recommendations list for the active song or committed search query.
+    // Strictly excludes the currently playing / active song and reshuffles on every track transition.
     val recommendations = remember(
-        player.current,
+        activeTrack?.id,
+        activeTrack?.title,
         player.catalog,
         player.youtubeSearchResults,
         player.relatedYoutubeTracks,
-        searchQuery,
-        selectedCategory
+        player.recentHistoryIds,
+        player.recommendationSeed,
+        committedSearchQuery
     ) {
-        val q = searchQuery.trim()
+        val q = committedSearchQuery.trim()
         val ytPool = if (q.isNotEmpty()) {
-            (player.youtubeSearchResults + player.relatedYoutubeTracks).distinctBy { it.id }
+            player.youtubeSearchResults
         } else {
             player.relatedYoutubeTracks
         }
-        BhajanSearch.youtubeFeedRecommendations(
-            anchor = player.current,
+        val feed = BhajanSearch.youtubeFeedRecommendations(
+            anchor = activeTrack,
             catalog = player.catalog,
             youtubeResults = ytPool,
             searchQuery = q,
-            categoryFilter = selectedCategory,
-            idol = player.idol
+            categoryFilter = "all",
+            idol = player.idol,
+            playedTrackIds = player.recentHistoryIds,
+            rotationSeed = player.recommendationSeed
         )
-    }
-
-    val activeTrack = player.current ?: recommendations.firstOrNull() ?: player.catalog.firstOrNull()
-    val nextRecommendedTrack = recommendations.firstOrNull { it.id != activeTrack?.id }
-
-    // Whenever the currently playing song changes (e.g., Next song button clicked, auto-advance, or card tap),
-    // scroll the YouTube recommendation feed to the top so fresh YouTube recommendations are visible right away.
-    LaunchedEffect(player.current?.id) {
-        if (player.current != null) {
-            showAutocompleteDropdown = false
-            runCatching { gridState.animateScrollToItem(0) }
+        if (q.isEmpty()) {
+            feed.filterNot { BhajanSearch.isSameSong(it, activeTrack) }.distinctBy { it.id }
+        } else {
+            feed.distinctBy { it.id }
         }
     }
 
-    // Recommended Next Words (like YouTube search next-word completions)
-    val recommendedNextWords = remember(
-        searchQuery,
-        hindi,
-        activeTrack,
-        player.catalog,
-        player.youtubeSearchResults,
-        player.relatedYoutubeTracks
-    ) {
-        BhajanSearch.recommendedNextWords(
-            query = searchQuery,
-            hindi = hindi,
-            anchor = activeTrack,
-            catalog = player.catalog,
-            youtubeResults = player.youtubeSearchResults + player.relatedYoutubeTracks,
-            idol = player.idol
-        )
+    // Scroll video list to the top whenever the song changes, committed search changes, or live search results arrive
+    LaunchedEffect(activeTrack?.id, player.recommendationSeed, committedSearchQuery, player.youtubeSearchResults.size) {
+        runCatching { gridState.scrollToItem(0) }
     }
 
-    // Full YouTube Autocomplete Prediction rows while typing
-    val autocompletePredictions = remember(
+    // Text search suggestions shown ONLY while typing
+    val textSuggestions = remember(
         searchQuery,
         hindi,
         activeTrack,
@@ -573,36 +488,41 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
         player.relatedYoutubeTracks,
         player.youtubeSuggestions
     ) {
-        BhajanSearch.autocompletePredictions(
-            query = searchQuery,
-            hindi = hindi,
-            catalog = player.catalog,
-            youtubeResults = player.youtubeSearchResults + player.relatedYoutubeTracks,
-            remoteSuggestions = player.youtubeSuggestions,
-            anchor = activeTrack,
-            idol = player.idol
-        )
-    }
-
-    fun applyNextWord(word: String) {
-        val currentTrimmed = searchQuery.trim()
-        val newQuery = if (currentTrimmed.isEmpty()) {
-            word
+        val q = searchQuery.trim()
+        if (q.isEmpty()) {
+            emptyList()
         } else {
-            val tokens = currentTrimmed.split(Regex("\\s+")).filter { it.isNotBlank() }
-            val lastToken = tokens.lastOrNull()?.lowercase(Locale.ROOT).orEmpty()
-            val wordLower = word.lowercase(Locale.ROOT)
-            if (wordLower.startsWith(lastToken) && wordLower != lastToken) {
-                (tokens.dropLast(1) + word).joinToString(" ")
-            } else if (tokens.any { it.equals(word, ignoreCase = true) }) {
-                currentTrimmed
-            } else {
-                "$currentTrimmed $word"
+            val predictions = BhajanSearch.autocompletePredictions(
+                query = q,
+                hindi = hindi,
+                catalog = player.catalog,
+                youtubeResults = player.youtubeSearchResults + player.relatedYoutubeTracks,
+                remoteSuggestions = player.youtubeSuggestions,
+                anchor = activeTrack,
+                idol = player.idol
+            )
+            val nextWords = BhajanSearch.recommendedNextWords(
+                query = q,
+                hindi = hindi,
+                anchor = activeTrack,
+                catalog = player.catalog,
+                youtubeResults = player.youtubeSearchResults + player.relatedYoutubeTracks,
+                idol = player.idol
+            ).map { nw ->
+                val tokens = q.split(Regex("\\s+")).filter { it.isNotBlank() }
+                val last = tokens.lastOrNull().orEmpty()
+                if (nw.startsWith(last, ignoreCase = true) && !nw.equals(last, ignoreCase = true)) {
+                    (tokens.dropLast(1) + nw).joinToString(" ")
+                } else {
+                    "$q $nw"
+                }
             }
+            (listOf(q) + predictions + nextWords)
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .distinctBy { it.lowercase() }
+                .take(10)
         }
-        searchQuery = newQuery
-        showAutocompleteDropdown = true
-        player.searchYoutube(newQuery, autoplayFirst = false)
     }
 
     MaterialTheme(
@@ -616,12 +536,44 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
         )
     ) {
         Dialog(
-            onDismissRequest = {
-                dismissKeyboard()
-                onDismiss()
-            },
+            onDismissRequest = onDismiss,
             properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
         ) {
+            // Read FocusManager, SoftwareKeyboardController, and View INSIDE the Dialog window scope
+            // so keyboard dismissal targets the Dialog's own window token and focus tree.
+            val dialogFocusManager = LocalFocusManager.current
+            val dialogKeyboardController = LocalSoftwareKeyboardController.current
+            val dialogView = LocalView.current
+
+            fun dismissDialogKeyboard() {
+                dialogFocusManager.clearFocus(force = true)
+                dialogKeyboardController?.hide()
+                runCatching {
+                    val imm = dialogView.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                    imm?.hideSoftInputFromWindow(dialogView.windowToken, 0)
+                    imm?.hideSoftInputFromWindow(dialogView.rootView.windowToken, 0)
+                }
+            }
+
+            fun commitSearch(queryText: String) {
+                val clean = queryText.trim()
+                dismissDialogKeyboard()
+                searchQuery = clean
+                committedSearchQuery = clean
+                isTypingSearch = false
+                if (clean.isNotEmpty()) {
+                    if (player.current != null) {
+                        isPlayerMinimizedToSide = true
+                    }
+                    player.searchYoutube(clean, autoplayFirst = false)
+                } else {
+                    player.clearYoutubeSearch()
+                }
+                coroutineScope.launch {
+                    runCatching { gridState.scrollToItem(0) }
+                }
+            }
+
             Surface(Modifier.fillMaxSize(), color = YouTubeBg) {
                 Box(
                     Modifier
@@ -629,67 +581,39 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
                         .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top))
                 ) {
                     Column(Modifier.fillMaxSize()) {
-                        // 1. YOUTUBE APP TOP HEADER + SEARCH BAR
+                        // 1. BIG SEARCH BAR + SINGLE CLOSE BUTTON
                         Row(
                             Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            // YouTube Brand Logo / Back button when searching
-                            if (searchQuery.isNotBlank()) {
-                                IconButton(
-                                    onClick = {
-                                        searchQuery = ""
-                                        showAutocompleteDropdown = false
-                                        player.clearYoutubeSearch()
-                                        dismissKeyboard()
-                                    },
-                                    modifier = Modifier.size(36.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.ArrowBack,
-                                        contentDescription = tr("वापस", "Back"),
-                                        tint = YouTubeTextPrimary
-                                    )
-                                }
-                            } else {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable {
-                                            isPlayerMinimizedToSide = false
-                                        }
-                                        .padding(horizontal = 4.dp, vertical = 4.dp)
-                                ) {
-                                    YouTubeBadgeIcon(hindi = hindi, compact = true)
-                                    Text(
-                                        text = "YouTube",
-                                        fontWeight = FontWeight.ExtraBold,
-                                        fontSize = 15.sp,
-                                        color = YouTubeTextPrimary,
-                                        letterSpacing = (-0.3).sp
-                                    )
-                                }
-                            }
-
-                            // YouTube Rounded Search Input Box
                             OutlinedTextField(
                                 value = searchQuery,
-                                onValueChange = {
-                                    searchQuery = it
-                                    showAutocompleteDropdown = it.isNotBlank()
+                                onValueChange = { updated ->
+                                    searchQuery = updated
+                                    if (updated.isNotBlank()) {
+                                        isTypingSearch = true
+                                    } else {
+                                        isTypingSearch = false
+                                        committedSearchQuery = ""
+                                        player.clearYoutubeSearch()
+                                    }
                                 },
                                 modifier = Modifier
                                     .weight(1f)
-                                    .heightIn(min = 44.dp),
+                                    .heightIn(min = 56.dp)
+                                    .testTag("youtube-search-input"),
+                                textStyle = TextStyle(
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = YouTubeTextPrimary
+                                ),
                                 placeholder = {
                                     Text(
-                                        tr("YouTube भजन, आरती खोजें…", "Search YouTube bhajans, aarti…"),
-                                        fontSize = 13.sp,
+                                        tr("भजन, आरती या गायक खोजें…", "Search bhajans, aarti or artist…"),
+                                        fontSize = 15.sp,
                                         color = YouTubeTextSecondary,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
@@ -698,42 +622,46 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
                                 trailingIcon = {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.padding(end = 4.dp)
+                                        modifier = Modifier.padding(end = 6.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
                                         if (searchQuery.isNotBlank()) {
                                             IconButton(
                                                 onClick = {
                                                     searchQuery = ""
-                                                    showAutocompleteDropdown = false
+                                                    committedSearchQuery = ""
+                                                    isTypingSearch = false
                                                     player.clearYoutubeSearch()
-                                                    dismissKeyboard()
+                                                    dismissDialogKeyboard()
                                                 },
-                                                modifier = Modifier.size(32.dp)
+                                                modifier = Modifier.size(36.dp)
                                             ) {
                                                 Icon(
                                                     Icons.Default.Clear,
                                                     contentDescription = tr("साफ़ करें", "Clear"),
                                                     tint = YouTubeTextSecondary,
-                                                    modifier = Modifier.size(18.dp)
+                                                    modifier = Modifier.size(20.dp)
                                                 )
                                             }
                                         }
-                                        IconButton(
-                                            onClick = {
-                                                dismissKeyboard()
-                                                showAutocompleteDropdown = false
-                                                if (searchQuery.isNotBlank()) {
-                                                    player.searchYoutube(searchQuery, autoplayFirst = false)
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = if (searchQuery.isNotBlank()) YouTubeRed else YouTubeChipBg,
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(CircleShape)
+                                                .clickable {
+                                                    commitSearch(searchQuery)
                                                 }
-                                            },
-                                            modifier = Modifier.size(34.dp)
                                         ) {
-                                            Icon(
-                                                Icons.Default.Search,
-                                                contentDescription = tr("खोजें", "Search"),
-                                                tint = YouTubeTextPrimary,
-                                                modifier = Modifier.size(19.dp)
-                                            )
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    Icons.Default.Search,
+                                                    contentDescription = tr("खोजें", "Search"),
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 },
@@ -742,16 +670,12 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                                 keyboardActions = KeyboardActions(
                                     onSearch = {
-                                        dismissKeyboard()
-                                        showAutocompleteDropdown = false
-                                        if (searchQuery.isNotBlank()) {
-                                            player.searchYoutube(searchQuery, autoplayFirst = false)
-                                        }
+                                        commitSearch(searchQuery)
                                     }
                                 ),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Color(0xFF3EA6FF),
-                                    unfocusedBorderColor = Color(0xFF303030),
+                                    focusedBorderColor = YouTubeRed,
+                                    unfocusedBorderColor = Color(0xFF3A3A3A),
                                     focusedContainerColor = YouTubeElevated,
                                     unfocusedContainerColor = YouTubeElevated,
                                     focusedTextColor = YouTubeTextPrimary,
@@ -759,199 +683,162 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
                                 )
                             )
 
-                            // Minimize / Expand Player to Side toggle button in header
                             IconButton(
                                 onClick = {
-                                    dismissKeyboard()
-                                    isPlayerMinimizedToSide = !isPlayerMinimizedToSide
-                                },
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .testTag("youtube-minimize-side-toggle")
-                            ) {
-                                Icon(
-                                    imageVector = if (isPlayerMinimizedToSide) Icons.Default.OpenInFull else Icons.Default.PictureInPictureAlt,
-                                    contentDescription = if (isPlayerMinimizedToSide) {
-                                        tr("प्लेयर बड़ा करें", "Expand player")
-                                    } else {
-                                        tr("प्लेयर साइड में छोटा करें", "Minimize player to side")
-                                    },
-                                    tint = if (isPlayerMinimizedToSide) YouTubeRed else YouTubeTextPrimary
-                                )
-                            }
-
-                            IconButton(
-                                onClick = {
-                                    dismissKeyboard()
+                                    dismissDialogKeyboard()
                                     onDismiss()
                                 },
-                                modifier = Modifier.size(38.dp)
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(YouTubeElevated, CircleShape)
                             ) {
                                 Icon(Icons.Default.Close, tr("बंद करें", "Close"), tint = YouTubeTextPrimary)
                             }
                         }
 
-                        // 2. YOUTUBE RECOMMENDED NEXT WORD BAR (Dynamic next-word suggestions like YouTube)
-                        RecommendedNextWordBar(
-                            searchQuery = searchQuery,
-                            recommendedNextWords = recommendedNextWords,
-                            hindi = hindi,
-                            onNextWordClick = { word ->
-                                applyNextWord(word)
-                            }
-                        )
-
-                        // 3. YOUTUBE AUTOCOMPLETE PREDICTIONS DROPDOWN (When typing in search bar)
-                        AnimatedVisibility(
-                            visible = showAutocompleteDropdown && searchQuery.isNotBlank() && autocompletePredictions.isNotEmpty(),
-                            enter = expandVertically() + fadeIn(),
-                            exit = shrinkVertically() + fadeOut()
-                        ) {
-                            YouTubeAutocompleteDropdown(
-                                currentQuery = searchQuery,
-                                predictions = autocompletePredictions,
-                                hindi = hindi,
-                                onSelectPrediction = { phrase ->
-                                    searchQuery = phrase
-                                    showAutocompleteDropdown = false
-                                    dismissKeyboard()
-                                    player.searchYoutube(phrase, autoplayFirst = false)
-                                },
-                                onInsertPrediction = { phrase ->
-                                    searchQuery = "$phrase "
-                                    player.fetchYoutubeSuggestions(phrase)
-                                    player.searchYoutube(phrase, autoplayFirst = false)
-                                }
-                            )
-                        }
-
-                        // 4. FULL 16:9 YOUTUBE VIDEO PLAYER (Collapses when minimized to side)
-                        AnimatedVisibility(
-                            visible = activeTrack != null && !isPlayerMinimizedToSide,
-                            enter = expandVertically() + fadeIn(),
-                            exit = shrinkVertically() + fadeOut()
-                        ) {
-                            if (activeTrack != null) {
-                                UnifiedYouTubeStylePlayer(
-                                    player = player,
-                                    track = activeTrack,
-                                    nextTrack = nextRecommendedTrack,
-                                    hindi = hindi,
-                                    onMinimizeToSide = {
-                                        dismissKeyboard()
-                                        isPlayerMinimizedToSide = true
+                        // 2. WHILE TYPING: SHOW ONLY TEXT SEARCH RESULTS (Click a text result to show video items)
+                        if (isTypingSearch && searchQuery.isNotBlank()) {
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                                    .testTag("youtube-text-suggestions-list"),
+                                contentPadding = PaddingValues(vertical = 4.dp)
+                            ) {
+                                val cleanInput = searchQuery.trim()
+                                items(textSuggestions, key = { it }) { suggestion ->
+                                    Row(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                commitSearch(suggestion)
+                                            }
+                                            .padding(horizontal = 18.dp, vertical = 14.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Search,
+                                            contentDescription = null,
+                                            tint = YouTubeTextSecondary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        val annotated = buildAnnotatedString {
+                                            if (suggestion.startsWith(cleanInput, ignoreCase = true) && suggestion.length > cleanInput.length) {
+                                                withStyle(SpanStyle(color = YouTubeTextSecondary, fontWeight = FontWeight.Normal)) {
+                                                    append(suggestion.substring(0, cleanInput.length))
+                                                }
+                                                withStyle(SpanStyle(color = YouTubeTextPrimary, fontWeight = FontWeight.Bold)) {
+                                                    append(suggestion.substring(cleanInput.length))
+                                                }
+                                            } else {
+                                                withStyle(SpanStyle(color = YouTubeTextPrimary, fontWeight = FontWeight.SemiBold)) {
+                                                    append(suggestion)
+                                                }
+                                            }
+                                        }
+                                        Text(
+                                            text = annotated,
+                                            fontSize = 16.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Icon(
+                                            Icons.Default.NorthWest,
+                                            contentDescription = null,
+                                            tint = YouTubeTextSecondary,
+                                            modifier = Modifier
+                                                .size(20.dp)
+                                                .clickable {
+                                                    searchQuery = "$suggestion "
+                                                    isTypingSearch = true
+                                                    player.fetchYoutubeSuggestions(suggestion)
+                                                }
+                                        )
                                     }
-                                )
+                                    HorizontalDivider(color = Color(0x18FFFFFF), thickness = 0.5.dp)
+                                }
                             }
-                        }
+                        } else {
+                            // 3. FULL 16:9 YOUTUBE VIDEO PLAYER (Collapses when minimized to side)
+                            AnimatedVisibility(
+                                visible = activeTrack != null && !isPlayerMinimizedToSide,
+                                enter = expandVertically() + fadeIn(),
+                                exit = shrinkVertically() + fadeOut()
+                            ) {
+                                if (activeTrack != null) {
+                                    UnifiedYouTubeStylePlayer(
+                                        player = player,
+                                        track = activeTrack,
+                                        hindi = hindi,
+                                        onMinimizeToSide = {
+                                            dismissDialogKeyboard()
+                                            isPlayerMinimizedToSide = true
+                                        }
+                                    )
+                                }
+                            }
 
-                        // 5. YOUTUBE CATEGORY FILTER CHIPS ROW (All, Up next, Hanuman, Shiva, Ganesh, etc.)
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = 14.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            youtubeFilterChips.forEach { chip ->
-                                val selected = selectedCategory == chip.id
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = if (selected) YouTubeChipSelected else YouTubeChipBg,
-                                    contentColor = if (selected) YouTubeBg else YouTubeTextPrimary,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable {
-                                            selectedCategory = chip.id
+                            if (player.catalogLoading || player.youtubeSearching) {
+                                LinearProgressIndicator(Modifier.fillMaxWidth().height(2.dp), color = YouTubeRed)
+                            }
+                            if (player.catalogError && recommendations.isEmpty()) {
+                                Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Text(tr("संग्रह लोड नहीं हुआ", "Couldn’t load music"), Modifier.weight(1f))
+                                    TextButton(onClick = player::fetchCatalog) { Text(tr("फिर प्रयास करें", "Retry")) }
+                                }
+                            }
+
+                            // 4. LIST OF VIDEO ITEMS (Recommendations / Search Results)
+                            LazyVerticalGrid(
+                                state = gridState,
+                                columns = GridCells.Adaptive(260.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)),
+                                contentPadding = PaddingValues(
+                                    start = 14.dp,
+                                    end = 14.dp,
+                                    top = 8.dp,
+                                    bottom = if (isPlayerMinimizedToSide) 104.dp else 16.dp
+                                ),
+                                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                items(recommendations, key = { it.id }) { track ->
+                                    val isCurrent = player.current?.id == track.id
+                                    YouTubeBhajanFeedCard(
+                                        track = track,
+                                        isNowPlaying = isCurrent,
+                                        hindi = hindi,
+                                        onClick = {
+                                            dismissDialogKeyboard()
+                                            if (searchQuery.isNotBlank() || committedSearchQuery.isNotBlank()) {
+                                                searchQuery = ""
+                                                committedSearchQuery = ""
+                                                isTypingSearch = false
+                                                player.clearYoutubeSearch()
+                                            }
+                                            isPlayerMinimizedToSide = false
+                                            player.playCatalog(
+                                                selected = track,
+                                                autoplay = true,
+                                                preferYoutube = true
+                                            )
                                             coroutineScope.launch {
                                                 runCatching { gridState.scrollToItem(0) }
                                             }
                                         }
-                                ) {
-                                    Text(
-                                        text = if (hindi) chip.labelHi else chip.labelEn,
-                                        fontSize = 12.sp,
-                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                                     )
                                 }
-                            }
-                        }
-
-                        if (player.catalogLoading || player.youtubeSearching) {
-                            LinearProgressIndicator(Modifier.fillMaxWidth().height(2.dp), color = YouTubeRed)
-                        }
-                        if (player.catalogError && recommendations.isEmpty()) {
-                            Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text(tr("संग्रह लोड नहीं हुआ", "Couldn’t load music"), Modifier.weight(1f))
-                                TextButton(onClick = player::fetchCatalog) { Text(tr("फिर प्रयास करें", "Retry")) }
-                            }
-                        }
-
-                        // 6. YOUTUBE RECOMMENDATIONS / UP NEXT FEED
-                        LazyVerticalGrid(
-                            state = gridState,
-                            columns = GridCells.Adaptive(260.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)),
-                            contentPadding = PaddingValues(
-                                start = 14.dp,
-                                end = 14.dp,
-                                top = 4.dp,
-                                bottom = if (isPlayerMinimizedToSide) 116.dp else 16.dp
-                            ),
-                            horizontalArrangement = Arrangement.spacedBy(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(14.dp)
-                        ) {
-                            // YouTube "Up next" section header
-                            if (recommendations.isNotEmpty()) {
-                                item(span = { GridItemSpan(maxLineSpan) }, key = "youtube_up_next_header") {
-                                    YouTubeUpNextHeader(
-                                        nextTrack = nextRecommendedTrack,
-                                        hindi = hindi,
-                                        onPlayNext = {
-                                            dismissKeyboard()
-                                            showAutocompleteDropdown = false
-                                            player.skip(1)
-                                        }
-                                    )
-                                }
-                            }
-
-                            itemsIndexed(recommendations, key = { _, track -> track.id }) { index, track ->
-                                val isCurrent = player.current?.id == track.id
-                                val isUpNextFirst = index == 0 && !isCurrent
-                                YouTubeBhajanFeedCard(
-                                    track = track,
-                                    isNowPlaying = isCurrent,
-                                    isUpNext = isUpNextFirst,
-                                    hindi = hindi,
-                                    onClick = {
-                                        dismissKeyboard()
-                                        showAutocompleteDropdown = false
-                                        if (searchQuery.isNotBlank()) {
-                                            searchQuery = ""
-                                            player.clearYoutubeSearch()
-                                        }
-                                        player.playCatalog(
-                                            selected = track,
-                                            autoplay = true,
-                                            preferYoutube = true
-                                        )
-                                        coroutineScope.launch {
-                                            runCatching { gridState.animateScrollToItem(0) }
-                                        }
-                                    }
-                                )
                             }
                         }
                     }
 
-                    // 7. FLOATING YOUTUBE SIDE MINI-PLAYER (When player is minimized to the side)
+                    // 5. FLOATING YOUTUBE SIDE MINI-PLAYER (When player is minimized to the side)
                     AnimatedVisibility(
-                        visible = activeTrack != null && isPlayerMinimizedToSide,
+                        visible = activeTrack != null && isPlayerMinimizedToSide && !isTypingSearch,
                         enter = fadeIn(),
                         exit = fadeOut(),
                         modifier = Modifier
@@ -963,7 +850,6 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
                             YouTubeSideMiniPlayer(
                                 player = player,
                                 track = activeTrack,
-                                nextTrack = nextRecommendedTrack,
                                 hindi = hindi,
                                 dockedLeft = sidePlayerOnLeft,
                                 onToggleSide = { sidePlayerOnLeft = !sidePlayerOnLeft },
@@ -978,248 +864,13 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
 }
 
 /**
- * YouTube-style "Recommended Next Word" bar right below the search input.
- * Shows predicted next words as the user types (e.g. "hanuman" -> "+ chalisa", "+ ashtak", "+ aarti")
- * or starter devotional search phrases when the search bar is empty.
- */
-@Composable
-private fun RecommendedNextWordBar(
-    searchQuery: String,
-    recommendedNextWords: List<String>,
-    hindi: Boolean,
-    onNextWordClick: (String) -> Unit
-) {
-    fun tr(hi: String, en: String) = if (hindi) hi else en
-    if (recommendedNextWords.isEmpty()) return
-    val isTyping = searchQuery.isNotBlank()
-
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 14.dp, vertical = 4.dp)
-            .testTag("youtube-next-word-bar"),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Surface(
-            shape = RoundedCornerShape(6.dp),
-            color = YouTubeRed.copy(alpha = 0.16f),
-            border = BorderStroke(0.8.dp, YouTubeRed.copy(alpha = 0.45f))
-        ) {
-            Row(
-                Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Icon(
-                    Icons.Default.AutoAwesome,
-                    contentDescription = null,
-                    tint = YouTubeRed,
-                    modifier = Modifier.size(12.dp)
-                )
-                Text(
-                    text = if (isTyping) tr("अगला शब्द:", "Next word:") else tr("सुझाव:", "Suggested:"),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = YouTubeTextPrimary
-                )
-            }
-        }
-
-        recommendedNextWords.forEach { word ->
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = YouTubeChipBg,
-                border = BorderStroke(0.8.dp, Color(0x44FFFFFF)),
-                modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .clickable { onNextWordClick(word) }
-            ) {
-                Row(
-                    Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        imageVector = if (isTyping) Icons.Default.Add else Icons.Default.Search,
-                        contentDescription = null,
-                        tint = YouTubeRed,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Text(
-                        text = word,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = YouTubeTextPrimary
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
- * YouTube search autocomplete predictions list with bolded recommended next words
- * and the `NorthWest` (`↖`) button to fill the word into the search bar without closing.
- */
-@Composable
-private fun YouTubeAutocompleteDropdown(
-    currentQuery: String,
-    predictions: List<String>,
-    hindi: Boolean,
-    onSelectPrediction: (String) -> Unit,
-    onInsertPrediction: (String) -> Unit
-) {
-    fun tr(hi: String, en: String) = if (hindi) hi else en
-    val cleanQuery = currentQuery.trim()
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = YouTubeElevated,
-        border = BorderStroke(0.8.dp, Color(0x33FFFFFF)),
-        shadowElevation = 10.dp
-    ) {
-        Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            predictions.take(5).forEach { prediction ->
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable { onSelectPrediction(prediction) }
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = null,
-                        tint = YouTubeTextSecondary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    val annotated = buildAnnotatedString {
-                        if (prediction.startsWith(cleanQuery, ignoreCase = true) && prediction.length > cleanQuery.length) {
-                            withStyle(SpanStyle(color = YouTubeTextSecondary, fontWeight = FontWeight.Normal)) {
-                                append(prediction.substring(0, cleanQuery.length))
-                            }
-                            withStyle(SpanStyle(color = YouTubeTextPrimary, fontWeight = FontWeight.Bold)) {
-                                append(prediction.substring(cleanQuery.length))
-                            }
-                        } else {
-                            withStyle(SpanStyle(color = YouTubeTextPrimary, fontWeight = FontWeight.SemiBold)) {
-                                append(prediction)
-                            }
-                        }
-                    }
-                    Text(
-                        text = annotated,
-                        fontSize = 13.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                    IconButton(
-                        onClick = { onInsertPrediction(prediction) },
-                        modifier = Modifier.size(28.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.NorthWest,
-                            contentDescription = tr("शब्द जोड़ें", "Insert recommended word"),
-                            tint = YouTubeTextSecondary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-/**
- * YouTube "Up next" header bar shown right above the recommendation cards.
- */
-@Composable
-private fun YouTubeUpNextHeader(
-    nextTrack: BhajanPlayer.Track?,
-    hindi: Boolean,
-    onPlayNext: () -> Unit
-) {
-    fun tr(hi: String, en: String) = if (hindi) hi else en
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.weight(1f)
-        ) {
-            YouTubeBadgeIcon(hindi = hindi, compact = true)
-            Column {
-                Text(
-                    text = tr("अगला भजन · YouTube सुझाव", "Up next · YouTube Recommendations"),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = YouTubeTextPrimary
-                )
-                if (nextTrack != null) {
-                    Text(
-                        text = "${tr("अगला:", "Next:")} ${nextTrack.title}",
-                        fontSize = 11.sp,
-                        color = YouTubeTextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        }
-
-        if (nextTrack != null) {
-            Surface(
-                shape = RoundedCornerShape(50),
-                color = YouTubeChipBg,
-                border = BorderStroke(0.8.dp, Color(0x44FFFFFF)),
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .clickable(onClick = onPlayNext)
-                    .testTag("youtube-play-next-button")
-            ) {
-                Row(
-                    Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        Icons.Default.SkipNext,
-                        contentDescription = null,
-                        tint = YouTubeRed,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = tr("अगला चलाएँ", "Play next"),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = YouTubeTextPrimary
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
- * Floating YouTube Side Mini-Player (Picture-in-Picture style) when the main 16:9 player is
- * minimized to the side while browsing recommendations or searching.
+ * Clean Floating YouTube Side Mini-Player when the main 16:9 player is minimized to the side.
+ * Tapping the card or thumbnail expands it back; includes only Play/Pause, Next, and Close.
  */
 @Composable
 private fun YouTubeSideMiniPlayer(
     player: BhajanPlayer,
     track: BhajanPlayer.Track,
-    nextTrack: BhajanPlayer.Track?,
     hindi: Boolean,
     dockedLeft: Boolean,
     onToggleSide: () -> Unit,
@@ -1228,21 +879,22 @@ private fun YouTubeSideMiniPlayer(
     fun tr(hi: String, en: String) = if (hindi) hi else en
     val effectiveDuration = player.duration.takeIf { it > 0L } ?: (track.durationSeconds * 1000L)
     val progress = if (effectiveDuration > 0L) {
-        (player.position.toFloat() / effectiveDuration.toFloat()).coerceIn(0f, 1f)
+        (player.position.toFloat() / effectiveDuration.toFloat()).takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f
     } else 0f
 
     Surface(
         modifier = Modifier
-            .widthIn(min = 270.dp, max = 330.dp)
-            .shadow(18.dp, RoundedCornerShape(14.dp))
+            .widthIn(min = 250.dp, max = 310.dp)
+            .shadow(18.dp, RoundedCornerShape(12.dp))
             .pointerInput(dockedLeft) {
                 detectHorizontalDragGestures { _, dragAmount ->
                     if (dragAmount < -24f && !dockedLeft) onToggleSide()
                     else if (dragAmount > 24f && dockedLeft) onToggleSide()
                 }
             }
+            .clickable(onClick = onExpand)
             .testTag("youtube-side-mini-player"),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         color = YouTubeElevated,
         border = BorderStroke(1.dp, Color(0x44FFFFFF))
     ) {
@@ -1252,137 +904,72 @@ private fun YouTubeSideMiniPlayer(
                     .fillMaxWidth()
                     .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // 16:9 Mini Video Screen on the side
                 Box(
                     Modifier
-                        .size(width = 112.dp, height = 63.dp)
+                        .size(width = 96.dp, height = 54.dp)
                         .clip(RoundedCornerShape(8.dp))
                         .background(YouTubeBg)
-                        .clickable(onClick = onExpand)
                 ) {
                     YouTubeStyleThumbnail(
                         track = track,
                         showDuration = false,
+                        useFixedSize = true,
                         modifier = Modifier.fillMaxSize()
-                    )
-                    Surface(
-                        shape = CircleShape,
-                        color = Color(0xAA000000),
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(4.dp)
-                            .size(22.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Default.OpenInFull,
-                                contentDescription = tr("प्लेयर बड़ा करें", "Expand player"),
-                                tint = Color.White,
-                                modifier = Modifier.size(12.dp)
-                            )
-                        }
-                    }
-                    YouTubeBadgeIcon(
-                        hindi = hindi,
-                        compact = true,
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(4.dp)
-                            .size(width = 18.dp, height = 13.dp)
                     )
                 }
 
-                // Song info + compact YouTube transport controls
-                Column(
-                    Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    Text(
-                        text = if (player.current != null) player.title else track.title,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                        color = YouTubeTextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.clickable(onClick = onExpand)
-                    )
-                    if (nextTrack != null) {
-                        Text(
-                            text = "${tr("अगला:", "Next:")} ${nextTrack.title}",
-                            fontSize = 10.sp,
-                            color = YouTubeTextSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                Text(
+                    text = if (player.current != null) player.title else track.title,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 12.sp,
+                    color = YouTubeTextPrimary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        IconButton(onClick = onToggleSide, modifier = Modifier.size(30.dp)) {
-                            Icon(
-                                Icons.Default.SwapHoriz,
-                                contentDescription = tr("साइड बदलें", "Switch side"),
-                                tint = YouTubeTextSecondary,
-                                modifier = Modifier.size(16.dp)
-                            )
+                IconButton(
+                    onClick = {
+                        if (player.current == null) {
+                            player.playCatalog(track, autoplay = true, preferYoutube = true)
+                        } else {
+                            player.toggle()
                         }
-                        IconButton(
-                            onClick = {
-                                if (player.current == null) {
-                                    player.playCatalog(track, autoplay = true, preferYoutube = true)
-                                } else {
-                                    player.toggle()
-                                }
-                            },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (player.failed) Icons.Default.Refresh
-                                else if (player.playing) Icons.Default.Pause
-                                else Icons.Default.PlayArrow,
-                                contentDescription = tr("चलाएँ / रोकें", "Play / pause"),
-                                tint = YouTubeTextPrimary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        IconButton(
-                            onClick = { player.skip(1) },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.SkipNext,
-                                contentDescription = tr("अगला", "Next"),
-                                tint = YouTubeTextPrimary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        IconButton(
-                            onClick = onExpand,
-                            modifier = Modifier.size(30.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.OpenInFull,
-                                contentDescription = tr("बड़ा करें", "Expand"),
-                                tint = YouTubeTextPrimary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                        IconButton(
-                            onClick = player::remove,
-                            modifier = Modifier.size(30.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = tr("बंद करें", "Close"),
-                                tint = YouTubeTextSecondary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
+                    },
+                    modifier = Modifier.size(34.dp)
+                ) {
+                    Icon(
+                        imageVector = if (player.failed) Icons.Default.Refresh
+                        else if (player.playing) Icons.Default.Pause
+                        else Icons.Default.PlayArrow,
+                        contentDescription = tr("चलाएँ / रोकें", "Play / pause"),
+                        tint = YouTubeTextPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                IconButton(
+                    onClick = { player.skip(1) },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        Icons.Default.SkipNext,
+                        contentDescription = tr("अगला", "Next"),
+                        tint = YouTubeTextPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                IconButton(
+                    onClick = player::remove,
+                    modifier = Modifier.size(30.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = tr("बंद करें", "Close"),
+                        tint = YouTubeTextSecondary,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
 
@@ -1399,18 +986,15 @@ private fun YouTubeSideMiniPlayer(
 }
 
 /**
- * Authentic YouTube recommendation card in the watch feed.
- * Single click plays the song and refreshes the YouTube recommendation feed.
+ * Clean YouTube video item card with no extra tags or repeated buttons.
  */
 @Composable
 private fun YouTubeBhajanFeedCard(
     track: BhajanPlayer.Track,
     isNowPlaying: Boolean,
-    isUpNext: Boolean,
     hindi: Boolean,
     onClick: () -> Unit
 ) {
-    fun tr(hi: String, en: String) = if (hindi) hi else en
     val cleanArtist = track.artist
         .replace("• YouTube", "")
         .trim()
@@ -1419,41 +1003,18 @@ private fun YouTubeBhajanFeedCard(
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = if (isNowPlaying) Color(0xFF261818) else YouTubeCardBg,
-        border = if (isNowPlaying) BorderStroke(1.2.dp, YouTubeRed)
-        else if (isUpNext) BorderStroke(0.8.dp, Color(0x44FFFFFF))
-        else null,
+        border = if (isNowPlaying) BorderStroke(1.2.dp, YouTubeRed) else null,
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .clickable(enabled = track.url.isNotBlank(), onClick = onClick)
     ) {
         Column {
-            Box {
-                YouTubeStyleThumbnail(
-                    track = track,
-                    showDuration = true,
-                    isNowPlaying = isNowPlaying,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                if (isUpNext && !isNowPlaying) {
-                    Surface(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(8.dp),
-                        shape = RoundedCornerShape(4.dp),
-                        color = Color(0xCC0F0F0F),
-                        border = BorderStroke(0.6.dp, YouTubeRed.copy(alpha = 0.8f))
-                    ) {
-                        Text(
-                            text = tr("अगला भजन · UP NEXT", "UP NEXT"),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = YouTubeTextPrimary,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                }
-            }
+            YouTubeStyleThumbnail(
+                track = track,
+                showDuration = true,
+                modifier = Modifier.fillMaxWidth()
+            )
 
             Row(
                 Modifier
@@ -1489,14 +1050,13 @@ private fun YouTubeBhajanFeedCard(
 }
 
 /**
- * Full 16:9 YouTube Watch Player with top Minimize-to-Side controls, center transport controls,
- * red YouTube seekbar, and watch-page action pills below the video.
+ * Full 16:9 YouTube Watch Player with a single top-left Minimize icon (`⌄`),
+ * center transport controls, red seekbar, and clean title row below.
  */
 @Composable
 private fun UnifiedYouTubeStylePlayer(
     player: BhajanPlayer,
     track: BhajanPlayer.Track,
-    nextTrack: BhajanPlayer.Track?,
     hindi: Boolean,
     onMinimizeToSide: () -> Unit
 ) {
@@ -1509,7 +1069,7 @@ private fun UnifiedYouTubeStylePlayer(
             .fillMaxWidth()
             .padding(horizontal = 14.dp)
     ) {
-        // 16:9 YouTube Video Stage (supports swipe-down to minimize to side like YouTube app)
+        // 16:9 YouTube Video Stage (tap top-left `⌄` or swipe down to minimize to side)
         Box(
             Modifier
                 .fillMaxWidth()
@@ -1528,7 +1088,7 @@ private fun UnifiedYouTubeStylePlayer(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Top YouTube Overlay Bar: Minimize Chevron (left) + Autoplay & Side PiP (right)
+            // Single top-left Minimize chevron (`⌄`) + single top-right Repeat icon
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -1542,59 +1102,28 @@ private fun UnifiedYouTubeStylePlayer(
                     modifier = Modifier
                         .size(34.dp)
                         .background(Color(0x99000000), CircleShape)
+                        .testTag("youtube-minimize-chevron")
                 ) {
                     Icon(
                         Icons.Default.KeyboardArrowDown,
-                        contentDescription = tr("प्लेयर साइड में छोटा करें", "Minimize player to side"),
+                        contentDescription = tr("प्लेयर छोटा करें", "Minimize player"),
                         tint = Color.White,
                         modifier = Modifier.size(22.dp)
                     )
                 }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                IconButton(
+                    onClick = { player.toggleRepeat() },
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(Color(0x99000000), CircleShape)
                 ) {
-                    Surface(
-                        shape = RoundedCornerShape(50),
-                        color = Color(0x99000000),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .clickable(onClick = onMinimizeToSide)
-                    ) {
-                        Row(
-                            Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.PictureInPictureAlt,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Text(
-                                text = tr("साइड प्लेयर", "Miniplayer"),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White
-                            )
-                        }
-                    }
-
-                    IconButton(
-                        onClick = { player.toggleRepeat() },
-                        modifier = Modifier
-                            .size(32.dp)
-                            .background(Color(0x99000000), CircleShape)
-                    ) {
-                        Icon(
-                            Icons.Default.RepeatOne,
-                            contentDescription = tr("दोहराएँ", "Repeat"),
-                            tint = if (player.repeat) YouTubeRed else Color.White,
-                            modifier = Modifier.size(17.dp)
-                        )
-                    }
+                    Icon(
+                        Icons.Default.RepeatOne,
+                        contentDescription = tr("दोहराएँ", "Repeat"),
+                        tint = if (player.repeat) YouTubeRed else Color.White,
+                        modifier = Modifier.size(17.dp)
+                    )
                 }
             }
 
@@ -1670,41 +1199,25 @@ private fun UnifiedYouTubeStylePlayer(
                     )
                     .padding(horizontal = 12.dp, vertical = 2.dp)
             ) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "${musicTime((dragPosition?.toLong() ?: player.position))} / ${musicTime(effectiveDuration)}",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color.White
-                    )
-                    if (nextTrack != null) {
-                        Text(
-                            text = "${tr("अगला:", "Up next:")} ${nextTrack.title}",
-                            fontSize = 10.sp,
-                            color = YouTubeTextSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier
-                                .padding(start = 12.dp)
-                                .clickable { player.skip(1) }
-                        )
-                    }
-                }
+                Text(
+                    "${musicTime((dragPosition?.toLong() ?: player.position))} / ${musicTime(effectiveDuration)}",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White
+                )
+                val maxSliderVal = effectiveDuration.coerceAtLeast(1L).toFloat()
+                val currentSliderVal = (dragPosition ?: player.position.toFloat())
+                    .takeIf { it.isFinite() }
+                    ?.coerceIn(0f, maxSliderVal)
+                    ?: 0f
                 Slider(
-                    value = (dragPosition ?: player.position.toFloat()).coerceIn(
-                        0f,
-                        effectiveDuration.coerceAtLeast(1L).toFloat()
-                    ),
+                    value = currentSliderVal,
                     onValueChange = { dragPosition = it },
                     onValueChangeFinished = {
                         dragPosition?.let { player.seek(it.toLong()) }
                         dragPosition = null
                     },
-                    valueRange = 0f..effectiveDuration.coerceAtLeast(1L).toFloat(),
+                    valueRange = 0f..maxSliderVal,
                     enabled = effectiveDuration > 0 && !player.failed,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1718,7 +1231,7 @@ private fun UnifiedYouTubeStylePlayer(
             }
         }
 
-        // YouTube Watch-Page Video Title, Channel & Action Pills Row
+        // Clean YouTube Watch-Page Video Title & Channel Row (No extra written buttons)
         val cleanArtist = track.artist
             .replace("• YouTube", "")
             .trim()
@@ -1748,34 +1261,6 @@ private fun UnifiedYouTubeStylePlayer(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-            }
-
-            // Quick YouTube Action Pill: Minimize to Side
-            Surface(
-                shape = RoundedCornerShape(50),
-                color = YouTubeChipBg,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .clickable(onClick = onMinimizeToSide)
-            ) {
-                Row(
-                    Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        Icons.Default.PictureInPictureAlt,
-                        contentDescription = null,
-                        tint = YouTubeTextPrimary,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Text(
-                        text = tr("साइड में करें", "Minimize"),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = YouTubeTextPrimary
-                    )
-                }
             }
         }
     }

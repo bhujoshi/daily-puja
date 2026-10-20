@@ -89,7 +89,7 @@
     "runtime": "android/app/src/main/assets/shrine/shankh/classic.glb",
     "source_kind": "glb",
     "source_bytes": 2751668,
-    "runtime_bytes": 754828,
+    "runtime_bytes": 529916,
     "source_faces": 35380,
     "runtime_faces": 8000,
     "target_faces": 8000,
@@ -202,5 +202,17 @@
     "runtime_faces": 17621,
     "target_faces": 18000,
     "texture_limit": 768
+  },
+  {
+    "id": "accessories/shankh_stand",
+    "source": "temple_models/source/accessories/shankh_stand.glb",
+    "runtime": "android/app/src/main/assets/shrine/accessories/shankh_stand.glb",
+    "source_kind": "glb",
+    "source_bytes": 36512,
+    "runtime_bytes": 36512,
+    "source_faces": 1848,
+    "runtime_faces": 1848,
+    "target_faces": 12000,
+    "texture_limit": 512
   }
 ]

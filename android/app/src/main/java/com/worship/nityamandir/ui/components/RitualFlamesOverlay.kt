@@ -15,7 +15,18 @@ import kotlin.math.sin
 
 /** Screen-space flames stay attached to the moving wick, with independent, smooth flicker. */
 @Composable
-fun RitualFlamesOverlay(oilLit: Boolean, aartiLit: Boolean, lamp: TemplePoint, oilPoint:TemplePoint=TempleSceneLayout.oil, traditional:Boolean=false, brass:Boolean=false, oilWick:TemplePoint?=null, oilWicks:List<TemplePoint> = emptyList()) {
+fun RitualFlamesOverlay(
+    oilLit: Boolean,
+    aartiLit: Boolean,
+    lamp: TemplePoint,
+    oilPoint: TemplePoint = TempleSceneLayout.oil,
+    traditional: Boolean = false,
+    brass: Boolean = false,
+    oilWick: TemplePoint? = null,
+    oilWicks: List<TemplePoint> = emptyList(),
+    aartiWicks: List<TemplePoint> = emptyList(),
+    incenseEmbers: List<TemplePoint> = emptyList()
+) {
     if(!oilLit && !aartiLit) return
     var seconds by remember { mutableFloatStateOf(0f) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -31,10 +42,10 @@ fun RitualFlamesOverlay(oilLit: Boolean, aartiLit: Boolean, lamp: TemplePoint, o
     }
     Canvas(Modifier.fillMaxSize()) {
         val viewport=TempleViewport(size.width,size.height)
+        val unit=viewport.imageWidth
         fun flame(point: TemplePoint, phase: Float, scale: Float = 1f, flicker: Float = 1f) {
             val pixel=viewport.pixel(point)
             val base=Offset(pixel.x,pixel.y)
-            val unit=viewport.imageWidth
             val t=seconds+phase
             val height=unit*.047f*scale*(1f+flicker*(.06f*sin(t*11f)+.025f*sin(t*23f)))
             val width=unit*.008f*scale
@@ -52,20 +63,74 @@ fun RitualFlamesOverlay(oilLit: Boolean, aartiLit: Boolean, lamp: TemplePoint, o
             drawOval(Color(0xAA689AF0),base-Offset(width*.35f,height*.10f),androidx.compose.ui.geometry.Size(width*.7f,height*.12f))
             drawLine(Color(0xFF482819),base+Offset(0f,unit*.004f),base-Offset(0f,unit*.004f),unit*.0025f,StrokeCap.Round)
         }
+        fun incenseSmoke(point: TemplePoint, index: Int, isCone: Boolean) {
+            val pixel = viewport.pixel(point)
+            val base = Offset(pixel.x, pixel.y)
+            val t = seconds * 1.55f + index * 1.13f
+            val pulse = .82f + .18f * sin(seconds * 4.2f + index * .9f)
+            val emberRadius = unit * (if (isCone) .011f else .0065f) * pulse
+            drawCircle(
+                Brush.radialGradient(
+                    listOf(Color(0xCCFFD54F), Color(0x88FF5722), Color.Transparent),
+                    base,
+                    emberRadius * 2.1f
+                ),
+                radius = emberRadius * 2.1f,
+                center = base
+            )
+            val plumeHeight = unit * (if (isCone) .145f else .115f)
+            val sway1 = unit * .014f * sin(t)
+            val sway2 = unit * .022f * sin(t * .85f - 1.2f)
+            val topDrift = unit * .018f * sin(t * .65f + .7f)
+            val wisp = Path().apply {
+                moveTo(base.x, base.y - unit * .003f)
+                cubicTo(
+                    base.x + sway1, base.y - plumeHeight * .33f,
+                    base.x - sway2, base.y - plumeHeight * .68f,
+                    base.x + topDrift, base.y - plumeHeight
+                )
+            }
+            drawPath(
+                path = wisp,
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color.Transparent,
+                        Color(0x26FFF8E7),
+                        Color(0x44E8DFD5),
+                        Color(0x18D7CCC8)
+                    ),
+                    startY = base.y - plumeHeight,
+                    endY = base.y
+                ),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(
+                    width = unit * (if (isCone) .011f else .0065f),
+                    cap = StrokeCap.Round
+                )
+            )
+        }
         if(oilLit) {
             if(oilWicks.size > 1) {
                 oilWicks.forEachIndexed { index, wickPoint ->
-                    val spoutScale = if(index == 1 || index == 3) .82f else .92f
+                    val spoutScale = if(index == 1 || index == 2) .82f else .92f
                     flame(wickPoint, index * .67f, scale = spoutScale, flicker = .55f)
                 }
             } else {
                 val singleWick = oilWicks.firstOrNull() ?: oilWick ?: TemplePoint(oilPoint.x, oilPoint.y - (if(brass) .125f else .11f))
                 flame(singleWick, 0f, scale = 1.08f)
             }
+            incenseEmbers.forEachIndexed { index, emberPoint ->
+                val isCone = incenseEmbers.size == 1 || (incenseEmbers.size > 1 && index == incenseEmbers.lastIndex && incenseEmbers.size != 5)
+                incenseSmoke(emberPoint, index, isCone = isCone)
+            }
         }
         if(aartiLit || oilLit) {
             val aartiScale = if(aartiLit) TempleSceneLayout.AARTI_SCALE else TempleSceneLayout.AARTI_SCALE * .85f
-            if(traditional) {
+            if(aartiWicks.isNotEmpty()) {
+                aartiWicks.forEachIndexed { index, wickPoint ->
+                    val wickScale = if (aartiWicks.size == 1) aartiScale else .58f * aartiScale
+                    flame(wickPoint, 1.71f + index * .7f, scale = wickScale, flicker = .25f)
+                }
+            } else if(traditional) {
                 listOf(
                     TemplePoint(-.037f, -.056f),
                     TemplePoint(-.018f, -.038f),

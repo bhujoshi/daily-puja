@@ -23,11 +23,18 @@ class ShrineSelectionTest {
         assertEquals(listOf("rose"),ShrineSelection(mapOf("flowers" to "rose")).flowerIds)
     }
     @Test fun effectsAndOfferingsFollowEveryIdolAndAltar() {
-        for(shrine in listOf("original","marble","ivory","carved")) {
-            for(idol in listOf("original","ganesh_hanuman","shiva","lakshmi","durga","ram_darbar")) {
+        val shrines=listOf("original","marble","ivory","carved","swarna")
+        for(shrine in shrines) {
+            for(idol in listOf("original","ganesh_hanuman","radha_krishna","shiva","lakshmi","durga","ram_darbar","hanuman")) {
                 val selection=ShrineSelection(mapOf("shrine" to shrine,"idols" to idol))
+                val baseline=IdolPlacement(ShrineSelection(mapOf("shrine" to "marble","idols" to idol)))
                 val placement=IdolPlacement(selection)
                 assertEquals(selection.deityCount,placement.heads.size)
+                assertEquals(baseline.left,placement.left,.0001f)
+                assertEquals(baseline.top,placement.top,.0001f)
+                assertEquals(baseline.width,placement.width,.0001f)
+                assertEquals(baseline.height,placement.height,.0001f)
+                assertEquals(baseline.space.lamp,placement.space.lamp)
                 assertEquals(TempleSceneLayout.aartiRest,placement.aartiPosition(0f))
                 assertEquals(TempleSceneLayout.aartiRest,placement.aartiPosition(1f))
                 assertEquals(TempleSceneLayout.prasadRest,placement.prasadPosition(0f))
@@ -35,6 +42,15 @@ class ShrineSelectionTest {
                 assertEquals(placement.space.lamp.y,placement.prasadFloor.y,.0001f)
                 assertEquals(.50f,placement.prasadFloor.x,.0001f)
                 assertTrue(placement.prasadFloor.y>placement.space.floorY)
+                assertTrue(TempleSceneLayout.incense.y>placement.space.floorY)
+                assertTrue(TempleSceneLayout.incense.x<placement.left || TempleSceneLayout.incense.y>placement.bottom)
+                // Algorithmic constraint: every idol's crown stays below the upper arch hanging bells
+                assertTrue("Idol top (${placement.top}) must be >= bellCeilingY (${placement.space.bellCeilingY}) for $shrine/$idol",
+                    placement.top >= placement.space.bellCeilingY - .0001f)
+                // Algorithmic constraint: Bell and Incense stand never overlap horizontally
+                val bellRight = TempleSceneLayout.bell.x + TempleSceneLayout.BELL_DISPLAY_WIDTH / 2f
+                val incenseLeft = placement.space.incense.x - TempleSceneLayout.INCENSE_WIDTH / 2f
+                assertTrue("Bell right ($bellRight) must be < Incense left ($incenseLeft)", bellRight < incenseLeft)
                 placement.heads.forEachIndexed {i,head ->
                     assertTrue(head.x in placement.left..(placement.left+placement.width))
                     assertTrue(head.y in placement.top..placement.bottom)

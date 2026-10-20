@@ -40,7 +40,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.window.Popup
 import com.worship.nityamandir.engine.*
 import com.worship.nityamandir.ui.components.*
 import kotlinx.coroutines.delay
@@ -303,7 +302,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                 }
             })
             // Show the ritual dock only after the entrance has fully opened.
-            if(entered && !curtainMoving && !musicSheet && !devotionSheet && !customizer) Popup(alignment=Alignment.BottomCenter) { RitualGlassPanel(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)).padding(horizontal=14.dp,vertical=10.dp)
+            if(entered && !curtainMoving && !musicSheet && !devotionSheet && !customizer) Box(Modifier.align(Alignment.BottomCenter)) { RitualGlassPanel(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)).padding(horizontal=14.dp,vertical=10.dp)
                 .fillMaxWidth().heightIn(max=270.dp).verticalScroll(rememberScrollState()).testTag("ritual-dock"),sceneSize,sceneOrigin,backgroundPath="shrine/backgrounds/${selection["shrine"]}.png") {
                 val buttonColors=ButtonDefaults.buttonColors(containerColor=RitualInk,contentColor=cream,disabledContainerColor=Color(0xCFE2D9CF),disabledContentColor=Color(0xFF81766C))
                 if(aging.needsCleaning) {
@@ -341,7 +340,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
         // Global options stay outside the ritual dock, so a single action needs only one row.
         if(entered && curtain.value >= 1f && !menu && !musicSheet && !devotionSheet && !customizer && !curtainMoving) {
             val hasMusic=bhajan.current!=null || bhajan.loading
-            Popup(alignment=if(hasMusic) Alignment.TopCenter else Alignment.TopEnd) {
+            Box(Modifier.align(if(hasMusic) Alignment.TopCenter else Alignment.TopEnd)) {
                 Row((if(hasMusic) Modifier.fillMaxWidth() else Modifier).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)).padding(horizontal=14.dp,vertical=8.dp),
                     horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.Top) {
                     if(hasMusic) {

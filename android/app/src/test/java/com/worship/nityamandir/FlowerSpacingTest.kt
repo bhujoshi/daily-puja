@@ -36,7 +36,7 @@ class FlowerSpacingTest {
         assertTrue(TempleSceneLayout.ACTIVE_RITUAL_DEPTH > TempleSceneLayout.FLOWER_FLIGHT_DEPTH)
 
         for(shrine in listOf("original","marble","ivory","carved")) {
-            for(idol in listOf("original","ganesh_hanuman","shiva","lakshmi","durga","ram_darbar")) {
+            for(idol in listOf("original","ganesh_hanuman","radha_krishna","shiva","lakshmi","durga","ram_darbar","hanuman")) {
                 val selection=ShrineSelection(mapOf("shrine" to shrine,"idols" to idol))
                 val placement=IdolPlacement(selection)
                 val offered=(0 until selection.deityCount).flatMap { deity ->
@@ -51,7 +51,7 @@ class FlowerSpacingTest {
     }
     @Test fun offeredBoundsRemainSeparateAcrossLayoutsAndSlotReuse() {
         for(shrine in listOf("original","marble","ivory","carved")) {
-            for(idol in listOf("original","ganesh_hanuman","shiva","lakshmi","durga","ram_darbar")) {
+            for(idol in listOf("original","ganesh_hanuman","radha_krishna","shiva","lakshmi","durga","ram_darbar","hanuman")) {
                 val selection=ShrineSelection(mapOf("shrine" to shrine,"idols" to idol))
                 val placement=IdolPlacement(selection)
                 for(start in 0..20) {

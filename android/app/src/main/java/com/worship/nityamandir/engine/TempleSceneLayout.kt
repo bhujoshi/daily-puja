@@ -26,8 +26,15 @@ object TempleSceneLayout {
     const val AARTI_WIDTH = .15f * AARTI_SCALE
     const val AARTI_HEIGHT = .135f * AARTI_SCALE
     val oil = TemplePoint(.505f,.665f)
+    val incense = TemplePoint(.325f,.875f)
+    const val INCENSE_WIDTH = .096f
+    const val BELL_DISPLAY_WIDTH = .090f
+    const val STANDING_LAMP_WIDTH = .098f
     val plate = TemplePoint(.50f,1.14f)
     val conch = TemplePoint(.625f,1.125f)
+    val conchVisual = TemplePoint(.633f,1.147f)
+    const val CONCH_DISPLAY_WIDTH = .132f
+    const val CONCH_STAND_WIDTH = .130f
     const val CONCH_SCALE = 1.15f
     const val CONCH_SIZE = .26f * CONCH_SCALE
     const val CONCH_WIDTH = .16f * CONCH_SCALE
@@ -53,25 +60,26 @@ object TempleSceneLayout {
     val aartiRest = TemplePoint(.765f,1.01f)
     fun feet(deity: Int, petal: Int = 0) = TemplePoint((if(deity==0) .405f else .604f)+(petal-2f)*.015f,.689f)
     fun plateFlower(index: Int): TemplePoint {
-        // Lush floral crescent along the left and lower-left rim of the brass Puja Thali:
+        // Non-overlapping floral crescent along the lower-left betel-leaf well of the Puja Thali,
+        // staying strictly below and left of the upper Roli & Chandan katoris (y >= 1.092f):
         // 0..8: vibrant orange & golden-yellow marigold cluster over the betel leaves
-        // 9: crowning crimson hibiscus at the bottom-left beside the laddu bowl
+        // 9: crowning crimson hibiscus at the bottom-left beside the prasad bowl
         val cx = plate.x
         val cy = plate.y
         return when (index) {
-            0 -> TemplePoint(cx - .138f, cy - .055f)
-            1 -> TemplePoint(cx - .175f, cy - .008f)
-            2 -> TemplePoint(cx - .092f, cy - .022f)
-            3 -> TemplePoint(cx - .135f, cy + .018f)
-            4 -> TemplePoint(cx - .168f, cy + .048f)
-            5 -> TemplePoint(cx - .096f, cy + .034f)
-            6 -> TemplePoint(cx - .126f, cy - .018f)
-            7 -> TemplePoint(cx - .112f, cy + .008f)
-            8 -> TemplePoint(cx - .085f, cy + .062f)
-            9 -> TemplePoint(cx - .128f, cy + .082f)
+            0 -> TemplePoint(cx - .162f, cy - .042f)
+            1 -> TemplePoint(cx - .180f, cy - .004f)
+            2 -> TemplePoint(cx - .125f, cy - .022f)
+            3 -> TemplePoint(cx - .148f, cy + .018f)
+            4 -> TemplePoint(cx - .172f, cy + .042f)
+            5 -> TemplePoint(cx - .112f, cy + .026f)
+            6 -> TemplePoint(cx - .142f, cy - .012f)
+            7 -> TemplePoint(cx - .126f, cy + .006f)
+            8 -> TemplePoint(cx - .102f, cy + .056f)
+            9 -> TemplePoint(cx - .122f, cy + .078f)
             else -> {
                 val ang = index * (2f * PI.toFloat() / FLOWER_COUNT)
-                TemplePoint(cx - .125f + .048f * cos(ang), cy + .018f + .038f * sin(ang))
+                TemplePoint(cx - .138f + .044f * cos(ang), cy + .016f + .036f * sin(ang))
             }
         }
     }

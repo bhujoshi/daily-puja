@@ -101,7 +101,7 @@ class BhajanPlayer(context: Context) {
     private val youtubeFeaturedTracks = listOf(
         Track(
             title = "Shree Hanuman Chalisa (Original Video)",
-            url = "https://archive.org/download/ShriHanumanChalisa_404/Shri-Hanuman-Chalisa.mp3#yt_hanuman_chalisa",
+            url = "https://www.youtube.com/watch?v=AETFvQonfV8",
             id = "yt_hanuman_chalisa",
             order = 1,
             collection = "hanuman",
@@ -115,7 +115,7 @@ class BhajanPlayer(context: Context) {
         ),
         Track(
             title = "Shiv Tandav Stotram (Har Har Shiv Shankar)",
-            url = "https://archive.org/download/ShivBhajansAndDhuns/115%20Shiva%20Tandava%20Stotram.mp3#yt_shiv_tandav",
+            url = "https://www.youtube.com/watch?v=hMBKmQEPNzI",
             id = "yt_shiv_tandav",
             order = 2,
             collection = "shiva",
@@ -129,7 +129,7 @@ class BhajanPlayer(context: Context) {
         ),
         Track(
             title = "Sukh Karta Dukh Harta (Ganpati Aarti)",
-            url = "https://archive.org/download/HindiBhajans-HemantChauhanMp3/Ganpati%20-%20Aarti%20-%20Sukh%20Karta%20Dukh%20Harta.mp3#yt_sukh_karta",
+            url = "https://www.youtube.com/watch?v=87Y-OH_mJxM",
             id = "yt_sukh_karta",
             order = 3,
             collection = "ganesh",
@@ -142,7 +142,7 @@ class BhajanPlayer(context: Context) {
         ),
         Track(
             title = "Ambe Tu Hai Jagdambe Kali (Maa Durga Aarti)",
-            url = "https://archive.org/download/MataKeBhajan/26%20-Ambey%20Tu%20Hai%20Jagdambey%20Kali.mp3#yt_ambe_tu_hai",
+            url = "https://www.youtube.com/watch?v=gFD46BhorTk",
             id = "yt_ambe_tu_hai",
             order = 4,
             collection = "durga",
@@ -156,7 +156,7 @@ class BhajanPlayer(context: Context) {
         ),
         Track(
             title = "Raam Aayenge To Angana Sajaungi",
-            url = "https://archive.org/download/ganesh-ji-ki-aarti-sukh-karta-dukh-harta-bhajanindia-mp-3-160-k/Raam%20Aayenge%20__%20Swati%20Mishra%20Bhajan%28MP3_160K%29.mp3#yt_raam_aayenge",
+            url = "https://www.youtube.com/watch?v=3TylP-ux8W0",
             id = "yt_raam_aayenge",
             order = 5,
             collection = "mixed",
@@ -170,7 +170,7 @@ class BhajanPlayer(context: Context) {
         ),
         Track(
             title = "Mere Banke Bihari Laal (Vrindavan Bhajan)",
-            url = "https://archive.org/download/BestKrishnaBhajan1-151/Mere%20Banke%20Bihari%20Lala.mp3#yt_banke_bihari",
+            url = "https://www.youtube.com/watch?v=L1s4jaR0TpM",
             id = "yt_banke_bihari",
             order = 6,
             collection = "mixed",
@@ -184,7 +184,7 @@ class BhajanPlayer(context: Context) {
         ),
         Track(
             title = "Sankat Mochan Naam Tiharo (Hanuman Ashtak)",
-            url = "https://archive.org/download/sankat-mochan-hanuman-ashtak-hariharan-hindi-english-lyrics-hanuman-chalisa/%E0%A4%B8%E0%A4%95%E0%A4%9F%E0%A4%AE%E0%A4%9A%E0%A4%A8%20%E0%A4%B9%E0%A4%A8%E0%A4%AE%E0%A4%A8%20%E0%A4%85%E0%A4%B7%E0%A4%9F%E0%A4%95%2C%20Sankat%20Mochan%20Hanuman%20Ashtak%2CHARIHARAN%2CHindi%2C%20English%20Lyrics%2C%20Hanuman%20Chalisa.mp3#yt_sankat_mochan",
+            url = "https://www.youtube.com/watch?v=HH_a6aRO1TE",
             id = "yt_sankat_mochan",
             order = 7,
             collection = "hanuman",
@@ -198,7 +198,7 @@ class BhajanPlayer(context: Context) {
         ),
         Track(
             title = "Mera Bhola Hai Bhandari (Har Har Mahadev)",
-            url = "https://archive.org/download/mera-bhola-hai-bhandari-pagal-world.com.se/Mera%20Bhola%20Hai%20Bhandari%28PagalWorld.com.se%29.mp3#yt_bhola_bhandari",
+            url = "https://www.youtube.com/watch?v=gaJR15qWTDA",
             id = "yt_bhola_bhandari",
             order = 8,
             collection = "shiva",
@@ -212,7 +212,7 @@ class BhajanPlayer(context: Context) {
         ),
         Track(
             title = "Ganpati Bappa Morya (Siddhivinayak Vandana)",
-            url = "https://archive.org/download/Bhajans_101/NB2%2F384_Ganpati%20Bappa%20Morya%20Hail%20to%20Lord%20Ganesha%20Ganesha%20Chaturthi%20Special%204K%20Video%20DJJS%20Bhajan%20%28128%20kbps%29.mp3#yt_ganpati_morya",
+            url = "https://www.youtube.com/watch?v=WtOv9lhfVnw",
             id = "yt_ganpati_morya",
             order = 9,
             collection = "ganesh",
@@ -226,7 +226,7 @@ class BhajanPlayer(context: Context) {
         ),
         Track(
             title = "Shriman Narayan Narayan Hari Hari",
-            url = "https://archive.org/download/20260130_20260130_1448/Shriman%20Narayan%20Hari%20Hari-Narayan%20Dhun%20by%20Anuradha%20Paudwal.mp3#yt_shriman_narayan",
+            url = "https://www.youtube.com/watch?v=xU5uRpl8nzA",
             id = "yt_shriman_narayan",
             order = 10,
             collection = "mixed",
@@ -239,7 +239,7 @@ class BhajanPlayer(context: Context) {
         ),
         Track(
             title = "Durga Chalisa (Namo Namo Durge Sukh Karani)",
-            url = "https://archive.org/download/DurgaChalisa_201709/Durga%20Chalisa.mp3#yt_durga_chalisa",
+            url = "https://www.youtube.com/watch?v=WnDOYHRbZ00",
             id = "yt_durga_chalisa",
             order = 11,
             collection = "durga",
@@ -253,7 +253,7 @@ class BhajanPlayer(context: Context) {
         ),
         Track(
             title = "Shyama Aan Baso Vrindavan Mein",
-            url = "https://archive.org/download/HindiBhajans-collection/ShyamAanBasoVrindavanMein.mp3#yt_shyama_aan_baso",
+            url = "https://www.youtube.com/watch?v=HfHkBEjofqk",
             id = "yt_shyama_aan_baso",
             order = 12,
             collection = "mixed",
@@ -276,9 +276,7 @@ class BhajanPlayer(context: Context) {
     }
 
     var catalog by mutableStateOf<List<Track>>(
-        runCatching {
-            app.assets.open("shrine/music_catalog.json").bufferedReader().use { parseCatalog(it.readText()) }
-        }.getOrElse { listOf(ganeshAarti) + youtubeFeaturedTracks }
+        listOf(ganeshAarti) + youtubeFeaturedTracks
     ); private set
     var catalogLoading by mutableStateOf(false); private set
     var catalogError by mutableStateOf(false); private set
@@ -300,6 +298,8 @@ class BhajanPlayer(context: Context) {
     var relatedYoutubeTracks by mutableStateOf<List<Track>>(emptyList()); private set
     var youtubeSuggestions by mutableStateOf<List<String>>(emptyList()); private set
     var youtubeSearching by mutableStateOf(false); private set
+    var recommendationSeed by mutableIntStateOf(0); private set
+    var recentHistoryIds by mutableStateOf<Set<String>>(emptySet()); private set
     private val playHistory = mutableListOf<Track>()
     private var youtubeSearchJob: Job? = null
     private var relatedYoutubeJob: Job? = null
@@ -323,7 +323,8 @@ class BhajanPlayer(context: Context) {
         }
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             cancelPrefetch()
-            val previousId = current?.id
+            val previousTrack = current
+            val previousId = previousTrack?.id
             val matched = tracks.firstOrNull { it.id == mediaItem?.mediaId }
                 ?: catalog.firstOrNull { it.id == mediaItem?.mediaId }
             if (matched != null) {
@@ -349,23 +350,38 @@ class BhajanPlayer(context: Context) {
             }
             position = 0; failed = false; firstFrameReported = false
             requestedAt = SystemClock.elapsedRealtime()
-            player?.volume = 10.0.pow((current?.volumeGainDb ?: 0f).coerceIn(-12f, 0f) / 20.0).toFloat()
+            val gainDb = (current?.volumeGainDb ?: 0f).takeIf { it.isFinite() }?.coerceIn(-12f, 0f) ?: 0f
+            val vol = 10.0.pow(gainDb / 20.0).toFloat()
+            if (vol.isFinite()) {
+                player?.volume = vol.coerceIn(0f, 1f)
+            }
             val active = current
             if (active != null && active.id != previousId) {
+                if (previousTrack != null && playHistory.lastOrNull()?.id != previousTrack.id) {
+                    playHistory.add(previousTrack)
+                    if (playHistory.size > 30) playHistory.removeAt(0)
+                }
+                recentHistoryIds = (playHistory.map { it.id } + active.id).toSet()
+                recommendationSeed += 1
+                relatedYoutubeTracks = emptyList()
                 fetchRelatedYoutubeForTrack(active)
+                preResolveUpcomingTracks(active)
             }
         }
         override fun onPlayerError(error: PlaybackException) {
             Log.w("BhajanPlayback", "track=${current?.id} error=${error.errorCodeName}")
             loading = false; playing = false; failed = true
-            current?.let { failedIDs.add(it.id) }
-            // Bound recovery to one pass through the queue; never loop on broken sources.
-            if (failedIDs.size < tracks.size && player?.playWhenReady == true) {
-                val native = player ?: return
-                val next = (1..tracks.size).map { (native.currentMediaItemIndex + it) % tracks.size }
-                    .firstOrNull { tracks[it].id !in failedIDs } ?: return
+            current?.let {
+                failedIDs.add(it.id)
+                resolvedStreamCache.remove(it.id)
+            }
+            // Bound recovery to a few attempts; resolve next YouTube track cleanly before seeking.
+            if (failedIDs.size < 4 && player?.playWhenReady == true) {
+                val nextCandidate = tracks.drop(1).firstOrNull { it.id !in failedIDs }
+                    ?: catalog.firstOrNull { it.id != "jai_ganesh_deva" && it.id !in failedIDs }
+                    ?: return
                 notice = "Skipped an unavailable recording"
-                native.seekTo(next, 0); native.prepare()
+                playCatalog(selected = nextCandidate, autoplay = true, preferYoutube = true, recordHistory = false)
             }
         }
     }
@@ -445,28 +461,22 @@ class BhajanPlayer(context: Context) {
         catalogJob = scope.launch {
             catalogLoading = catalog.isEmpty(); catalogError = false
             try {
-                withContext(Dispatchers.IO) { runCatching { parseCatalog(catalogFile.readText()) }.getOrNull() }
-                    ?.let { catalog = it; catalogLoading = false }
-                val refreshed = withContext(Dispatchers.IO) {
-                    require(base.isNotBlank())
-                    val reqBuilder = Request.Builder().url("$base/api/v2/music")
-                    if (catalogFile.exists()) {
-                        preferences.getString("etag-$base", null)?.let { reqBuilder.header("If-None-Match", it) }
-                    }
-                    catalogHttpClient.newCall(reqBuilder.build()).execute().use { response ->
-                        if (response.code == 304) return@withContext null
-                        check(response.code == 200)
-                        val json = response.body?.string().orEmpty()
-                        val result = parseCatalog(json)
-                        val temp = File(catalogFile.path + ".tmp")
-                        temp.writeText(json)
-                        check(temp.renameTo(catalogFile))
-                        preferences.edit().putString("etag-$base", response.header("ETag")).apply()
-                        result
+                val bundled = withContext(Dispatchers.IO) {
+                    runCatching {
+                        app.assets.open("shrine/music_catalog.json").bufferedReader().use { parseCatalog(it.readText()) }
+                    }.getOrNull()
+                }
+                if (!bundled.isNullOrEmpty()) {
+                    catalog = bundled
+                }
+                catalogFetched = true
+                // Pre-resolve the first featured YouTube track in the background so initial tap starts instantly.
+                val firstYoutube = catalog.firstOrNull { it.isYoutubeOnly && it.needsStreamResolution }
+                if (firstYoutube != null && !resolvedStreamCache.containsKey(firstYoutube.id)) {
+                    withContext(Dispatchers.IO) {
+                        runCatching { resolveDirectPlayableUrl(firstYoutube) }
                     }
                 }
-                refreshed?.let { catalog = it }
-                catalogFetched = true
             } catch (e: CancellationException) { throw e }
             catch (_: Exception) { catalogError = catalog.isEmpty() }
             finally { catalogLoading = false }
@@ -477,10 +487,19 @@ class BhajanPlayer(context: Context) {
         val rows = JSONObject(json).getJSONArray("tracks")
         return List(rows.length()) { i ->
             rows.getJSONObject(i).let {
+                val id = it.getString("id")
+                val ytId = it.optString("youtubeId")
+                val isDefaultAarti = id == "jai_ganesh_deva"
+                val rawAudioUrl = it.getString("audioUrl")
+                val effectiveUrl = if (!isDefaultAarti && ytId.isNotBlank()) {
+                    "https://www.youtube.com/watch?v=$ytId"
+                } else {
+                    rawAudioUrl
+                }
                 Track(
                     title = it.getString("title"),
-                    url = it.getString("audioUrl"),
-                    id = it.getString("id"),
+                    url = effectiveUrl,
+                    id = id,
                     order = it.getInt("order"),
                     collection = it.getString("collection"),
                     deity = it.getString("deity"),
@@ -489,8 +508,8 @@ class BhajanPlayer(context: Context) {
                     bitrateKbps = it.optInt("bitrateKbps"),
                     durationSeconds = it.optLong("durationSeconds"),
                     volumeGainDb = it.optDouble("volumeGainDb", 0.0).toFloat(),
-                    youtubeId = it.optString("youtubeId"),
-                    isYoutube = false
+                    youtubeId = ytId,
+                    isYoutube = !isDefaultAarti
                 )
             }
         }
@@ -498,19 +517,29 @@ class BhajanPlayer(context: Context) {
 
     private fun parseCatalog(json: String): List<Track> {
         val parsed = parseRawTracks(json).map { remote ->
-            val fallback = bundledById[remote.id]
-            val verifiedYoutubeId = fallback?.youtubeId?.takeIf { it.isNotBlank() } ?: remote.youtubeId
-            val verifiedThumbnail = fallback?.thumbnail?.takeIf { it.startsWith("https://") }
-                ?: if (remote.thumbnail.startsWith("https://")) remote.thumbnail else fallback?.thumbnail ?: remote.thumbnail
-            remote.copy(
-                thumbnail = verifiedThumbnail,
-                artist = remote.artist.takeIf { it.isNotBlank() && !it.contains("RiskyjaTT", true) && !it.contains("PagalWorld", true) }
-                    ?: fallback?.artist ?: remote.artist,
-                youtubeId = verifiedYoutubeId,
-                isYoutube = false
-            )
+            if (remote.id == "jai_ganesh_deva") {
+                ganeshAarti
+            } else {
+                val fallback = bundledById[remote.id]
+                val verifiedYoutubeId = fallback?.youtubeId?.takeIf { it.isNotBlank() } ?: remote.youtubeId
+                val verifiedThumbnail = fallback?.thumbnail?.takeIf { it.startsWith("https://") }
+                    ?: if (remote.thumbnail.startsWith("https://")) remote.thumbnail else fallback?.thumbnail ?: remote.thumbnail
+                val ytUrl = if (verifiedYoutubeId.isNotBlank()) {
+                    "https://www.youtube.com/watch?v=$verifiedYoutubeId"
+                } else {
+                    remote.url
+                }
+                remote.copy(
+                    url = ytUrl,
+                    thumbnail = verifiedThumbnail,
+                    artist = remote.artist.takeIf { it.isNotBlank() && !it.contains("RiskyjaTT", true) && !it.contains("PagalWorld", true) }
+                        ?: fallback?.artist ?: remote.artist,
+                    youtubeId = verifiedYoutubeId,
+                    isYoutube = true
+                )
+            }
         }
-        return (listOf(ganeshAarti) + parsed + youtubeFeaturedTracks)
+        return (listOf(ganeshAarti) + youtubeFeaturedTracks + parsed)
             .distinctBy { it.id }
             .filter { it.url.startsWith("https://") || BuildConfig.DEBUG && it.url.startsWith("http://") }
     }
@@ -519,6 +548,7 @@ class BhajanPlayer(context: Context) {
         youtubeSearchJob?.cancel()
         youtubeSuggestJob?.cancel()
         youtubeSearching = false
+        activeYoutubeQuery = ""
         youtubeSearchResults = emptyList()
         youtubeSuggestions = emptyList()
     }
@@ -560,6 +590,12 @@ class BhajanPlayer(context: Context) {
             clearYoutubeSearch()
             return
         }
+        if (!activeYoutubeQuery.equals(clean, ignoreCase = true)) {
+            youtubeSearchResults = emptyList()
+            activeYoutubeQuery = clean
+        } else if (youtubeSearchJob?.isActive == true && !autoplayFirst) {
+            return
+        }
         youtubeSearchJob?.cancel()
         youtubeSearching = true
         youtubeSearchJob = scope.launch {
@@ -597,16 +633,66 @@ class BhajanPlayer(context: Context) {
     /** Fetches related YouTube bhajans in the background whenever a song or next song is played. */
     private fun fetchRelatedYoutubeForTrack(track: Track) {
         relatedYoutubeJob?.cancel()
+        val seedSnapshot = recommendationSeed
         relatedYoutubeJob = scope.launch {
             val cleanArtist = track.artist.substringBefore("•").trim()
-            val relatedQuery = "${track.deity} ${track.title.take(28)} $cleanArtist bhajan".trim()
+            val deityQueries = when (track.deity.lowercase()) {
+                "hanuman" -> listOf(
+                    "hanuman bhajan aarti ashtak",
+                    "bajrang bali bhajan kirtan",
+                    "sankat mochan hanuman bhakti song",
+                    "shri ram hanuman bhajan"
+                )
+                "shiva" -> listOf(
+                    "shiv bhajan mahadev aarti",
+                    "bholenath bhajan stotram",
+                    "om namah shivay dhun bhajan",
+                    "har har mahadev bhakti song"
+                )
+                "ganesh" -> listOf(
+                    "ganesh bhajan aarti vandana",
+                    "ganpati bappa morya bhajan",
+                    "siddhivinayak ganesh mantra bhajan",
+                    "shri ganesh ji ke bhajan"
+                )
+                "durga" -> listOf(
+                    "mata rani bhajan navratri aarti",
+                    "maa durga bhajan ambe bhente",
+                    "sherawali mata bhajan",
+                    "vaishno devi mata bhajan"
+                )
+                "rama", "ram" -> listOf(
+                    "shri ram bhajan ayodhya aarti",
+                    "siya ram bhajan kirtan",
+                    "ramchandra kripalu bhajan",
+                    "raghupati raghav ram bhajan"
+                )
+                "krishna" -> listOf(
+                    "krishna bhajan vrindavan banke bihari",
+                    "radhe krishna bhajan kirtan",
+                    "shyam bhajan khatu shyam",
+                    "achyutam keshavam krishna bhajan"
+                )
+                "lakshmi", "vishnu" -> listOf(
+                    "lakshmi narayan bhajan aarti",
+                    "vishnu bhajan om jai jagdish",
+                    "mahalakshmi mantra bhajan",
+                    "shriman narayan bhajan"
+                )
+                else -> listOf(
+                    "$cleanArtist devotional bhajan",
+                    "popular hindi bhajan aarti",
+                    "morning bhakti bhajan"
+                )
+            }
+            val relatedQuery = deityQueries[(seedSnapshot and 0x7FFFFFFF) % deityQueries.size].trim()
             val results = withTimeoutOrNull(6_000L) {
                 withContext(Dispatchers.IO) {
                     runCatching { fetchYoutubeSearchTracks(relatedQuery) }.getOrDefault(emptyList())
                 }
             }.orEmpty()
             if (results.isNotEmpty()) {
-                val filtered = results.filter { it.id != track.id && (track.youtubeId.isBlank() || it.youtubeId != track.youtubeId) }
+                val filtered = BhajanSearch.deduplicateTracks(results, exclude = track)
                 if (filtered.isNotEmpty()) {
                     relatedYoutubeTracks = filtered
                 }
@@ -637,69 +723,99 @@ class BhajanPlayer(context: Context) {
     }
 
     /**
-     * Resolves any YouTube watch URL (`https://www.youtube.com/watch?v=...`) to a direct audio stream
-     * so that ExoPlayer in [BhajanPlaybackService] plays both YouTube and Pavitra Mandir tracks
-     * identically and posts every song to the Android Notification Bar.
+     * Resolves any YouTube watch URL (`https://www.youtube.com/watch?v=...`) to a direct YouTube audio stream
+     * so that ExoPlayer in [BhajanPlaybackService] plays YouTube tracks and posts every song to the
+     * Android Notification Bar. Only `jai_ganesh_deva` uses a direct non-YouTube MP3 URL (for default Aarti).
      */
     private fun resolveDirectPlayableUrl(track: Track): String {
         if (!track.needsStreamResolution) return track.url
         resolvedStreamCache[track.id]?.let { return it }
 
-        // 1. Check if our curated catalog has a verified audio stream for this exact youtubeId or title
-        val playableCatalog = catalog.filter { !it.needsStreamResolution && it.url.isNotBlank() }
-        val exactYoutubeMatch = playableCatalog.firstOrNull {
-            track.youtubeId.isNotBlank() && it.youtubeId == track.youtubeId
+        // 1. Resolve via YouTube Innertube player endpoint using the track's youtubeId
+        val videoId = track.youtubeId.ifBlank {
+            track.url.substringAfter("v=", "").substringBefore("&").trim()
         }
-        if (exactYoutubeMatch != null) {
-            val stream = "${exactYoutubeMatch.url.substringBefore('#')}#yt_${track.id}"
-            resolvedStreamCache[track.id] = stream
-            return stream
-        }
-
-        // 2. Try YouTube Innertube player endpoint for direct audio stream URL
-        if (track.youtubeId.isNotBlank()) {
-            val extracted = runCatching { fetchInnertubeDirectStreamUrl(track.youtubeId) }.getOrNull()
+        if (videoId.isNotBlank()) {
+            val extracted = runCatching { fetchInnertubeDirectStreamUrl(videoId) }.getOrNull()
             if (!extracted.isNullOrBlank()) {
                 resolvedStreamCache[track.id] = extracted
                 return extracted
             }
         }
 
-        // 3. Match by title/artist in playable catalog
-        val titleMatch = playableCatalog.firstOrNull {
-            BhajanSearch.matchesTrack(track.title, it.title, it.artist, it.deity, it.collection)
-        }
-        if (titleMatch != null) {
-            val stream = "${titleMatch.url.substringBefore('#')}#yt_${track.id}"
-            resolvedStreamCache[track.id] = stream
-            return stream
-        }
-
-        // 4. Query Internet Archive for a direct MP3 devotional recording matching the YouTube title
-        val archiveStream = runCatching { fetchArchiveDirectMp3Url(track.title, track.deity) }.getOrNull()
-        if (!archiveStream.isNullOrBlank()) {
-            resolvedStreamCache[track.id] = archiveStream
-            return archiveStream
+        // 2. If this specific videoId is restricted or unavailable, search YouTube for an alternate upload of the same bhajan
+        val alternates = runCatching { fetchYoutubeSearchTracks(track.youtubeSearchQuery) }.getOrDefault(emptyList())
+        for (alt in alternates.take(3)) {
+            if (alt.youtubeId.isNotBlank() && alt.youtubeId != videoId) {
+                val altStream = runCatching { fetchInnertubeDirectStreamUrl(alt.youtubeId) }.getOrNull()
+                if (!altStream.isNullOrBlank()) {
+                    resolvedStreamCache[track.id] = altStream
+                    return altStream
+                }
+            }
         }
 
-        // 5. Fallback to best matching deity recording so ExoPlayer playback & notification bar always succeed
-        val deityFallback = playableCatalog.firstOrNull { it.deity == track.deity }
-            ?: playableCatalog.firstOrNull()
-            ?: ganeshAarti
-        val fallbackUrl = "${deityFallback.url.substringBefore('#')}#yt_${track.id}"
-        resolvedStreamCache[track.id] = fallbackUrl
-        return fallbackUrl
+        // 3. Last resort: return any already-resolved YouTube stream from cache or resolve top featured YouTube track
+        resolvedStreamCache.values.firstOrNull()?.let { return it }
+        for (featured in youtubeFeaturedTracks.take(3)) {
+            val stream = runCatching { fetchInnertubeDirectStreamUrl(featured.youtubeId) }.getOrNull()
+            if (!stream.isNullOrBlank()) {
+                resolvedStreamCache[featured.id] = stream
+                return stream
+            }
+        }
+        return track.url
     }
 
     private fun fetchInnertubeDirectStreamUrl(videoId: String): String? {
+        if (videoId.isBlank()) return null
+
+        // Primary client: ANDROID_VR (fast, unthrottled direct audio/mp4 streams)
+        val vrClient = JSONObject()
+            .put("clientName", "ANDROID_VR")
+            .put("clientVersion", "1.56.21")
+            .put("androidSdkVersion", 34)
+            .put("hl", "en")
+            .put("gl", "IN")
+        callInnertubePlayer(
+            videoId = videoId,
+            clientJson = vrClient,
+            userAgent = "com.google.android.apps.youtube.vr.oculus/1.56.21 (Linux; U; Android 14; en_IN) gzip"
+        )?.let { return it }
+
+        // Fallback client 1: IOS
+        val iosClient = JSONObject()
+            .put("clientName", "IOS")
+            .put("clientVersion", "19.29.1")
+            .put("deviceMake", "Apple")
+            .put("deviceModel", "iPhone16,2")
+            .put("osName", "iPhone")
+            .put("osVersion", "17.5.1.21F90")
+            .put("hl", "en")
+            .put("gl", "IN")
+        callInnertubePlayer(
+            videoId = videoId,
+            clientJson = iosClient,
+            userAgent = "com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X;)"
+        )?.let { return it }
+
+        // Fallback client 2: ANDROID
+        val androidClient = JSONObject()
+            .put("clientName", "ANDROID")
+            .put("clientVersion", "19.09.37")
+            .put("androidSdkVersion", 30)
+            .put("hl", "en")
+            .put("gl", "IN")
+        return callInnertubePlayer(
+            videoId = videoId,
+            clientJson = androidClient,
+            userAgent = "com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip"
+        )
+    }
+
+    private fun callInnertubePlayer(videoId: String, clientJson: JSONObject, userAgent: String): String? {
         val bodyJson = JSONObject()
-            .put("context", JSONObject().put("client", JSONObject()
-                .put("clientName", "ANDROID_VR")
-                .put("clientVersion", "1.56.21")
-                .put("androidSdkVersion", 34)
-                .put("hl", "en")
-                .put("gl", "IN")
-            ))
+            .put("context", JSONObject().put("client", clientJson))
             .put("videoId", videoId)
             .put("contentCheckOk", true)
             .put("racyCheckOk", true)
@@ -707,41 +823,46 @@ class BhajanPlayer(context: Context) {
         val request = Request.Builder()
             .url("https://www.youtube.com/youtubei/v1/player?prettyPrint=false")
             .header("Content-Type", "application/json")
-            .header("User-Agent", "com.google.android.apps.youtube.vr.oculus/1.56.21 (Linux; U; Android 14; en_IN) gzip")
+            .header("User-Agent", userAgent)
             .post(bodyJson.toRequestBody("application/json; charset=utf-8".toMediaType()))
             .build()
-        return catalogHttpClient.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) null
-            else BhajanSearch.parseYoutubePlayerStreamUrl(response.body?.string().orEmpty())
-        }
+        return runCatching {
+            catalogHttpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) null
+                else BhajanSearch.parseYoutubePlayerStreamUrl(response.body?.string().orEmpty())
+            }
+        }.getOrNull()
     }
 
-    private fun fetchArchiveDirectMp3Url(title: String, deity: String): String? {
-        val q = BhajanSearch.query(title, deity)
-        val encoded = URLEncoder.encode(q, "UTF-8")
-        val searchUrl = "https://archive.org/advancedsearch.php?q=$encoded&fl[]=identifier&rows=3&output=json"
-        val identifier = catalogHttpClient.newCall(Request.Builder().url(searchUrl).build()).execute().use { resp ->
-            if (!resp.isSuccessful) return null
-            val docs = JSONObject(resp.body?.string().orEmpty())
-                .optJSONObject("response")
-                ?.optJSONArray("docs") ?: return null
-            if (docs.length() == 0) return null
-            docs.optJSONObject(0)?.optString("identifier")
-        }?.takeIf { it.isNotBlank() } ?: return null
-
-        val metaUrl = "https://archive.org/metadata/${URLEncoder.encode(identifier, "UTF-8")}"
-        return catalogHttpClient.newCall(Request.Builder().url(metaUrl).build()).execute().use { resp ->
-            if (!resp.isSuccessful) return null
-            val files = JSONObject(resp.body?.string().orEmpty()).optJSONArray("files") ?: return null
-            for (i in 0 until files.length()) {
-                val f = files.optJSONObject(i) ?: continue
-                val name = f.optString("name")
-                if (name.endsWith(".mp3", ignoreCase = true) && !f.optBoolean("private", false)) {
-                    val encodedName = URLEncoder.encode(name, "UTF-8").replace("+", "%20")
-                    return "https://archive.org/download/$identifier/$encodedName"
+    /**
+     * Pre-resolves the next 2 upcoming tracks in the background and appends them to [MediaController]
+     * so notification bar Next and automatic end-of-track transitions work with zero delay.
+     */
+    private fun preResolveUpcomingTracks(anchor: Track) {
+        val upcoming = tracks.drop(1).filter { it.id != anchor.id }.take(2)
+        if (upcoming.isEmpty()) return
+        scope.launch {
+            val native = runCatching { ready.await() }.getOrNull() ?: return@launch
+            for (nextItem in upcoming) {
+                if (!isActive || current?.id != anchor.id) break
+                val resolvedUrl = if (nextItem.needsStreamResolution) {
+                    resolvedStreamCache[nextItem.id] ?: withContext(Dispatchers.IO) {
+                        runCatching { resolveDirectPlayableUrl(nextItem) }.getOrNull()
+                    }
+                } else {
+                    nextItem.url
+                }
+                if (resolvedUrl.isNullOrBlank() || resolvedUrl.startsWith("https://www.youtube.com/")) continue
+                if (!isActive || current?.id != anchor.id) break
+                val resolvedTrack = nextItem.copy(url = resolvedUrl)
+                tracks = tracks.map { if (it.id == resolvedTrack.id) resolvedTrack else it }
+                val alreadyInPlayer = (0 until native.mediaItemCount).any { idx ->
+                    native.getMediaItemAt(idx).mediaId == resolvedTrack.id
+                }
+                if (!alreadyInPlayer) {
+                    native.addMediaItem(resolvedTrack.mediaItem())
                 }
             }
-            null
         }
     }
 
@@ -752,9 +873,9 @@ class BhajanPlayer(context: Context) {
     }
 
     /**
-     * Unified playback entry point for BOTH Pavitra Mandir tracks and YouTube tracks.
-     * Both play through [BhajanPlaybackService] (ExoPlayer + MediaSession), so both appear in the
-     * Android Notification Bar and behave identically in the player UI.
+     * Unified playback entry point for YouTube tracks (and `jai_ganesh_deva` when explicitly selected).
+     * Plays through [BhajanPlaybackService] (ExoPlayer + MediaSession), so every track appears in the
+     * Android Notification Bar and behaves identically in the player UI.
      */
     fun playCatalog(
         selected: Track? = null,
@@ -767,19 +888,23 @@ class BhajanPlayer(context: Context) {
             ?: catalog.firstOrNull()
             ?: return
 
-        if (recordHistory) {
-            current?.let { prev ->
-                if (prev.id != chosen.id && playHistory.lastOrNull()?.id != prev.id) {
-                    playHistory.add(prev)
-                    if (playHistory.size > 30) playHistory.removeAt(0)
-                }
+        val previous = current
+        if (recordHistory && previous != null && !BhajanSearch.isSameSong(previous, chosen)) {
+            if (playHistory.lastOrNull()?.id != previous.id) {
+                playHistory.add(previous)
+                if (playHistory.size > 30) playHistory.removeAt(0)
             }
         }
+        if (previous == null || !BhajanSearch.isSameSong(previous, chosen)) {
+            relatedYoutubeTracks = emptyList()
+        }
 
-        val isYt = preferYoutube || chosen.isYoutubeOnly || chosen.youtubeId.isNotBlank()
+        val isYt = chosen.id != "jai_ganesh_deva" && (preferYoutube || chosen.isYoutubeOnly || chosen.youtubeId.isNotBlank())
         val activeTrack = if (chosen.isYoutube != isYt) chosen.copy(isYoutube = isYt) else chosen
         youtubeMode = isYt
         activeYoutubeQuery = ""
+        recommendationSeed += 1
+        recentHistoryIds = (playHistory.map { it.id } + activeTrack.id).toSet()
 
         // Build a YouTube-first Up Next queue following the selected song
         val combinedYoutubePool = (youtubeSearchResults + relatedYoutubeTracks).distinctBy { it.id }
@@ -789,9 +914,11 @@ class BhajanPlayer(context: Context) {
             youtubeResults = combinedYoutubePool,
             searchQuery = "",
             categoryFilter = "all",
-            idol = idol
-        )
-        tracks = listOf(activeTrack) + relevantQueue.filter { it.id != activeTrack.id }
+            idol = idol,
+            playedTrackIds = recentHistoryIds,
+            rotationSeed = recommendationSeed
+        ).filterNot { BhajanSearch.isSameSong(it, activeTrack) }
+        tracks = listOf(activeTrack) + relevantQueue
         current = activeTrack
         title = activeTrack.title
         duration = activeTrack.durationSeconds * 1000L
@@ -802,25 +929,17 @@ class BhajanPlayer(context: Context) {
         fetchRelatedYoutubeForTrack(activeTrack)
 
         launchPlayback(autoplay) { native ->
-            val resolvedTracks = tracks.mapIndexed { idx, item ->
-                if ((idx == 0 || idx == 1) && item.needsStreamResolution) {
-                    val resolvedUrl = withContext(Dispatchers.IO) { resolveDirectPlayableUrl(item) }
-                    item.copy(url = resolvedUrl)
-                } else if (item.needsStreamResolution) {
-                    val cached = resolvedStreamCache[item.id]
-                    if (cached != null) item.copy(url = cached)
-                    else {
-                        val fallback = catalog.firstOrNull { !it.needsStreamResolution && it.deity == item.deity }
-                            ?: ganeshAarti
-                        item.copy(url = "${fallback.url.substringBefore('#')}#yt_${item.id}")
-                    }
-                } else {
-                    item
-                }
+            val resolvedFirst = if (activeTrack.needsStreamResolution) {
+                val url = resolvedStreamCache[activeTrack.id]
+                    ?: withContext(Dispatchers.IO) { resolveDirectPlayableUrl(activeTrack) }
+                activeTrack.copy(url = url)
+            } else {
+                activeTrack
             }
-            tracks = resolvedTracks
-            current = resolvedTracks.firstOrNull()
-            native.setMediaItems(resolvedTracks.map { it.mediaItem() }, 0, 0L)
+            tracks = listOf(resolvedFirst) + relevantQueue
+            current = resolvedFirst
+            native.setMediaItems(listOf(resolvedFirst.mediaItem()), 0, 0L)
+            preResolveUpcomingTracks(resolvedFirst)
         }
     }
 
@@ -859,15 +978,31 @@ class BhajanPlayer(context: Context) {
         }
     }
 
-    fun preload() { fetchCatalog() }
+    fun preload() {
+        fetchCatalog()
+        // Pre-warm the single ad-free default Aarti MP3 (`jai_ganesh_deva`) so puja completion starts with zero latency.
+        scope.launch(Dispatchers.IO) {
+            runCatching {
+                val source = cacheSource ?: BhajanAudioCache.source(app).also { cacheSource = it }
+                val spec = DataSpec.Builder()
+                    .setUri(ganeshAarti.url)
+                    .setKey(ganeshAarti.url)
+                    .setLength(512L * 1024)
+                    .build()
+                CacheWriter(source.createDataSource(), spec, null, null).cache()
+            }
+        }
+    }
 
     fun startAarti() {
-        // The ritual always starts the original Ganesh aarti, independently of
-        // catalog availability, the selected idol, and the music shuffle setting,
-        // and queues YouTube recommendations for Up Next playback.
-        youtubeMode = true
+        // The ritual always starts the single ad-free Ganesh aarti (`Jai Ganesh Jai Ganesh Deva`),
+        // so there are never any ads at puja completion, and queues YouTube tracks for Up Next.
+        youtubeMode = false
         activeYoutubeQuery = ""
-        val aarti = ganeshAarti.copy(isYoutube = true)
+        val aarti = ganeshAarti.copy(isYoutube = false)
+        recommendationSeed += 1
+        recentHistoryIds = (playHistory.map { it.id } + aarti.id).toSet()
+        relatedYoutubeTracks = emptyList()
         val combinedYoutubePool = (youtubeSearchResults + relatedYoutubeTracks).distinctBy { it.id }
         val upNext = BhajanSearch.youtubeFeedRecommendations(
             anchor = aarti,
@@ -875,21 +1010,26 @@ class BhajanPlayer(context: Context) {
             youtubeResults = combinedYoutubePool,
             searchQuery = "",
             categoryFilter = "all",
-            idol = idol
-        )
-        tracks = listOf(aarti) + upNext.filter { it.id != aarti.id && it.url != aarti.url }
+            idol = idol,
+            playedTrackIds = recentHistoryIds,
+            rotationSeed = recommendationSeed
+        ).filterNot { BhajanSearch.isSameSong(it, aarti) }
+        tracks = listOf(aarti) + upNext
         current = aarti
         title = aarti.title
+        duration = aarti.durationSeconds * 1000L
+        position = 0L
         failedIDs.clear(); notice = ""
         fetchRelatedYoutubeForTrack(aarti)
         launchPlayback(true) { native ->
-            native.setMediaItems(tracks.map { it.mediaItem() }, 0, 0L)
+            native.setMediaItems(listOf(aarti.mediaItem()), 0, 0L)
+            preResolveUpcomingTracks(aarti)
         }
     }
 
     fun load(track: Track, autoplay: Boolean = true) {
         if (track.url.isBlank()) return
-        playCatalog(track, autoplay = autoplay, preferYoutube = true)
+        playCatalog(track, autoplay = autoplay, preferYoutube = track.id != "jai_ganesh_deva")
     }
 
     fun toggle() {
@@ -916,6 +1056,7 @@ class BhajanPlayer(context: Context) {
         playing = false; loading = false; failed = false
         position = 0L; duration = 0L; notice = ""
         failedIDs.clear(); playHistory.clear()
+        recentHistoryIds = emptySet()
     }
 
     fun seek(ms: Long) {
@@ -937,20 +1078,23 @@ class BhajanPlayer(context: Context) {
      */
     fun skip(delta: Int) {
         failedIDs.clear(); notice = ""
+        val seedAnchor = current ?: catalog.firstOrNull { it.isYoutubeOnly } ?: catalog.firstOrNull()
         val combinedYoutubePool = (youtubeSearchResults + relatedYoutubeTracks).distinctBy { it.id }
         val upNext = BhajanSearch.youtubeFeedRecommendations(
-            anchor = current,
+            anchor = seedAnchor,
             catalog = catalog,
             youtubeResults = combinedYoutubePool,
             searchQuery = "",
             categoryFilter = "all",
-            idol = idol
-        )
+            idol = idol,
+            playedTrackIds = recentHistoryIds,
+            rotationSeed = recommendationSeed
+        ).filterNot { BhajanSearch.isSameSong(it, seedAnchor) }
 
         if (delta > 0) {
-            val nextTrack = upNext.firstOrNull { it.id != current?.id }
-                ?: tracks.drop(1).firstOrNull { it.id != current?.id }
-                ?: catalog.firstOrNull { it.id != current?.id }
+            val nextTrack = upNext.firstOrNull()
+                ?: tracks.drop(1).firstOrNull { !BhajanSearch.isSameSong(it, seedAnchor) }
+                ?: catalog.firstOrNull { it.id != "jai_ganesh_deva" && !BhajanSearch.isSameSong(it, seedAnchor) }
                 ?: return
             playCatalog(selected = nextTrack, autoplay = true, preferYoutube = true, recordHistory = true)
         } else if (delta < 0) {
@@ -959,13 +1103,15 @@ class BhajanPlayer(context: Context) {
                 return
             }
             val prevTrack = if (playHistory.isNotEmpty()) {
-                playHistory.removeAt(playHistory.lastIndex)
+                val popped = playHistory.removeAt(playHistory.lastIndex)
+                recentHistoryIds = playHistory.map { it.id }.toSet()
+                popped
             } else {
-                tracks.lastOrNull { it.id != current?.id }
+                tracks.lastOrNull { !BhajanSearch.isSameSong(it, seedAnchor) }
                     ?: upNext.lastOrNull()
-                    ?: catalog.lastOrNull()
+                    ?: catalog.lastOrNull { it.id != "jai_ganesh_deva" && !BhajanSearch.isSameSong(it, seedAnchor) }
             } ?: return
-            playCatalog(selected = prevTrack, autoplay = true, preferYoutube = true, recordHistory = false)
+            playCatalog(selected = prevTrack, autoplay = true, preferYoutube = prevTrack.id != "jai_ganesh_deva", recordHistory = false)
         }
     }
 
@@ -978,9 +1124,12 @@ class BhajanPlayer(context: Context) {
     private fun prefetchNext() {
         val source = cacheSource ?: return
         val native = player ?: return
-        if (tracks.size < 2 || repeat) return
-        val next = tracks[(native.currentMediaItemIndex + 1) % tracks.size]
-        if (next.needsStreamResolution) return
+        val itemCount = native.mediaItemCount
+        if (itemCount < 2 || repeat) return
+        val currentIdx = native.currentMediaItemIndex.takeIf { it in 0 until itemCount } ?: 0
+        val nextItem = native.getMediaItemAt((currentIdx + 1) % itemCount)
+        val nextUrl = nextItem.localConfiguration?.uri?.toString().orEmpty()
+        if (nextUrl.isBlank() || nextUrl.startsWith("https://www.youtube.com/") || nextUrl.startsWith("https://youtu.be/")) return
         cancelPrefetch()
         prefetchJob = scope.launch {
             delay(3_000) // Give current audio priority on slow connections.
@@ -995,7 +1144,7 @@ class BhajanPlayer(context: Context) {
             if (native.bufferedPosition - native.currentPosition < 10_000 &&
                 native.duration != C.TIME_UNSET && native.duration - native.currentPosition > 15_000) return@launch
             withContext(Dispatchers.IO) {
-                val spec = DataSpec.Builder().setUri(next.url).setKey(next.url).setLength(512L * 1024).build()
+                val spec = DataSpec.Builder().setUri(nextUrl).setKey(nextUrl).setLength(512L * 1024).build()
                 ensureActive()
                 val writer = CacheWriter(source.createDataSource(), spec, null, null)
                 prefetchWriter = writer

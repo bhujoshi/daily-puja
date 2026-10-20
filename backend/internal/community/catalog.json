@@ -8,14 +8,11 @@
   "coin_costs": {
     "shrine": 7,
     "garland": 4,
+    "incense": 3,
     "flowers": 2
   },
   "free_categories": [
-    "idols",
-    "lamp",
-    "shankh",
-    "aarti",
-    "prasad"
+    "idols"
   ],
   "categories": [
     {
@@ -54,6 +51,14 @@
           "path": "shrine/backgrounds/carved.png",
           "kind": "image",
           "thumbnail": "shrine/backgrounds/carved.png"
+        },
+        {
+          "id": "swarna",
+          "label_en": "Golden sanctum",
+          "label_hi": "स्वर्ण गर्भगृह मंदिर",
+          "path": "shrine/backgrounds/swarna.png",
+          "kind": "image",
+          "thumbnail": "shrine/backgrounds/swarna.png"
         }
       ]
     },
@@ -77,6 +82,14 @@
           "path": "shrine/idols/ganesh_hanuman.png",
           "kind": "image",
           "thumbnail": "shrine/idols/ganesh_hanuman.png"
+        },
+        {
+          "id": "radha_krishna",
+          "label_en": "Radha & Krishna",
+          "label_hi": "राधा कृष्ण",
+          "path": "shrine/idols/radha_krishna.png",
+          "kind": "image",
+          "thumbnail": "shrine/idols/radha_krishna.png"
         },
         {
           "id": "shiva",
@@ -109,6 +122,14 @@
           "path": "shrine/idols/ram_darbar.png",
           "kind": "image",
           "thumbnail": "shrine/idols/ram_darbar.png"
+        },
+        {
+          "id": "hanuman",
+          "label_en": "Hanuman",
+          "label_hi": "हनुमान जी",
+          "path": "shrine/idols/hanuman.png",
+          "kind": "image",
+          "thumbnail": "shrine/idols/hanuman.png"
         }
       ]
     },
@@ -195,6 +216,53 @@
           "path": "shrine/flowers/bouquet.glb",
           "kind": "model",
           "thumbnail": "shrine/flowers/bouquet.png"
+        },
+        {
+          "id": "mogra_flower",
+          "label_en": "Jasmine mogra",
+          "label_hi": "चमेली मोगरा",
+          "path": "shrine/flowers/mogra_flower.png",
+          "kind": "image",
+          "thumbnail": "shrine/flowers/mogra_flower.png"
+        }
+      ]
+    },
+    {
+      "id": "incense",
+      "label_en": "Dhoop & Agarbatti",
+      "label_hi": "धूप और अगरबत्ती",
+      "options": [
+        {
+          "id": "original",
+          "label_en": "Agarbatti stand",
+          "label_hi": "अगरबत्ती स्टैंड",
+          "path": "shrine/incense/agarbatti.png",
+          "kind": "image",
+          "thumbnail": "shrine/incense/agarbatti.png"
+        },
+        {
+          "id": "dhoop",
+          "label_en": "Loban dhoop dani",
+          "label_hi": "लोबान धूपदानी",
+          "path": "shrine/incense/dhoop_dani.png",
+          "kind": "image",
+          "thumbnail": "shrine/incense/dhoop_dani.png"
+        },
+        {
+          "id": "kamal_dhoop",
+          "label_en": "Royal kamal dhoop",
+          "label_hi": "शाही कमल धूपदान",
+          "path": "shrine/incense/kamal_dhoop.png",
+          "kind": "image",
+          "thumbnail": "shrine/incense/kamal_dhoop.png"
+        },
+        {
+          "id": "mayur_dhoop",
+          "label_en": "Mayur dhoop stand",
+          "label_hi": "मोर धूप स्टैंड",
+          "path": "shrine/incense/mayur_dhoop.png",
+          "kind": "image",
+          "thumbnail": "shrine/incense/mayur_dhoop.png"
         }
       ]
     },
@@ -218,6 +286,14 @@
           "path": "shrine/lamps/brass_diya.glb",
           "kind": "model",
           "thumbnail": "shrine/lamps/brass_diya.png"
+        },
+        {
+          "id": "peacock",
+          "label_en": "Mayur deepstambh",
+          "label_hi": "मोर दीपस्तंभ",
+          "path": "shrine/lamps/peacock_lamp.png",
+          "kind": "image",
+          "thumbnail": "shrine/lamps/peacock_lamp.png"
         }
       ]
     },
@@ -241,6 +317,14 @@
           "path": "shrine/shankh/ivory.glb",
           "kind": "model",
           "thumbnail": "shrine/shankh/ivory.png"
+        },
+        {
+          "id": "swarna",
+          "label_en": "Swarna shankh",
+          "label_hi": "स्वर्ण नक्काशी शंख",
+          "path": "shrine/shankh/swarna.png",
+          "kind": "image",
+          "thumbnail": "shrine/shankh/swarna.png"
         }
       ]
     },
@@ -264,6 +348,14 @@
           "path": "shrine/aarti/traditional.glb",
           "kind": "model",
           "thumbnail": "shrine/aarti/traditional.png"
+        },
+        {
+          "id": "karpura",
+          "label_en": "Nagkanya panch-aarti",
+          "label_hi": "नागकन्या पंच-आरती",
+          "path": "shrine/aarti/karpura.png",
+          "kind": "image",
+          "thumbnail": "shrine/aarti/karpura.png"
         }
       ]
     },
@@ -295,6 +387,14 @@
           "path": "shrine/prasad/laddu.glb",
           "kind": "model",
           "thumbnail": "shrine/prasad/laddu.png"
+        },
+        {
+          "id": "modak",
+          "label_en": "Kesar modak",
+          "label_hi": "केसर मोदक",
+          "path": "shrine/prasad/modak.png",
+          "kind": "image",
+          "thumbnail": "shrine/prasad/modak.png"
         }
       ]
     }

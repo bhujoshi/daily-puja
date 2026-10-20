@@ -1,9 +1,16 @@
 # Android release builds
 
 Application ID: `com.pavitramandir.app`  
-Version: `1.0.16` (version code `17`)
+Version: `1.0.17` (version code `18`)
 
-## Latest release verification
+## Version 1.0.17
+
+Includes the updated shrine artwork and incense catalog, coin passbook and
+streak changes, and bhajan playback and search improvements. Signed APK and
+AAB outputs are stored in `android/app/build/outputs/releases/1.0.17/`.
+The account API remains the existing Google-enabled Sprite.
+
+## Version 1.0.16 verification
 
 Version 1.0.16 addresses the Play Console findings for version code 16:
 

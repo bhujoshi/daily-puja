@@ -67,7 +67,12 @@ func (s *Server) initRewards() {
 }
 
 func coinCost(category, item string) int {
-	if item == "original" || (category == "shrine" && item == "marble") {
+	if item == "original" ||
+		(category == "shrine" && item == "marble") ||
+		(category == "lamp" && item == "brass") ||
+		(category == "shankh" && item == "ivory") ||
+		(category == "aarti" && item == "traditional") ||
+		(category == "prasad" && (item == "halwa" || item == "laddu")) {
 		return 0
 	}
 	switch category {
@@ -75,6 +80,8 @@ func coinCost(category, item string) int {
 		return 7
 	case "garland":
 		return 4
+	case "incense", "lamp", "shankh", "aarti", "prasad":
+		return 3
 	case "flowers":
 		return 2
 	default:

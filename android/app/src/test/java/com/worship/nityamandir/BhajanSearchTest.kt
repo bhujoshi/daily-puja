@@ -281,6 +281,210 @@ class BhajanSearchTest {
         assertEquals("yt_sankat_mochan", feed[0].id)
         assertTrue(feed.all { it.isYoutubeOnly })
     }
+
+    @Test fun searchQueryImmediatelyRefreshesFeedWithMatchingTracks() {
+        val playingGanesh = BhajanPlayer.Track(
+            title = "Jai Ganesh Deva",
+            url = "https://archive.org/download/ganesh.mp3",
+            id = "ganesh_1",
+            deity = "ganesh",
+            collection = "ganesh",
+            youtubeId = "87Y-OH_mJxM",
+            isYoutube = true
+        )
+        val shivTrack = BhajanPlayer.Track(
+            title = "Shiv Tandav Stotram",
+            url = "https://archive.org/download/shiv.mp3",
+            id = "shiv_1",
+            deity = "shiva",
+            collection = "shiva",
+            youtubeId = "hMBKmQEPNzI",
+            isYoutube = true
+        )
+        val feed = BhajanSearch.youtubeFeedRecommendations(
+            anchor = playingGanesh,
+            catalog = listOf(playingGanesh, shivTrack),
+            youtubeResults = emptyList(),
+            searchQuery = "shiv",
+            categoryFilter = "all",
+            idol = "original"
+        )
+        assertEquals(1, feed.size)
+        assertEquals("shiv_1", feed[0].id)
+    }
+
+    @Test fun recommendationsNeverIncludePlayingSongOrItsDuplicateTwins() {
+        val catalogHanumanChalisa = BhajanPlayer.Track(
+            title = "Hanuman Chalisa",
+            url = "https://archive.org/download/ShriHanumanChalisa_404/Shri-Hanuman-Chalisa.mp3",
+            id = "46",
+            deity = "hanuman",
+            collection = "hanuman",
+            youtubeId = "AETFvQonfV8",
+            isYoutube = false
+        )
+        val featuredTwin = BhajanPlayer.Track(
+            title = "Shree Hanuman Chalisa (Original Video)",
+            url = "https://archive.org/download/ShriHanumanChalisa_404/Shri-Hanuman-Chalisa.mp3#yt_hanuman_chalisa",
+            id = "yt_hanuman_chalisa",
+            deity = "hanuman",
+            collection = "hanuman",
+            youtubeId = "AETFvQonfV8",
+            isYoutube = true
+        )
+        val liveReuploadTwin = BhajanPlayer.Track(
+            title = "श्री हनुमान चालीसा | Shree Hanuman Chalisa Full Audio",
+            url = "https://www.youtube.com/watch?v=otherVideo11",
+            id = "yt_otherVideo11",
+            deity = "hanuman",
+            collection = "hanuman",
+            youtubeId = "otherVideo11",
+            isYoutube = true
+        )
+        val sankatMochan = BhajanPlayer.Track(
+            title = "Sankat Mochan Hanuman Ashtak",
+            url = "https://archive.org/download/sm.mp3",
+            id = "47",
+            deity = "hanuman",
+            collection = "hanuman",
+            youtubeId = "HH_a6aRO1TE",
+            isYoutube = false
+        )
+        val bajrangBaan = BhajanPlayer.Track(
+            title = "Bajrang Baan",
+            url = "https://archive.org/download/bb.mp3",
+            id = "49",
+            deity = "hanuman",
+            collection = "hanuman",
+            youtubeId = "zRIdNyLRJ6c",
+            isYoutube = false
+        )
+
+        val feed = BhajanSearch.youtubeFeedRecommendations(
+            anchor = catalogHanumanChalisa,
+            catalog = listOf(catalogHanumanChalisa, featuredTwin, sankatMochan, bajrangBaan),
+            youtubeResults = listOf(liveReuploadTwin),
+            searchQuery = "",
+            categoryFilter = "all",
+            idol = "original"
+        )
+
+        assertFalse(feed.any { it.id == "46" })
+        assertFalse(feed.any { it.id == "yt_hanuman_chalisa" })
+        assertFalse(feed.any { it.id == "yt_otherVideo11" })
+        assertEquals(2, feed.size)
+    }
+
+    @Test fun recommendationsDynamicallyChangeAcrossTracksAndPlayHistory() {
+        val shiv1 = BhajanPlayer.Track(
+            title = "Om Namah Shivay",
+            url = "https://archive.org/download/s1.mp3",
+            id = "s1",
+            deity = "shiva",
+            collection = "shiva",
+            youtubeId = "nVib8eC2JDI",
+            isYoutube = true
+        )
+        val shiv2 = BhajanPlayer.Track(
+            title = "Har Har Mahadev",
+            url = "https://archive.org/download/s2.mp3",
+            id = "s2",
+            deity = "shiva",
+            collection = "shiva",
+            youtubeId = "YHC5gWW0n0s",
+            isYoutube = true
+        )
+        val shiv3 = BhajanPlayer.Track(
+            title = "Shiv Tandav Stotram",
+            url = "https://archive.org/download/s3.mp3",
+            id = "s3",
+            deity = "shiva",
+            collection = "shiva",
+            youtubeId = "hMBKmQEPNzI",
+            isYoutube = true
+        )
+        val shiv4 = BhajanPlayer.Track(
+            title = "Mera Bhola Hai Bhandari",
+            url = "https://archive.org/download/s4.mp3",
+            id = "s4",
+            deity = "shiva",
+            collection = "shiva",
+            youtubeId = "gaJR15qWTDA",
+            isYoutube = true
+        )
+        val shiv5 = BhajanPlayer.Track(
+            title = "Karpur Gauram",
+            url = "https://archive.org/download/s5.mp3",
+            id = "s5",
+            deity = "shiva",
+            collection = "shiva",
+            youtubeId = "k_ZGo8qEcOA",
+            isYoutube = true
+        )
+        val catalog = listOf(shiv1, shiv2, shiv3, shiv4, shiv5)
+
+        val feedForSong1 = BhajanSearch.youtubeFeedRecommendations(
+            anchor = shiv1,
+            catalog = catalog,
+            youtubeResults = emptyList(),
+            playedTrackIds = setOf("s1"),
+            rotationSeed = 1
+        )
+        val topPick = feedForSong1.first()
+
+        // Playing topPick next excludes topPick and deprioritizes already-played s1
+        val feedForSong2 = BhajanSearch.youtubeFeedRecommendations(
+            anchor = topPick,
+            catalog = catalog,
+            youtubeResults = emptyList(),
+            playedTrackIds = setOf("s1", topPick.id),
+            rotationSeed = 2
+        )
+
+        assertFalse(feedForSong2.any { it.id == topPick.id })
+        assertNotEquals("s1", feedForSong2.first().id)
+        assertNotEquals(feedForSong1.map { it.id }, feedForSong2.map { it.id })
+    }
+
+    @Test fun defaultAartiSongIsReservedForPujaCompletionAndAllOtherFeedSongsAreYoutube() {
+        val defaultAarti = BhajanPlayer.Track(
+            title = "Jai Ganesh Jai Ganesh Deva",
+            url = "https://archive.org/download/JaiGanesh.mp3",
+            id = "jai_ganesh_deva",
+            deity = "ganesh",
+            collection = "ganesh",
+            youtubeId = "87Y-OH_mJxM",
+            isYoutube = false
+        )
+        val ytGanesh = BhajanPlayer.Track(
+            title = "Sukh Karta Dukh Harta",
+            url = "https://www.youtube.com/watch?v=87Y-OH_mJxM",
+            id = "yt_sukh_karta",
+            deity = "ganesh",
+            collection = "ganesh",
+            youtubeId = "87Y-OH_mJxM",
+            isYoutube = true
+        )
+        val ytHanuman = BhajanPlayer.Track(
+            title = "Shree Hanuman Chalisa",
+            url = "https://www.youtube.com/watch?v=AETFvQonfV8",
+            id = "yt_hanuman_chalisa",
+            deity = "hanuman",
+            collection = "hanuman",
+            youtubeId = "AETFvQonfV8",
+            isYoutube = true
+        )
+
+        val feed = BhajanSearch.youtubeFeedRecommendations(
+            anchor = defaultAarti,
+            catalog = listOf(defaultAarti, ytGanesh, ytHanuman),
+            youtubeResults = emptyList(),
+            idol = "original"
+        )
+
+        assertFalse(feed.any { it.id == "jai_ganesh_deva" })
+        assertTrue(feed.all { it.isYoutubeOnly && it.needsStreamResolution })
+    }
 }
 
 

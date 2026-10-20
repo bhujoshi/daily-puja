@@ -3,8 +3,16 @@ import json,pathlib,struct,hashlib
 from audit_models import inspect
 root=pathlib.Path(__file__).resolve().parents[1]
 source=root/'shared_assets/catalog/catalog.json';catalog=json.loads(source.read_text())
-for target in ['backend/internal/community/catalog.json','android/app/src/main/assets/shrine/catalog.json']:
+for target in ['backend/internal/community/catalog.json']:
  assert source.read_bytes()==(root/target).read_bytes(),f'Catalog differs: {target}'
+# Android deliberately hides the legacy wooden shrine; the backend retains it
+# for existing accounts and older app versions.
+android_catalog=json.loads((root/'android/app/src/main/assets/shrine/catalog.json').read_text())
+expected_android=dict(catalog, categories=[
+ dict(c, options=[o for o in c['options'] if o['id']!='original']) if c['id']=='shrine' else c
+ for c in catalog['categories']
+])
+assert android_catalog==expected_android,'Android catalog differs beyond the legacy wooden shrine'
 assets=root/'android/app/src/main/assets'
 for category in catalog['categories']:
  ids=[o['id'] for o in category['options']]

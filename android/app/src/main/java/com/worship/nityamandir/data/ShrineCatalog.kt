@@ -20,14 +20,16 @@ data class ShrineSelection(val values:Map<String,String> = emptyMap()) {
     }
     val original get()=values.values.all {it=="original" || it=="marble"}
     // Measured altar surfaces in the prepared portrait backgrounds, in image-width units.
-    val altarOffset get()=when(this["shrine"]) {"marble" -> -.040f; "ivory" -> -.080f; "carved" -> -.055f; else -> -.040f}
-    val deityCount get()=if(this["idols"] in listOf("original","ganesh_hanuman")) 2 else 1
+    val altarOffset get()=when(this["shrine"]) {"marble","ivory","carved","swarna" -> -.040f; else -> -.040f}
+    val deityCount get()=if(this["idols"] in listOf("original","ganesh_hanuman","radha_krishna")) 2 else 1
     fun deityNames(hindi:Boolean):List<String> = when(this["idols"]) {
         "ganesh_hanuman" -> if(hindi) listOf("गणेश जी","हनुमान जी") else listOf("Ganesha","Hanuman")
+        "radha_krishna" -> if(hindi) listOf("राधा जी","कृष्ण जी") else listOf("Radha","Krishna")
         "shiva" -> listOf(if(hindi) "शिव जी" else "Shiva")
         "lakshmi" -> listOf(if(hindi) "लक्ष्मी जी" else "Lakshmi")
         "durga" -> listOf(if(hindi) "दुर्गा माँ" else "Durga")
         "ram_darbar" -> listOf(if(hindi) "राम दरबार" else "Ram Darbar")
+        "hanuman" -> listOf(if(hindi) "हनुमान जी" else "Hanuman")
         else -> if(hindi) listOf("गणेश जी","लक्ष्मी जी") else listOf("Ganesha","Lakshmi")
     }
 }

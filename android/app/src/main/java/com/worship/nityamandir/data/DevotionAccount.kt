@@ -112,13 +112,39 @@ class DevotionAccount(context: Context) {
     }
     private fun localKey() = "completed_days_" + (profile?.optString("id") ?: "guest")
     private var completionRevision by mutableStateOf(0)
-    val streakDays: Int get() {
+    val completedDays: Set<String> get() {
         completionRevision // Observe locally recorded completions before network sync finishes.
         val days = prefs.getStringSet(localKey(), emptySet()).orEmpty().toMutableSet()
         profile?.optJSONArray("days")?.let { values ->
             repeat(values.length()) { days.add(values.getString(it)) }
         }
-        return DevotionStreakCounter.count(days, java.time.LocalDate.parse(today()))
+        return days
+    }
+    val streakDays: Int get() = DevotionStreakCounter.count(completedDays, java.time.LocalDate.parse(today()))
+    fun passbook(
+        catalog: ShrineCatalog,
+        today: java.time.LocalDate = java.time.LocalDate.parse(today())
+    ): PassbookLedger {
+        completionRevision
+        val rawHistory = profile?.optJSONArray("history")
+        val events = if (rawHistory == null) emptyList() else (0 until rawHistory.length()).mapNotNull { i ->
+            rawHistory.optJSONObject(i)?.let { obj ->
+                RawHistoryEvent(
+                    id = obj.optString("id"),
+                    kind = obj.optString("kind"),
+                    at = obj.optString("at"),
+                    detail = obj.optString("detail")
+                )
+            }
+        }
+        return CoinPassbook.build(
+            balance = coins,
+            history = events,
+            categories = catalog.categories,
+            today = today,
+            pendingToday = pending,
+            cost = ::cost
+        )
     }
     fun recordCompletion() {
         val days = prefs.getStringSet(localKey(), emptySet()).orEmpty() + today()

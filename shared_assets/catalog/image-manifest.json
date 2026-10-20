@@ -24,11 +24,19 @@
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {
+    "runtime": "android/app/src/main/assets/shrine/idols/hanuman.png",
+    "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
+  },
+  {
     "runtime": "android/app/src/main/assets/shrine/idols/lakshmi.png",
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {
     "runtime": "android/app/src/main/assets/shrine/idols/original.png",
+    "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
+  },
+  {
+    "runtime": "android/app/src/main/assets/shrine/idols/radha_krishna.png",
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {

@@ -21,7 +21,7 @@ class GaneshMouseAnimationTest {
         for (shrine in shrines) for (idol in ganeshIdols) for (prasad in listOf("original", "laddu")) {
             assertTrue(GaneshMouseAnimation.isEligible(selection(shrine, idol, prasad)))
         }
-        for (idol in listOf("shiva", "lakshmi", "durga", "ram_darbar")) {
+        for (idol in listOf("radha_krishna", "shiva", "lakshmi", "durga", "ram_darbar", "hanuman")) {
             assertFalse(GaneshMouseAnimation.isEligible(selection(idol = idol)))
         }
         for (idol in ganeshIdols) {

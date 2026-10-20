@@ -43,8 +43,15 @@ func validSelections(selections map[string]string) bool {
 	if json.Unmarshal(catalogJSON, &catalog) != nil {
 		return false
 	}
-	if _, ok := selections["garland"]; !ok && len(selections) == len(catalog.Categories)-1 {
+	if _, ok := selections["garland"]; !ok && len(selections) >= len(catalog.Categories)-2 {
 		copied := map[string]string{"garland": "original"}
+		for k, v := range selections {
+			copied[k] = v
+		}
+		selections = copied
+	}
+	if _, ok := selections["incense"]; !ok && len(selections) == len(catalog.Categories)-1 {
+		copied := map[string]string{"incense": "original"}
 		for k, v := range selections {
 			copied[k] = v
 		}

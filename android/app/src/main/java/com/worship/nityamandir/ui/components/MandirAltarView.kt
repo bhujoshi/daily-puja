@@ -45,15 +45,11 @@ private fun rememberAssetImage(path: String): ImageBitmap = rememberCachedAssetI
 @Composable
 private fun GarlandLayer(
     bitmap: ImageBitmap,
-    shrineId: String,
+    space: ShrineSpace,
     viewport: TempleViewport
 ) {
     Canvas(Modifier.fillMaxSize()) {
-        val spec = when (shrineId) {
-            "ivory" -> floatArrayOf(.298f, .182f, .702f, .605f, .068f, .095f)
-            "carved" -> floatArrayOf(.155f, .148f, .845f, .630f, .084f, .118f)
-            else -> floatArrayOf(.145f, .025f, .855f, .675f, .088f, .125f)
-        }
+        val spec = space.garlandSpec
         val fLeft = spec[0]; val fTop = spec[1]; val fRight = spec[2]
         val fBottom = spec[3]; val pillarW = spec[4]; val topH = spec[5]
         val sw = bitmap.width
@@ -61,7 +57,7 @@ private fun GarlandLayer(
         val sideSrcW = (sw * 0.125f).toInt().coerceAtLeast(1)
         val topSrcX = (sw * 0.1065f).toInt()
         val topSrcW = (sw * (1f - 2f * 0.1065f)).toInt().coerceAtLeast(1)
-        val topSrcH = (sh * 0.195f).toInt().coerceAtLeast(1)
+        val topSrcH = (sh * 0.275f).toInt().coerceAtLeast(1)
 
         val u = viewport.imageWidth
         val topLeftPx = viewport.pixel(TemplePoint(fLeft, fTop))
@@ -182,6 +178,7 @@ fun MandirAltarView(
     val shankhStandBitmap = rememberAssetImage("shrine/accessories/shankh_stand.png")
     val copperLotaBitmap = rememberAssetImage("shrine/accessories/copper_lota.png")
     val garlandBitmap = rememberAssetImage(catalog.option("garland", selection).thumbnail)
+    val incenseBitmap = rememberAssetImage(catalog.option("incense", selection).thumbnail)
     val lampBitmap = rememberAssetImage(catalog.option("lamp", selection).thumbnail)
     val shankhBitmap = rememberAssetImage(catalog.option("shankh", selection).thumbnail)
     val aartiBitmap = rememberAssetImage(catalog.option("aarti", selection).thumbnail)
@@ -206,21 +203,58 @@ fun MandirAltarView(
         return flowerBitmaps[index % flowerBitmaps.size]
     }
 
-    val standingLampWidth = .104f
+    val incensePoint = idolPlacement.space.incense
+    val incenseWidth = when (selection["incense"]) {
+        "dhoop" -> .084f
+        "kamal_dhoop" -> .102f
+        else -> TempleSceneLayout.INCENSE_WIDTH
+    }
+    val incenseAspect = incenseBitmap.height.toFloat() / incenseBitmap.width.toFloat().coerceAtLeast(1f)
+    val incenseHeight = incenseWidth * incenseAspect
+    val incenseEmbers = remember(incensePoint, incenseWidth, incenseHeight, selection["incense"]) {
+        when (selection["incense"]) {
+            "dhoop" -> listOf(
+                TemplePoint(incensePoint.x, incensePoint.y - incenseHeight * .96f)
+            )
+            "kamal_dhoop" -> listOf(
+                TemplePoint(incensePoint.x - incenseWidth * .23f, incensePoint.y - incenseHeight * .94f),
+                TemplePoint(incensePoint.x - incenseWidth * .11f, incensePoint.y - incenseHeight * .97f),
+                TemplePoint(incensePoint.x + incenseWidth * .11f, incensePoint.y - incenseHeight * .97f),
+                TemplePoint(incensePoint.x + incenseWidth * .23f, incensePoint.y - incenseHeight * .94f),
+                TemplePoint(incensePoint.x, incensePoint.y - incenseHeight * .62f)
+            )
+            "mayur_dhoop" -> listOf(
+                TemplePoint(incensePoint.x - incenseWidth * .47f, incensePoint.y - incenseHeight * .86f),
+                TemplePoint(incensePoint.x - incenseWidth * .25f, incensePoint.y - incenseHeight * .92f),
+                TemplePoint(incensePoint.x - incenseWidth * .01f, incensePoint.y - incenseHeight * .98f),
+                TemplePoint(incensePoint.x + incenseWidth * .24f, incensePoint.y - incenseHeight * .92f),
+                TemplePoint(incensePoint.x + incenseWidth * .46f, incensePoint.y - incenseHeight * .86f),
+                TemplePoint(incensePoint.x - incenseWidth * .01f, incensePoint.y - incenseHeight * .44f)
+            )
+            else -> listOf(
+                TemplePoint(incensePoint.x - incenseWidth * .42f, incensePoint.y - incenseHeight * .92f),
+                TemplePoint(incensePoint.x - incenseWidth * .21f, incensePoint.y - incenseHeight * .95f),
+                TemplePoint(incensePoint.x, incensePoint.y - incenseHeight * .98f),
+                TemplePoint(incensePoint.x + incenseWidth * .20f, incensePoint.y - incenseHeight * .96f),
+                TemplePoint(incensePoint.x + incenseWidth * .41f, incensePoint.y - incenseHeight * .93f)
+            )
+        }
+    }
+
+    val standingLampWidth = TempleSceneLayout.STANDING_LAMP_WIDTH
     val standingLampAspect = lampBitmap.height.toFloat() / lampBitmap.width.toFloat().coerceAtLeast(1f)
     val standingLampHeight = standingLampWidth * standingLampAspect
     val oilWicks = remember(oilPoint, standingLampWidth, standingLampHeight, selection["lamp"]) {
-        if (selection["lamp"] == "brass") {
-            listOf(
-                TemplePoint(oilPoint.x - standingLampWidth * .355f, oilPoint.y - standingLampHeight * .842f),
-                TemplePoint(oilPoint.x - standingLampWidth * .185f, oilPoint.y - standingLampHeight * .846f),
-                TemplePoint(oilPoint.x, oilPoint.y - standingLampHeight * .840f),
-                TemplePoint(oilPoint.x + standingLampWidth * .185f, oilPoint.y - standingLampHeight * .846f),
-                TemplePoint(oilPoint.x + standingLampWidth * .355f, oilPoint.y - standingLampHeight * .842f)
+        when (selection["lamp"]) {
+            "brass", "peacock" -> listOf(
+                TemplePoint(oilPoint.x - standingLampWidth * .44f, oilPoint.y - standingLampHeight * .77f),
+                TemplePoint(oilPoint.x - standingLampWidth * .15f, oilPoint.y - standingLampHeight * .73f),
+                TemplePoint(oilPoint.x - standingLampWidth * .14f, oilPoint.y - standingLampHeight * .81f),
+                TemplePoint(oilPoint.x + standingLampWidth * .41f, oilPoint.y - standingLampHeight * .80f),
+                TemplePoint(oilPoint.x + standingLampWidth * .39f, oilPoint.y - standingLampHeight * .74f)
             )
-        } else {
-            listOf(
-                TemplePoint(oilPoint.x - standingLampWidth * .355f, oilPoint.y - standingLampHeight * .842f)
+            else -> listOf(
+                TemplePoint(oilPoint.x, oilPoint.y - standingLampHeight * .80f)
             )
         }
     }
@@ -264,7 +298,7 @@ fun MandirAltarView(
         // Sanctum arch Garland (Toran / Mala) framing the upper arch frieze and side pillars of the temple
         GarlandLayer(
             bitmap = garlandBitmap,
-            shrineId = selection["shrine"],
+            space = idolPlacement.space,
             viewport = viewport
         )
 
@@ -312,6 +346,7 @@ fun MandirAltarView(
                     )
                 }
             }
+            shadow(incensePoint, .115f, .030f, 1.05f)
             shadow(oilPoint, .14f, .034f, 1.15f)
             shadow(TempleSceneLayout.plate.copy(y = TempleSceneLayout.plate.y + .028f), .52f, .33f, 1.35f)
             shadow(TempleSceneLayout.bell.copy(y = TempleSceneLayout.bell.y + .108f), .115f, .038f, 1.10f * (1f - .6f * bellLift))
@@ -330,7 +365,17 @@ fun MandirAltarView(
         }
 
         if (showModels) {
-            // 1. Standing Temple Oil Lamp (Deepstambh / Kuthuvilakku) on the right altar floor
+            // 1a. Sacred Dhoop & Agarbatti Stand on the left altar step
+            SpriteLayer(
+                bitmap = incenseBitmap,
+                center = incensePoint,
+                widthFraction = incenseWidth,
+                viewport = viewport,
+                density = density,
+                bottomAligned = true
+            )
+
+            // 1b. Standing Temple Oil Lamp (Deepstambh / Kuthuvilakku) on the right altar floor
             SpriteLayer(
                 bitmap = lampBitmap,
                 center = oilPoint,
@@ -391,26 +436,26 @@ fun MandirAltarView(
                     }
                 }
                 // Flower bed shadow on left of thali
-                plateShadow(TemplePoint(TempleSceneLayout.plate.x - .128f, TempleSceneLayout.plate.y + .022f), .19f, .16f, .85f)
+                plateShadow(TemplePoint(TempleSceneLayout.plate.x - .138f, TempleSceneLayout.plate.y + .022f), .18f, .15f, .85f)
                 // Shankh stand contact shadow on right of thali
-                plateShadow(TempleSceneLayout.conch.copy(y = TempleSceneLayout.conch.y + .048f), .135f, .050f, 1f - .4f * conchLift)
+                plateShadow(TempleSceneLayout.conchVisual.copy(y = TempleSceneLayout.conchVisual.y + .046f), .128f, .048f, 1f - .4f * conchLift)
                 // Prasad bowl contact shadow at bottom-center of thali
-                plateShadow(TempleSceneLayout.prasadRest.copy(y = TempleSceneLayout.prasadRest.y + .026f), .155f, .062f, 1f - prasadLift)
+                plateShadow(TempleSceneLayout.prasadRest.copy(y = TempleSceneLayout.prasadRest.y + .024f), .142f, .058f, 1f - prasadLift)
             }
 
             // 5. Ornate Brass Shankh Stand + Sacred Shankh on the right side of the Puja Thali
             SpriteLayer(
                 bitmap = shankhStandBitmap,
-                center = TempleSceneLayout.conch.copy(y = TempleSceneLayout.conch.y + .032f),
-                widthFraction = .12f,
+                center = TempleSceneLayout.conchVisual.copy(y = TempleSceneLayout.conchVisual.y + .024f),
+                widthFraction = TempleSceneLayout.CONCH_STAND_WIDTH,
                 viewport = viewport,
                 density = density
             )
             if (!conchRunning) {
                 SpriteLayer(
                     bitmap = shankhBitmap,
-                    center = TempleSceneLayout.conch.copy(y = TempleSceneLayout.conch.y + .002f),
-                    widthFraction = .148f,
+                    center = TempleSceneLayout.conchVisual.copy(y = TempleSceneLayout.conchVisual.y - .002f),
+                    widthFraction = TempleSceneLayout.CONCH_DISPLAY_WIDTH,
                     viewport = viewport,
                     density = density
                 )
@@ -422,9 +467,9 @@ fun MandirAltarView(
                 val point = TempleSceneLayout.plateFlower(i)
                 val isCrowningHibiscus = i == 9 && "original" in selection.flowerIds
                 val sizeFraction = if (isCrowningHibiscus) {
-                    .138f
+                    .102f
                 } else {
-                    TempleSceneLayout.flowerSize(i) * .74f
+                    TempleSceneLayout.flowerSize(i) * .64f
                 }
                 SpriteLayer(
                     bitmap = bmp,
@@ -446,7 +491,7 @@ fun MandirAltarView(
                 SpriteLayer(
                     bitmap = bellBitmap,
                     center = bellCenter,
-                    widthFraction = .108f,
+                    widthFraction = TempleSceneLayout.BELL_DISPLAY_WIDTH,
                     viewport = viewport,
                     density = density,
                     rotationZ = bellSwing,
@@ -457,7 +502,7 @@ fun MandirAltarView(
             // 8. 2D Prasad Katori Bowl (at rest on bottom-center of Thali, or settled at altar after offering)
             if (!prasadRunning) {
                 val prasadPoint = if (session.prasadOffered) idolPlacement.prasadFloor else TempleSceneLayout.prasadRest
-                val prasadScale = if (session.prasadOffered) .72f else 1f
+                val prasadScale = if (session.prasadOffered) .72f else .88f
                 SpriteLayer(
                     bitmap = prasadBitmap,
                     center = prasadPoint,
@@ -470,7 +515,7 @@ fun MandirAltarView(
             }
 
             // 9. 2D Brass Aarti Diya at rest outside the right of the Puja Thali, facing towards the idols
-            val aartiSpriteWidth = if (selection["aarti"] == "original") TempleSceneLayout.AARTI_WIDTH * .72f else TempleSceneLayout.AARTI_WIDTH * .68f
+            val aartiSpriteWidth = if (selection["aarti"] == "original") TempleSceneLayout.AARTI_WIDTH * .68f else TempleSceneLayout.AARTI_WIDTH * .64f
             if (!aartiRunning) {
                 SpriteLayer(
                     bitmap = aartiBitmap,
@@ -507,7 +552,7 @@ fun MandirAltarView(
                     SpriteLayer(
                         bitmap = shankhBitmap,
                         center = conchPoint,
-                        widthFraction = .148f,
+                        widthFraction = TempleSceneLayout.CONCH_DISPLAY_WIDTH,
                         viewport = viewport,
                         density = density,
                         rotationZ = -28f * turn,
@@ -524,7 +569,7 @@ fun MandirAltarView(
                     SpriteLayer(
                         bitmap = bellBitmap,
                         center = bellCenter,
-                        widthFraction = .108f,
+                        widthFraction = TempleSceneLayout.BELL_DISPLAY_WIDTH,
                         viewport = viewport,
                         density = density,
                         rotationZ = bellSwing,
@@ -591,7 +636,7 @@ fun MandirAltarView(
                 // Active 2D Brass Aarti Diya orbiting deities, oriented towards the idols
                 if (aartiRunning) {
                     val point = idolPlacement.aartiPosition(aartiProgress)
-                    val aartiSpriteWidth = if (selection["aarti"] == "original") TempleSceneLayout.AARTI_WIDTH * .72f else TempleSceneLayout.AARTI_WIDTH * .68f
+                    val aartiSpriteWidth = if (selection["aarti"] == "original") TempleSceneLayout.AARTI_WIDTH * .68f else TempleSceneLayout.AARTI_WIDTH * .64f
                     SpriteLayer(
                         bitmap = aartiBitmap,
                         center = point,
@@ -611,6 +656,28 @@ fun MandirAltarView(
             visible = showModels
         )
         val aartiPoint = if (aartiRunning) idolPlacement.aartiPosition(aartiProgress) else TempleSceneLayout.aartiRest
+        val aartiRenderScale = if (aartiRunning) 1.05f else 1f
+        val aartiW = (if (selection["aarti"] == "original") TempleSceneLayout.AARTI_WIDTH * .68f else TempleSceneLayout.AARTI_WIDTH * .64f) * aartiRenderScale
+        val aartiH = aartiW * (aartiBitmap.height.toFloat() / aartiBitmap.width.toFloat().coerceAtLeast(1f))
+        val aartiWicks = when (selection["aarti"]) {
+            "traditional" -> listOf(
+                TemplePoint(aartiPoint.x - aartiW * .45f, aartiPoint.y - aartiH * .06f),
+                TemplePoint(aartiPoint.x - aartiW * .36f, aartiPoint.y - aartiH * .34f),
+                TemplePoint(aartiPoint.x, aartiPoint.y - aartiH * .47f),
+                TemplePoint(aartiPoint.x + aartiW * .36f, aartiPoint.y - aartiH * .34f),
+                TemplePoint(aartiPoint.x + aartiW * .45f, aartiPoint.y - aartiH * .06f)
+            )
+            "karpura" -> listOf(
+                TemplePoint(aartiPoint.x - aartiW * .45f, aartiPoint.y - aartiH * .02f),
+                TemplePoint(aartiPoint.x - aartiW * .36f, aartiPoint.y - aartiH * .28f),
+                TemplePoint(aartiPoint.x, aartiPoint.y - aartiH * .22f),
+                TemplePoint(aartiPoint.x + aartiW * .36f, aartiPoint.y - aartiH * .28f),
+                TemplePoint(aartiPoint.x + aartiW * .45f, aartiPoint.y - aartiH * .02f)
+            )
+            else -> listOf(
+                TemplePoint(aartiPoint.x, aartiPoint.y - aartiH * .46f)
+            )
+        }
         if (showModels) Box(Modifier.fillMaxSize().zIndex(10f)) {
             RitualFlamesOverlay(
                 session.lit,
@@ -620,7 +687,9 @@ fun MandirAltarView(
                 traditional = selection["aarti"] != "original",
                 brass = selection["lamp"] != "original",
                 oilWick = oilWicks.firstOrNull(),
-                oilWicks = oilWicks
+                oilWicks = oilWicks,
+                aartiWicks = aartiWicks,
+                incenseEmbers = incenseEmbers
             )
         }
         WaterFlowOverlay(bathTarget, bathProgress, placement = idolPlacement, modifier = Modifier.zIndex(10.5f))
@@ -654,6 +723,11 @@ fun MandirAltarView(
                     .clickable(onClickLabel = "तिलक · Apply tilak") { onDeityClick(nextDeity) }
             )
         }
+        Box(
+            target(TemplePoint(incensePoint.x - .055f, incensePoint.y - incenseHeight), .11f, incenseHeight + .02f)
+                .zIndex(12f)
+                .clickable(onClickLabel = "धूप जलाएँ · Light incense", onClick = onDiyaClick)
+        )
         Box(
             target(TemplePoint(oilPoint.x - .06f, oilPoint.y - standingLampHeight), .12f, standingLampHeight + .02f)
                 .zIndex(12f)

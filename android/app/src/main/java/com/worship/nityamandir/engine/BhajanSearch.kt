@@ -259,6 +259,7 @@ object BhajanSearch {
         val clean = query.trim()
         val targetDeity = anchor?.deity?.takeIf { it.isNotBlank() } ?: when (idol) {
             "original", "ganesh_hanuman" -> "ganesh"
+            "radha_krishna" -> "krishna"
             "ram_darbar" -> "rama"
             else -> idol
         }
@@ -419,6 +420,40 @@ object BhajanSearch {
 
     /** Extracts a direct playable audio/media stream URL from a YouTube Innertube player response. */
     fun parseYoutubePlayerStreamUrl(payload: String): String? {
+        runCatching {
+            val streamingData = org.json.JSONObject(payload).optJSONObject("streamingData")
+            if (streamingData != null) {
+                val adaptive = streamingData.optJSONArray("adaptiveFormats")
+                var bestAudioMp4: String? = null
+                var bestAudioAny: String? = null
+                if (adaptive != null) {
+                    for (i in 0 until adaptive.length()) {
+                        val fmt = adaptive.optJSONObject(i) ?: continue
+                        val url = fmt.optString("url").trim()
+                        if (!url.startsWith("https://")) continue
+                        val mime = fmt.optString("mimeType").lowercase(Locale.ROOT)
+                        val itag = fmt.optInt("itag", 0)
+                        if (itag == 140) return url
+                        if (mime.startsWith("audio/mp4") && bestAudioMp4 == null) {
+                            bestAudioMp4 = url
+                        } else if (mime.startsWith("audio/") && bestAudioAny == null) {
+                            bestAudioAny = url
+                        }
+                    }
+                }
+                if (bestAudioMp4 != null) return bestAudioMp4
+                if (bestAudioAny != null) return bestAudioAny
+
+                val formats = streamingData.optJSONArray("formats")
+                if (formats != null) {
+                    for (i in 0 until formats.length()) {
+                        val fmt = formats.optJSONObject(i) ?: continue
+                        val url = fmt.optString("url").trim()
+                        if (url.startsWith("https://")) return url
+                    }
+                }
+            }
+        }
         val raw = audioStreamUrlPattern.find(payload)?.groupValues?.getOrNull(1)
             ?: reverseAudioStreamUrlPattern.find(payload)?.groupValues?.getOrNull(1)
             ?: fallbackVideoStreamUrlPattern.find(payload)?.groupValues?.getOrNull(1)
@@ -430,6 +465,157 @@ object BhajanSearch {
         "aarti", "arti", "chalisa", "stotram", "stotra", "mantra", "ashtak", "dhun",
         "tandav", "vandana", "baan", "amritwani", "bhajan", "kirtan", "stuti", "prarthana"
     )
+
+    private val hindiToLatinSongTokens = mapOf(
+        "श्री" to "",
+        "हनुमान" to "hanuman",
+        "चालीसा" to "chalisa",
+        "संकट" to "sankat",
+        "मोचन" to "mochan",
+        "अष्टक" to "ashtak",
+        "बजरंग" to "bajrang",
+        "बाण" to "baan",
+        "शिव" to "shiv",
+        "तांडव" to "tandav",
+        "स्तोत्रम" to "stotram",
+        "स्तोत्र" to "stotram",
+        "महादेव" to "mahadev",
+        "भोला" to "bhola",
+        "भोले" to "bhola",
+        "भंडारी" to "bhandari",
+        "महामृत्युंजय" to "mahamrityunjaya",
+        "मंत्र" to "mantra",
+        "गणेश" to "ganesh",
+        "गणपति" to "ganpati",
+        "बप्पा" to "bappa",
+        "मोरया" to "morya",
+        "गजानन" to "gajanan",
+        "सुखकर्ता" to "sukh karta",
+        "दुखहर्ता" to "dukh harta",
+        "दुर्गा" to "durga",
+        "अम्बे" to "ambe",
+        "जगदम्बे" to "jagdambe",
+        "काली" to "kali",
+        "माता" to "mata",
+        "राम" to "ram",
+        "आएंगे" to "aayenge",
+        "कृष्ण" to "krishna",
+        "बांके" to "banke",
+        "बिहारी" to "bihari",
+        "श्याम" to "shyam",
+        "नारायण" to "narayan",
+        "लक्ष्मी" to "lakshmi",
+        "आरती" to "aarti",
+        "भजन" to "bhajan"
+    )
+
+    /**
+     * Normalizes a bhajan title so duplicate entries across `music_catalog.json`,
+     * `youtubeFeaturedTracks`, and live YouTube search results are recognized as the same song.
+     */
+    fun normalizeSongTitle(raw: String): String {
+        val core = raw
+            .substringBefore("(")
+            .substringBefore("[")
+            .substringBefore("|")
+            .substringBefore(" - ")
+            .substringBefore(" __ ")
+        return normalizeSegment(core).ifBlank { normalizeSegment(raw) }
+    }
+
+    private fun normalizeSegment(segment: String): String {
+        var text = segment.lowercase(Locale.ROOT)
+        for ((hi, en) in hindiToLatinSongTokens) {
+            if (text.contains(hi)) {
+                text = text.replace(hi, " $en ")
+            }
+        }
+        val words = text
+            .replace(Regex("[^\\p{L}\\p{M}\\p{N}\\s]"), " ")
+            .trim()
+            .split(Regex("\\s+"))
+            .mapNotNull { token ->
+                when (token) {
+                    "", "shree", "shri", "sri", "o", "oh", "original", "official",
+                    "video", "audio", "full", "hd", "4k", "lyrics", "lyrical", "song" -> null
+                    "raam" -> "ram"
+                    "moriya" -> "morya"
+                    "chalisha" -> "chalisa"
+                    "arti", "arati" -> "aarti"
+                    "ambey" -> "ambe"
+                    "jagdambey" -> "jagdambe"
+                    "shanker" -> "shankar"
+                    "tandava" -> "tandav"
+                    "shiva" -> "shiv"
+                    "lala" -> "laal"
+                    "ban" -> "baan"
+                    "bechne" -> "bechane"
+                    else -> token
+                }
+            }
+        return words.joinToString(" ")
+    }
+
+    private fun normalizedTitleSegments(raw: String): List<String> {
+        val primary = normalizeSongTitle(raw)
+        val parts = raw.split('|', '(', ')', '[', ']')
+            .map { normalizeSegment(it) }
+            .filter { it.length >= 8 }
+        return (listOf(primary) + parts).filter { it.isNotBlank() }.distinct()
+    }
+
+    /**
+     * Returns true if [a] and [b] represent the same song (by id, base audio URL, or normalized title).
+     */
+    fun isSameSong(a: BhajanPlayer.Track?, b: BhajanPlayer.Track?): Boolean {
+        if (a == null || b == null) return false
+        if (a.id.equals(b.id, ignoreCase = true)) return true
+
+        val urlA = a.url.substringBefore('#').trim()
+        val urlB = b.url.substringBefore('#').trim()
+        if (urlA.isNotBlank() && urlA.equals(urlB, ignoreCase = true)) return true
+
+        val normA = normalizeSongTitle(a.title)
+        val normB = normalizeSongTitle(b.title)
+        if (normA.isNotBlank() && normA == normB) return true
+
+        // If both share the same non-blank YouTube video ID and are not two distinct catalog songs
+        if (a.youtubeId.isNotBlank() && a.youtubeId.equals(b.youtubeId, ignoreCase = true)) {
+            val bothAreDistinctCatalogTitles = normA.isNotBlank() && normB.isNotBlank() &&
+                !normA.contains(normB) && !normB.contains(normA) &&
+                !normA.startsWith(normB.take(10)) && !normB.startsWith(normA.take(10)) &&
+                (normA.contains("jai ganesh") != normB.contains("jai ganesh"))
+            if (!bothAreDistinctCatalogTitles) return true
+        }
+
+        val segmentsA = normalizedTitleSegments(a.title)
+        val segmentsB = normalizedTitleSegments(b.title)
+        for (segA in segmentsA) {
+            for (segB in segmentsB) {
+                if (segA == segB) return true
+                if (segA.length >= 10 && segB.length >= 10 && (segA.contains(segB) || segB.contains(segA))) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    /**
+     * Removes any track matching [exclude] (same song) and deduplicates twins within [tracks].
+     */
+    fun deduplicateTracks(
+        tracks: List<BhajanPlayer.Track>,
+        exclude: BhajanPlayer.Track? = null
+    ): List<BhajanPlayer.Track> {
+        val result = mutableListOf<BhajanPlayer.Track>()
+        for (track in tracks) {
+            if (exclude != null && isSameSong(track, exclude)) continue
+            if (result.any { isSameSong(it, track) }) continue
+            result.add(track)
+        }
+        return result
+    }
 
     /**
      * Ranks and interleaves Pavitra Mandir (Temple icon) and YouTube (YouTube icon) recommendations
@@ -445,37 +631,42 @@ object BhajanSearch {
         val q = searchQuery.trim()
         val targetDeity = anchor?.deity?.takeIf { it.isNotBlank() } ?: when (idol) {
             "original", "ganesh_hanuman" -> "ganesh"
+            "radha_krishna" -> "krishna"
             "ram_darbar" -> "rama"
             else -> idol
         }
 
-        val mandirCandidates = catalog
-            .filter { !it.isYoutubeOnly }
-            .filter {
-                if (q.isEmpty()) it.id != anchor?.id
-                else matchesTrack(q, it.title, it.artist, it.deity, it.collection)
-            }
-            .sortedByDescending { candidate ->
-                relevanceScore(candidate, anchor, targetDeity, q)
-            }
+        val mandirCandidates = deduplicateTracks(
+            tracks = catalog
+                .filter { !it.isYoutubeOnly }
+                .filter {
+                    if (q.isEmpty()) !isSameSong(it, anchor)
+                    else matchesTrack(q, it.title, it.artist, it.deity, it.collection)
+                }
+                .sortedByDescending { candidate ->
+                    relevanceScore(candidate, anchor, targetDeity, q)
+                },
+            exclude = if (q.isEmpty()) anchor else null
+        )
 
         val catalogYoutubeCandidates = catalog
             .filter { it.isYoutubeOnly }
             .filter {
-                if (q.isEmpty()) it.id != anchor?.id
+                if (q.isEmpty()) !isSameSong(it, anchor)
                 else matchesTrack(q, it.title, it.artist, it.deity, it.collection)
             }
 
         val liveYoutubeCandidates = youtubeResults
-            .filter { it.id != anchor?.id && (anchor == null || it.youtubeId != anchor.youtubeId || anchor.youtubeId.isBlank()) }
+            .filter { !isSameSong(it, anchor) }
 
-        val allYoutubeCandidates = (liveYoutubeCandidates + catalogYoutubeCandidates)
-            .distinctBy { it.youtubeId.ifBlank { it.url } }
-            .filter { it.id != anchor?.id }
-            .sortedByDescending { candidate ->
-                relevanceScore(candidate, anchor, targetDeity, q) +
-                    if (candidate in liveYoutubeCandidates) 30 else 0
-            }
+        val allYoutubeCandidates = deduplicateTracks(
+            tracks = (liveYoutubeCandidates + catalogYoutubeCandidates)
+                .sortedByDescending { candidate ->
+                    relevanceScore(candidate, anchor, targetDeity, q) +
+                        if (candidate in liveYoutubeCandidates) 30 else 0
+                },
+            exclude = if (q.isEmpty()) anchor else null
+        )
 
         // Interleave Pavitra Mandir (Temple icon) and YouTube (YouTube icon) relevant tracks
         val combined = mutableListOf<BhajanPlayer.Track>()
@@ -484,13 +675,65 @@ object BhajanSearch {
             if (i < mandirCandidates.size) combined.add(mandirCandidates[i])
             if (i < allYoutubeCandidates.size) combined.add(allYoutubeCandidates[i])
         }
-        return combined.distinctBy { it.id }
+        return deduplicateTracks(combined, exclude = if (q.isEmpty()) anchor else null)
     }
 
     /**
-     * Returns a YouTube-first recommendation feed for the YouTube player UI.
-     * Whenever a song or next song is played, fresh YouTube recommendations for that track
-     * appear at the top of the Up Next feed.
+     * Loose token match used as a fallback when a multi-word search query contains extra words
+     * not present in the local catalog title, ensuring the screen still refreshes immediately
+     * with relevant tracks while live YouTube results load.
+     */
+    fun matchesAnyToken(
+        rawQuery: String,
+        title: String,
+        artist: String,
+        deity: String,
+        collection: String
+    ): Int {
+        val q = rawQuery.trim().lowercase(Locale.ROOT)
+        if (q.isEmpty()) return 0
+        val haystack = buildString {
+            append(title.lowercase(Locale.ROOT)).append(' ')
+            append(artist.lowercase(Locale.ROOT)).append(' ')
+            append(deity.lowercase(Locale.ROOT)).append(' ')
+            append(collection.lowercase(Locale.ROOT)).append(' ')
+            when (deity.lowercase(Locale.ROOT)) {
+                "shiva" -> append("shiv mahadev bhola bholenath shankar शिव महादेव भोले शंकर ")
+                "hanuman" -> append("bajrang maruti sankat mochan हनुमान बजरंग मारुति ")
+                "durga" -> append("mata rani ambe jagdambe sherawali माता दुर्गा अम्बे ")
+                "ganesh" -> append("ganpati gajanan bappa morya moriya vinayak गणेश गणपति गजानन ")
+                "rama", "ram" -> append("ram rama raghav siya ayodhya राम सिया ")
+                "krishna" -> append("shyam shyama kanha bihari radhe narayan कृष्ण श्याम बांके बिहारी ")
+                "lakshmi" -> append("luxmi mahalakshmi jagdish लक्ष्मी ")
+            }
+        }
+        val tokens = q.replace(Regex("[^\\p{L}\\p{M}\\p{N}\\s]"), " ")
+            .trim()
+            .split(Regex("\\s+"))
+            .filter { it.isNotEmpty() && it != "भजन" && it != "bhajan" && it != "जी" && it != "ji" }
+        if (tokens.isEmpty()) return 1
+        var matchedCount = 0
+        for (token in tokens) {
+            val hit = haystack.contains(token) ||
+                (hindiAndAliasExpansions[token]?.split(' ')?.any { alias -> haystack.contains(alias) } == true)
+            if (hit) matchedCount++
+        }
+        return matchedCount
+    }
+
+    private fun mixDynamicSeed(anchorHash: Int, candidateHash: Int, rotationSeed: Int): Int {
+        var h = anchorHash xor (candidateHash * 0x9E3779B9.toInt()) xor (rotationSeed * 0x85EBCA6B.toInt())
+        h = h xor (h ushr 16)
+        h *= 0x7FEB352D
+        h = h xor (h ushr 15)
+        return h and 0x7FFFFFFF
+    }
+
+    /**
+     * Returns a YouTube-first dynamic recommendation feed for the YouTube player UI.
+     * - Strictly excludes the currently playing [anchor] song (and any twin/re-upload of it).
+     * - Dynamically reorders recommendations whenever [anchor], [playedTrackIds], or [rotationSeed] changes.
+     * - When [searchQuery] is non-empty, filters and ranks tracks strictly by search relevance.
      */
     fun youtubeFeedRecommendations(
         anchor: BhajanPlayer.Track?,
@@ -498,35 +741,114 @@ object BhajanSearch {
         youtubeResults: List<BhajanPlayer.Track>,
         searchQuery: String = "",
         categoryFilter: String = "all",
-        idol: String = "original"
+        idol: String = "original",
+        playedTrackIds: Set<String> = emptySet(),
+        rotationSeed: Int = 0
     ): List<BhajanPlayer.Track> {
-        val base = relevantRecommendations(anchor, catalog, youtubeResults, searchQuery, idol)
-        // Prioritize YouTube tracks first so playing the next song immediately shows YouTube recommendations,
-        // while also surfacing catalog tracks that carry verified YouTube IDs as YouTube-ready tracks.
-        val ytFirst = base.sortedByDescending { track ->
-            val isLiveYt = youtubeResults.any { it.id == track.id }
-            val isYt = track.isYoutubeOnly
-            val sameDeity = anchor != null && track.deity.equals(anchor.deity, ignoreCase = true)
-            (if (isLiveYt) 200 else 0) +
-                (if (isYt) 100 else 0) +
-                (if (sameDeity) 50 else 0)
-        }.map { track ->
-            if (!track.isYoutube && track.youtubeId.isNotBlank()) {
-                track.copy(isYoutube = true)
-            } else {
-                track
+        val q = searchQuery.trim()
+        val youtubeCatalog = catalog.filter { it.id != "jai_ganesh_deva" }
+        if (q.isNotEmpty()) {
+            val inferredSearchDeity = inferDeity(q, "")
+            val allCandidates = deduplicateTracks(
+                tracks = (youtubeResults + youtubeCatalog).map { track ->
+                    if (!track.isYoutube && track.youtubeId.isNotBlank()) track.copy(isYoutube = true) else track
+                },
+                exclude = null
+            )
+
+            val strictMatches = allCandidates.filter { track ->
+                youtubeResults.any { it.id == track.id } ||
+                    matchesTrack(q, track.title, track.artist, track.deity, track.collection)
             }
+
+            val searchPool = if (strictMatches.size >= 3) {
+                strictMatches
+            } else {
+                val partialMatches = allCandidates.filter { track ->
+                    matchesAnyToken(q, track.title, track.artist, track.deity, track.collection) > 0
+                }
+                deduplicateTracks(strictMatches + partialMatches)
+            }
+
+            val qLower = q.lowercase(Locale.ROOT)
+            return searchPool.sortedByDescending { track ->
+                val isLiveSearchResult = youtubeResults.any { it.id == track.id }
+                val isStrict = matchesTrack(q, track.title, track.artist, track.deity, track.collection)
+                val tokenHits = matchesAnyToken(q, track.title, track.artist, track.deity, track.collection)
+                val titleLower = track.title.lowercase(Locale.ROOT)
+                val exactPrefix = titleLower.startsWith(qLower)
+                val exactContains = titleLower.contains(qLower)
+                val deityMatch = inferredSearchDeity.isNotBlank() && track.deity.equals(inferredSearchDeity, ignoreCase = true)
+
+                (if (isLiveSearchResult) 400 else 0) +
+                    (if (isStrict) 250 else 0) +
+                    (tokenHits * 60) +
+                    (if (exactPrefix) 120 else if (exactContains) 80 else 0) +
+                    (if (deityMatch) 90 else 0)
+            }.distinctBy { it.id }
         }
+
+        val targetDeity = anchor?.deity?.takeIf { it.isNotBlank() } ?: when (idol) {
+            "original", "ganesh_hanuman" -> "ganesh"
+            "radha_krishna" -> "krishna"
+            "ram_darbar" -> "rama"
+            else -> idol
+        }
+
+        // Prefer YouTube-flagged entries first when deduplicating twins, and promote all tracks with a YouTube ID
+        // so the entire catalog participates equally in dynamic recommendations instead of static top-12 locking.
+        val rawPool = (
+            youtubeResults +
+                youtubeCatalog.filter { it.isYoutubeOnly } +
+                youtubeCatalog.filter { !it.isYoutubeOnly }
+            ).map { track ->
+            if (!track.isYoutube && track.youtubeId.isNotBlank()) track.copy(isYoutube = true) else track
+        }
+
+        val uniqueCandidates = deduplicateTracks(rawPool, exclude = anchor)
+        val anchorKey = normalizeSongTitle(anchor?.title.orEmpty()).ifBlank { anchor?.id ?: idol }
+        val anchorHash = anchorKey.hashCode()
+
+        val dynamicallyRanked = uniqueCandidates.sortedByDescending { track ->
+            val isLiveYt = youtubeResults.any { isSameSong(it, track) }
+            val isYtReady = track.isYoutubeOnly || track.youtubeId.isNotBlank()
+            val wasRecentlyPlayed = track.id in playedTrackIds
+            val candDeity = track.deity.lowercase(Locale.ROOT)
+            val normTarget = targetDeity.lowercase(Locale.ROOT)
+            val sameDeity = candDeity == normTarget
+            val relatedDeity = !sameDeity && areRelatedDeities(candDeity, normTarget)
+
+            // Deterministic per-anchor + per-play dynamic jitter (0..84) that reshuffles recommendations
+            // every time the user plays a different song or presses Next.
+            val dynamicJitter = mixDynamicSeed(
+                anchorHash = anchorHash,
+                candidateHash = normalizeSongTitle(track.title).hashCode(),
+                rotationSeed = rotationSeed
+            ) % 85
+
+            val artistBonus = if (anchor != null) {
+                val anchorArtist = anchor.artist.substringBefore("•").trim().lowercase(Locale.ROOT)
+                if (anchorArtist.length >= 4 && track.artist.lowercase(Locale.ROOT).contains(anchorArtist)) 22 else 0
+            } else 0
+
+            (if (isLiveYt) 160 else 0) +
+                (if (isYtReady) 40 else 0) +
+                (if (sameDeity) 95 else if (relatedDeity) 55 else 20) +
+                artistBonus +
+                dynamicJitter -
+                (if (wasRecentlyPlayed) 180 else 0)
+        }.distinctBy { it.id }
+
         val filterLower = categoryFilter.lowercase(Locale.ROOT)
-        if (filterLower == "all" || filterLower == "up_next") return ytFirst
-        return ytFirst.filter { track ->
+        if (filterLower == "all" || filterLower == "up_next") return dynamicallyRanked
+        return dynamicallyRanked.filter { track ->
             when (filterLower) {
                 "aarti" -> track.title.contains("aarti", ignoreCase = true) || track.title.contains("आरती")
                 "chalisa" -> track.title.contains("chalisa", ignoreCase = true) || track.title.contains("चालीसा")
                 "mantra" -> track.title.contains("mantra", ignoreCase = true) || track.title.contains("stotram", ignoreCase = true) || track.title.contains("मंत्र")
                 else -> track.deity.equals(filterLower, ignoreCase = true) || track.collection.equals(filterLower, ignoreCase = true)
             }
-        }.ifEmpty { ytFirst }
+        }.ifEmpty { dynamicallyRanked }
     }
 
     private fun relevanceScore(

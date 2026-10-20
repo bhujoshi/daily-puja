@@ -7,6 +7,7 @@ object BhajanQueue {
         if (shuffle) return available.shuffled()
         val deity = when (idol) {
             "original", "ganesh_hanuman" -> "ganesh"
+            "radha_krishna" -> "krishna"
             "ram_darbar" -> "rama"
             else -> idol
         }

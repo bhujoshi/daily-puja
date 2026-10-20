@@ -156,6 +156,29 @@ func TestGarlandUnlockForFourCoins(t *testing.T) {
 	}
 }
 
+func TestIncenseAndRitualUpgradeUnlocks(t *testing.T) {
+	s, _ := New(filepath.Join(t.TempDir(), "accounts.json"))
+	_, auth := call(s, "POST", "register", "", `{"email":"incense@example.com","password":"long-password"}`)
+	token := auth["token"].(string)
+	s.db.Accounts["incense@example.com"].Coins = 6
+	selection := `{"selections":{"shrine":"marble","idols":"original","garland":"original","flowers":"original","incense":"kamal_dhoop","lamp":"peacock","shankh":"original","aarti":"original","prasad":"original"}}`
+	if code, _ := call(s, "PUT", "shrine", token, selection); code != 403 {
+		t.Fatal("unowned incense or lamp accepted", code)
+	}
+	code, profile := call(s, "POST", "coins/unlock", token, `{"category":"incense","item":"kamal_dhoop"}`)
+	if code != 200 || profile["coins"] != float64(3) || profile["owned"].(map[string]any)["incense:kamal_dhoop"] != true {
+		t.Fatal("incense purchase failed", code, profile)
+	}
+	code, profile = call(s, "POST", "coins/unlock", token, `{"category":"lamp","item":"peacock"}`)
+	if code != 200 || profile["coins"] != float64(0) || profile["owned"].(map[string]any)["lamp:peacock"] != true {
+		t.Fatal("peacock lamp purchase failed", code, profile)
+	}
+	code, profile = call(s, "PUT", "shrine", token, selection)
+	if code != 200 || profile["selections"].(map[string]any)["incense"] != "kamal_dhoop" || profile["selections"].(map[string]any)["lamp"] != "peacock" {
+		t.Fatal("purchased incense and lamp could not be applied", code, profile)
+	}
+}
+
 
 func TestGoogleSharingAndInstallRewards(t *testing.T) {
 	s, _ := New(filepath.Join(t.TempDir(), "accounts.json"))

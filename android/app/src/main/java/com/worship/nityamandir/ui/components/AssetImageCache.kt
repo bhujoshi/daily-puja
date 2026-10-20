@@ -52,7 +52,9 @@ internal object AssetImageCache {
         val pixels = IntArray(source.width * source.height)
         source.getPixels(pixels, 0, source.width, 0, 0, source.width, source.height)
         pixels.forEachIndexed { i, color ->
-            if ((color ushr 24) > 0) {
+            // Ignore near-zero alpha noise (alpha < 24) around AI-extracted sprites so
+            // bounding boxes match true visible geometry in IdolPlacement.
+            if ((color ushr 24) >= 24) {
                 val x = i % source.width
                 val y = i / source.width
                 left = minOf(left, x)
