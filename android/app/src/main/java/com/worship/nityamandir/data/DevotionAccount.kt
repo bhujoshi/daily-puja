@@ -10,10 +10,13 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
-import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
-import java.net.URL
+import java.util.concurrent.TimeUnit
 
 class GoogleSignInFailure(val reason: Reason, cause: Throwable? = null) : IllegalStateException(
     when (reason) {
@@ -123,26 +126,28 @@ class DevotionAccount(context: Context) {
             .putString("pending_owner",profile?.optString("id") ?: "").apply()
         completionRevision++
     }
+    private val httpClient = OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
+        .build()
     private suspend fun request(path: String, method: String = "GET", body: JSONObject? = null): JSONObject = withContext(Dispatchers.IO) {
         check(configured) { "Account service is not connected yet." }
         try {
-            val connection = URL(BuildConfig.ACCOUNT_API_URL.trimEnd('/') + "/api/v2/" + path).openConnection() as HttpURLConnection
-            try {
-                connection.requestMethod = method
-                connection.connectTimeout = 10000; connection.readTimeout = 15000
-                connection.setRequestProperty("Authorization", "Bearer $token")
-                if (body != null) {
-                    connection.doOutput = true
-                    connection.setRequestProperty("Content-Type", "application/json")
-                    connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-                }
-                val status = connection.responseCode
-                val text = (if(status in 200..299) connection.inputStream else connection.errorStream)?.bufferedReader()?.use { it.readText() } ?: "{}"
+            val requestBody = body?.toString()?.toRequestBody("application/json; charset=utf-8".toMediaType())
+                ?: if (method == "POST" || method == "PUT") "".toRequestBody(null) else null
+            val req = Request.Builder()
+                .url(BuildConfig.ACCOUNT_API_URL.trimEnd('/') + "/api/v2/" + path)
+                .header("Authorization", "Bearer $token")
+                .method(method, requestBody)
+                .build()
+            httpClient.newCall(req).execute().use { response ->
+                val status = response.code
+                val text = response.body?.string()?.takeIf { it.isNotEmpty() } ?: "{}"
                 val result = JSONObject(text)
                 if(status==401 && signedIn && !path.startsWith("auth/")) withContext(Dispatchers.Main) { clearLocal() }
                 check(status in 200..299) { result.optString("error", "Please try again") }
                 result
-            } finally { connection.disconnect() }
+            }
         } catch (e: SocketTimeoutException) {
             throw AccountConnectionFailure(AccountConnectionFailure.Reason.TIMEOUT, e)
         } catch (e: IOException) {

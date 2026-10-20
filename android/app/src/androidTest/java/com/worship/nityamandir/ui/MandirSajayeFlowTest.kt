@@ -92,7 +92,7 @@ class MandirSajayeFlowTest {
         assertEquals(signedIn, account.signedIn)
     }
 
-    private fun showCustomizer(narrowWithLargeText: Boolean = false) {
+    private fun showCustomizer(narrowWithLargeText: Boolean = false, hindi: Boolean = false) {
         compose.setContent {
             // Dialog content inherits this density too: exercise a 320dp-wide viewport at 1.3x text.
             val density = if (narrowWithLargeText) {
@@ -100,7 +100,7 @@ class MandirSajayeFlowTest {
             } else LocalDensity.current
             CompositionLocalProvider(LocalDensity provides density) {
                 ShrineControlsTheme {
-                    ShrineCustomizer(account, ShrineSelection(), false, {},
+                    ShrineCustomizer(account, ShrineSelection(), hindi, {},
                         onAccount = { routed.set(it) }, onApplied = { applied.set(it) },
                         player = player, onMusic = { musicDraft.set(it) })
                 }
@@ -296,6 +296,25 @@ class MandirSajayeFlowTest {
         compose.waitUntil(5_000) { applied.get() != null }
         compose.onNodeWithContentDescription("Back to choices").assertDoesNotExist()
         assertEquals(0, origin.requests.get())
+    }
+
+    @Test fun hindiDecorationButtonsStayInsideWindowWithLargerText() {
+        fixture(coins = 0, signedIn = false)
+        showFixtureMusic()
+        showCustomizer(narrowWithLargeText = true, hindi = true)
+        for (tag in listOf("mandir-preview-button", "mandir-selection-action")) {
+            val action = compose.onNodeWithTag(tag).assertIsDisplayed()
+            val bounds = action.fetchSemanticsNode().boundsInWindow
+            val windowBounds = context.getSystemService(android.view.WindowManager::class.java)
+                .maximumWindowMetrics.bounds
+            assertTrue("$tag left clipped: $bounds", bounds.left >= 0)
+            assertTrue("$tag right clipped: $bounds", bounds.right <= windowBounds.width())
+            assertTrue("$tag bottom clipped: $bounds", bounds.bottom <= windowBounds.height())
+        }
+        captureLayout("mandir-hindi-large-text")
+        compose.onNodeWithTag("mandir-preview-button").performClick()
+        compose.onNodeWithTag("mandir-preview-action").assertIsDisplayed().performClick()
+        compose.waitUntil(5_000) { applied.get() != null }
     }
 
     @Test fun openingMusicFromPreviewKeepsTheMultiFlowerDraft() {

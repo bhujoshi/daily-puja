@@ -29,6 +29,7 @@ type Track struct {
 	Deity           string  `json:"deity"`
 	Thumbnail       string  `json:"thumbnail"`
 	AudioURL        string  `json:"audioUrl"`
+	YouTubeID       string  `json:"youtubeId,omitempty"`
 	Artist          string  `json:"artist"`
 	SourceURL       string  `json:"sourceUrl"`
 }

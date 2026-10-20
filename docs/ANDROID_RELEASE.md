@@ -1,9 +1,34 @@
 # Android release builds
 
 Application ID: `com.pavitramandir.app`  
-Version: `1.0.15` (version code `16`)
+Version: `1.0.16` (version code `17`)
 
 ## Latest release verification
+
+Version 1.0.16 addresses the Play Console findings for version code 16:
+
+- Updated Compose (BOM 2025.08.01), Activity 1.11.0 and Core 1.17.0 for
+  modern full-screen dialog sizing/insets. Decoration actions (`देखें` /
+  `Preview` and `लगाएँ` / `Apply`) remain pinned inside `WindowInsets.safeDrawing`
+  outside the scrollable options and bounded feedback; preview controls, ritual
+  dock, and music player sheet respect cutouts as well as system bars without
+  double bottom padding.
+- `MainActivity` calls `enableEdgeToEdge` with transparent dark `SystemBarStyle`,
+  and `proguard-rules.pro` preserves `androidx.activity.EdgeToEdge**` and
+  `SystemBarStyle**` so Play Console's static analyzer sees `EdgeToEdge.enable`
+  and does not flag obfuscated AndroidX compatibility classes (`d.q.a`, `d.r.a`).
+- Coil 2.7.0 loads music and decoration thumbnails asynchronously at their
+  displayed size using shared caches. Full-scene local assets and the 4x
+  downsampled ritual dock backdrop use `AssetImageCache` (`LruCache`), and JSON
+  catalog/account requests use `OkHttpClient` with preserved library package
+  names in R8.
+- SceneView 2.3.0 brings Filament 1.56.0. All native libraries pass 16 KB ELF
+  `PT_LOAD` alignment and 16 KB uncompressed APK ZIP alignment checks.
+- Built with AGP 9.0.1, Gradle 9.1.0, and `android.r8.optimizedResourceShrinking=true`.
+
+Verification details are recorded in `docs/PLAY_QUALITY_1.0.16.md`.
+
+## Version 1.0.15 verification
 
 Version 1.0.15 updates full-screen dialog window insets and navigation bar
 padding across the Bhajan player, Shrine Customizer, and navigation drawer. The
@@ -94,14 +119,15 @@ Versioned build copies and SHA-256 checksums are stored locally in
 ## Build from the command line
 
 Use JDK 17 and an Android SDK with platform 36 and Build Tools 35.0.0.
-The app compiles against and targets API 36 using Android Gradle Plugin 8.10.1.
+The app compiles against and targets API 36 using Android Gradle Plugin 9.0.1
+and Gradle 9.1.0.
 Configure the SDK location in
 `android/local.properties` (`sdk.dir=/your/android/sdk`). On this Mac:
 
 ```sh
 cd /Users/bhuwanjoshi/work/worship/android
 export JAVA_HOME=$(/usr/libexec/java_home -v 17)
-./gradlew :app:assembleRelease :app:bundleRelease :app:testReleaseUnitTest
+./gradlew :app:assembleRelease :app:bundleRelease :app:testDebugUnitTest
 ```
 
 Outputs, relative to the `android` directory:

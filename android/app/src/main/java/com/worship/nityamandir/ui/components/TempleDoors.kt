@@ -1,6 +1,5 @@
 package com.worship.nityamandir.ui.components
 
-import android.graphics.BitmapFactory
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
@@ -11,25 +10,18 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
 /** The leaves swing from a fixed chaukhat, which fades away at the end of opening. */
 @Composable
 fun TempleDoors(openProgress: Float) {
-    val context = LocalContext.current
-    val texture = remember(context) {
-        context.assets.open("shrine/entrance/teak_door.png").use {
-            BitmapFactory.decodeStream(it).asImageBitmap()
-        }
-    }
+    val texture = rememberCachedAssetImage("shrine/entrance/teak_door.png")
     val masks = remember { listOf(doorLeafMask(false), doorLeafMask(true)) }
     val handles = remember { listOf(doorHandleMask(false), doorHandleMask(true)) }
     val frameMask = remember {

@@ -1,6 +1,5 @@
 package com.worship.nityamandir.ui.components
 
-import android.graphics.BitmapFactory
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,7 +14,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -103,7 +101,7 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
     }
     Dialog(onDismissRequest={if(!busy) onDismiss()},properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
         Surface(Modifier.fillMaxSize(),color=Color(0xFFFFF7EC)) {
-            Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal=12.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.fillMaxSize().safeDrawingPadding().testTag("mandir-safe-content").padding(horizontal=12.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                     Text(tr("मंदिर सजाएँ","Mandir Sajaye"),Modifier.weight(1f),fontSize=20.sp,fontWeight=FontWeight.SemiBold)
                     TextButton(onClick={onAccount(draft)},enabled=!busy,modifier=Modifier.semantics {
@@ -139,8 +137,7 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                             if(category.id=="flowers") {role=Role.Checkbox;toggleableState=if(selected) ToggleableState.On else ToggleableState.Off}
                         }) {
                             Row(Modifier.padding(10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                                val bitmap=remember(option.thumbnail) {context.assets.open(option.thumbnail).use {BitmapFactory.decodeStream(it)}.asImageBitmap()}
-                                Image(bitmap,null,Modifier.size(64.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFF6EBDD)),contentScale=ContentScale.Fit)
+                                coil.compose.AsyncImage("file:///android_asset/${option.thumbnail}",null,Modifier.size(64.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFF6EBDD)),contentScale=ContentScale.Fit)
                                 Column(Modifier.weight(1f)) {
                                     Text(label(option),fontSize=16.sp,fontWeight=FontWeight.Medium)
                                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)) {
@@ -157,10 +154,15 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                 }
                 }
                 if(busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-                if(error.isNotEmpty()) Text(error,color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics {liveRegion=LiveRegionMode.Polite})
-                if(message.isNotEmpty()) Text(message,color=RitualInk,modifier=Modifier.semantics {liveRegion=LiveRegionMode.Polite})
+                // Bound feedback independently so long messages cannot displace the actions.
+                if(error.isNotEmpty() || message.isNotEmpty()) Column(
+                    Modifier.heightIn(max=64.dp).verticalScroll(rememberScrollState())
+                ) {
+                    if(error.isNotEmpty()) Text(error,color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics {liveRegion=LiveRegionMode.Polite})
+                    if(message.isNotEmpty()) Text(message,color=RitualInk,modifier=Modifier.semantics {liveRegion=LiveRegionMode.Polite})
+                }
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
-                    RitualChoice(tr("देखें","Preview"),false,{showPreview=true},Modifier.weight(1f),enabled=!busy)
+                    RitualChoice(tr("देखें","Preview"),false,{showPreview=true},Modifier.weight(1f).testTag("mandir-preview-button"),enabled=!busy)
                     RitualChoice(selectionActionLabel,false,applyOrUnlock,Modifier.weight(1f).testTag("mandir-selection-action"),enabled=!busy,leadingIcon=selectionActionIcon)
                 }
                 Text(selectionHint,fontSize=12.sp)
@@ -204,7 +206,7 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                 onFlowerClick={},onConchClick={},onAartiClick={},selection=draft)}
             // Popup stays above SceneView's surface.
             androidx.compose.ui.window.Popup(alignment=Alignment.BottomCenter) {
-                Surface(color=Color(0xFFFFF7EC),shape=RoundedCornerShape(20.dp),modifier=Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=12.dp,vertical=8.dp)) {
+                Surface(color=Color(0xFFFFF7EC),shape=RoundedCornerShape(20.dp),modifier=Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)).padding(horizontal=12.dp,vertical=8.dp)) {
                     Column(Modifier.testTag("mandir-preview-actions").padding(10.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)) {
                         if(busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                         if(error.isNotEmpty()) Text(error,color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics {liveRegion=LiveRegionMode.Polite})
@@ -214,7 +216,7 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                 }
             }
             androidx.compose.ui.window.Popup(alignment=Alignment.TopCenter) {
-                Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)).padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     Surface(shape=RoundedCornerShape(16.dp),color=Color(0xFFFFF7EC)) {
                         IconButton(onClick={showPreview=false},enabled=!busy) {Icon(Icons.AutoMirrored.Outlined.ArrowBack,tr("चुनाव पर वापस जाएँ","Back to choices"))}
                     }

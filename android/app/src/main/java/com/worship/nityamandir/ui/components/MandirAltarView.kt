@@ -1,6 +1,5 @@
 package com.worship.nityamandir.ui.components
 
-import android.graphics.BitmapFactory
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -17,7 +16,6 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -42,12 +40,7 @@ class FlowerFlight(val id: Long, val offering: FlowerOffering) {
 }
 
 @Composable
-private fun rememberAssetImage(path: String): ImageBitmap {
-    val context = LocalContext.current
-    return remember(path) {
-        context.assets.open(path).use { BitmapFactory.decodeStream(it) }.asImageBitmap()
-    }
-}
+private fun rememberAssetImage(path: String): ImageBitmap = rememberCachedAssetImage(path)
 
 @Composable
 private fun GarlandLayer(
@@ -255,7 +248,7 @@ fun MandirAltarView(
         val density = LocalDensity.current
         val viewport = remember(maxWidth, maxHeight, density) { with(density) { TempleViewport(maxWidth.toPx(), maxHeight.toPx()) } }
         val background = remember(selection["shrine"]) {
-            context.assets.open(catalog.option("shrine", selection).path).use { BitmapFactory.decodeStream(it) }.asImageBitmap()
+            AssetImageCache.image(context, catalog.option("shrine", selection).path)
         }
         Image(
             background, null,
@@ -280,17 +273,7 @@ fun MandirAltarView(
         }
 
         val idol = remember(selection["idols"]) {
-            val bitmap = context.assets.open(catalog.option("idols", selection).path).use { BitmapFactory.decodeStream(it) }
-            var left = bitmap.width; var top = bitmap.height; var right = 0; var bottom = 0
-            val pixels = IntArray(bitmap.width * bitmap.height)
-            bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-            pixels.forEachIndexed { i, color ->
-                if ((color ushr 24) > 0) {
-                    val x = i % bitmap.width; val y = i / bitmap.width
-                    left = minOf(left, x); right = maxOf(right, x); top = minOf(top, y); bottom = maxOf(bottom, y)
-                }
-            }
-            android.graphics.Bitmap.createBitmap(bitmap, left, top, right - left + 1, bottom - top + 1).asImageBitmap()
+            AssetImageCache.trimmedIdol(context, catalog.option("idols", selection).path)
         }
         val idolPoint = viewport.pixel(TemplePoint(idolPlacement.left, idolPlacement.top))
         Image(

@@ -20,8 +20,8 @@ android {
         applicationId = "com.pavitramandir.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 16
-        versionName = "1.0.15"
+        versionCode = 17
+        versionName = "1.0.16"
         // Use the Google-enabled backend by default; local development can override this URL.
         buildConfigField("String", "ACCOUNT_API_URL", "\"${providers.gradleProperty("accountApiUrl").getOrElse("https://mcp-daily-puja-backend-staging-b3mqb.sprites.app")}\"")
 
@@ -93,14 +93,14 @@ tasks.matching { it.name == "preReleaseBuild" }.configureEach {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2024.04.01")
+    val composeBom = platform("androidx.compose:compose-bom:2025.08.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
-    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
-    implementation("androidx.activity:activity-compose:1.8.2")
+    implementation("androidx.activity:activity-compose:1.11.0")
 
     // Jetpack Compose UI & Material 3
     implementation("androidx.compose.ui:ui")
@@ -132,6 +132,9 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
+    // Size-aware artwork decoding with shared memory/disk caching.
+    implementation("io.coil-kt:coil-compose:2.7.0")
+
     // SceneView 3D
-    implementation("io.github.sceneview:sceneview:2.2.1")
+    implementation("io.github.sceneview:sceneview:2.3.0")
 }

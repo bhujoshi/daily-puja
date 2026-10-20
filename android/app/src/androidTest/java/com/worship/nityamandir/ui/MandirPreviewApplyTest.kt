@@ -77,13 +77,13 @@ class MandirPreviewApplyTest {
             it.config.getOrNull(SemanticsActions.OnClick)?.label == "Open temple"
         }).performClick()
         compose.waitUntil(10_000) {
-            compose.onAllNodesWithText("Light oil lamp").fetchSemanticsNodes().isNotEmpty()
+            runCatching { compose.onNodeWithText("Light oil lamp").assertIsDisplayed() }.isSuccess
         }
     }
 
     @Test fun pujaGuideExplainsTheCurrentStepAndKeepsTheDockCompact() {
         openTemple()
-        compose.onNodeWithContentDescription("Step 1 of 8. Light the diya to begin")
+        compose.onNodeWithContentDescription("Step 1 of 7. Light the diya to begin")
             .assertIsDisplayed()
         assertCompactDock()
         captureLayout("puja-step-light")
@@ -93,11 +93,11 @@ class MandirPreviewApplyTest {
         compose.onNodeWithText("Light oil lamp").performClick()
         compose.waitUntil(10_000) {
             compose.mainClock.advanceTimeBy(100)
-            compose.onAllNodesWithContentDescription("Step 2 of 8. Bathe each deity")
+            compose.onAllNodesWithContentDescription("Step 2 of 7. Bathe each deity")
                 .fetchSemanticsNodes().isNotEmpty()
         }
         compose.mainClock.advanceTimeBy(2_000) // Finish the step's slide-in transition.
-        compose.onNodeWithContentDescription("Step 2 of 8. Bathe each deity")
+        compose.onNodeWithContentDescription("Step 2 of 7. Bathe each deity")
             .assertIsDisplayed()
         compose.onNode(hasText("Ganesha") and hasAnyAncestor(hasTestTag("ritual-dock")))
             .assertIsDisplayed().assertHasClickAction()
@@ -130,8 +130,12 @@ class MandirPreviewApplyTest {
     @Test fun guestUnlockOpensSignInAfterTheConsistentPreviewActionIsTapped() {
         openTemple()
         openCustomizer()
-        compose.onNodeWithText("Marble arch").performScrollTo().performClick()
+        compose.onNodeWithText("Ivory alcove").performScrollTo().performClick()
         compose.onNodeWithText("Preview").performClick()
+        // Popup semantics can be registered before its separate window is placed.
+        compose.waitUntil(10_000) {
+            runCatching { compose.onNodeWithTag("mandir-preview-action").assertIsDisplayed() }.isSuccess
+        }
         compose.onNode(hasTestTag("mandir-preview-action") and hasText("Unlock"))
             .assertIsDisplayed().performClick()
         compose.onNodeWithText("Sign in").assertIsDisplayed()

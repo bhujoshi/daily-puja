@@ -18,11 +18,10 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.remember
-import androidx.compose.ui.graphics.asImageBitmap
-import android.graphics.BitmapFactory
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import com.worship.nityamandir.R
 import com.worship.nityamandir.engine.TempleViewport
 
@@ -41,8 +40,10 @@ fun RitualGlassPanel(
     val shape=RoundedCornerShape(28.dp)
     val hostView=LocalView.current
     val context=LocalContext.current
+    // The backdrop is blurred with an 18dp radius, so a 4x downsampled cached bitmap
+    // preserves visual fidelity while reducing memory footprint by 16x.
     val backdrop=if(backgroundPath==null) ImageBitmap.imageResource(R.drawable.temple_portrait)
-        else remember(backgroundPath) {context.assets.open(backgroundPath).use {BitmapFactory.decodeStream(it)}.asImageBitmap()}
+        else remember(backgroundPath) {AssetImageCache.image(context,backgroundPath,sampleSize=4)}
     var origin by remember { mutableStateOf(Offset.Zero) }
     Box(modifier.onGloballyPositioned {val location=IntArray(2);hostView.getLocationOnScreen(location);origin=it.positionInRoot()+Offset(location[0].toFloat(),location[1].toFloat())-sceneOrigin}
         .shadow(16.dp,shape,ambientColor=Color(0x661A1108),spotColor=Color(0x661A1108))
@@ -68,6 +69,6 @@ fun RitualChoice(label:String,selected:Boolean,onClick:()->Unit,modifier:Modifie
         colors=ButtonDefaults.outlinedButtonColors(containerColor=if(selected) Color(0xFFF0E0C8) else Color(0x99FFFFFF),contentColor=RitualInk,disabledContentColor=Color(0xFF887B6D)),
         contentPadding=PaddingValues(horizontal=10.dp,vertical=8.dp)) {
         if(leadingIcon!=null) {leadingIcon();Spacer(Modifier.width(8.dp))}
-        Text(if(selected) "✓ $label" else label,fontSize=16.sp,fontWeight=if(selected) FontWeight.SemiBold else FontWeight.Medium)
+        Text(if(selected) "✓ $label" else label,fontSize=16.sp,fontWeight=if(selected) FontWeight.SemiBold else FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
     }
 }

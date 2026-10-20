@@ -281,7 +281,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                         hindi = hindi,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .navigationBarsPadding()
+                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
                             .padding(horizontal = 24.dp, vertical = 28.dp)
                     )
                 }
@@ -303,7 +303,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                 }
             })
             // Show the ritual dock only after the entrance has fully opened.
-            if(entered && !curtainMoving && !musicSheet && !devotionSheet && !customizer) Popup(alignment=Alignment.BottomCenter) { RitualGlassPanel(Modifier.navigationBarsPadding().padding(horizontal=14.dp,vertical=10.dp)
+            if(entered && !curtainMoving && !musicSheet && !devotionSheet && !customizer) Popup(alignment=Alignment.BottomCenter) { RitualGlassPanel(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)).padding(horizontal=14.dp,vertical=10.dp)
                 .fillMaxWidth().heightIn(max=270.dp).verticalScroll(rememberScrollState()).testTag("ritual-dock"),sceneSize,sceneOrigin,backgroundPath="shrine/backgrounds/${selection["shrine"]}.png") {
                 val buttonColors=ButtonDefaults.buttonColors(containerColor=RitualInk,contentColor=cream,disabledContainerColor=Color(0xCFE2D9CF),disabledContentColor=Color(0xFF81766C))
                 if(aging.needsCleaning) {
@@ -342,7 +342,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
         if(entered && curtain.value >= 1f && !menu && !musicSheet && !devotionSheet && !customizer && !curtainMoving) {
             val hasMusic=bhajan.current!=null || bhajan.loading
             Popup(alignment=if(hasMusic) Alignment.TopCenter else Alignment.TopEnd) {
-                Row((if(hasMusic) Modifier.fillMaxWidth() else Modifier).statusBarsPadding().padding(horizontal=14.dp,vertical=8.dp),
+                Row((if(hasMusic) Modifier.fillMaxWidth() else Modifier).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)).padding(horizontal=14.dp,vertical=8.dp),
                     horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.Top) {
                     if(hasMusic) {
                         BhajanMiniPlayer(bhajan,hindi,{musicSheet=true},Modifier.weight(1f),showTrackNavigation=false,compact=true)
@@ -357,11 +357,11 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
         if(customizer) ShrineControlsTheme { ShrineCustomizer(account,customizerDraft ?: selection,hindi,
             onDismiss={customizer=false;customizerDraft=null},onAccount={customizerDraft=it;customizer=false;devotionPage=if(account.signedIn) DevotionPage.PACKAGE else DevotionPage.LOGIN;devotionSheet=true},
             onApplied={selection=it;customizerDraft=null;session=WorshipSession(deityCount=it.deityCount);customizer=false},
-            player=bhajan,onMusic={customizerDraft=it;musicSheet=true}) }
+            player=bhajan,onMusic={customizerDraft=it;customizer=false;musicSheet=true}) }
         if(devotionSheet) ShrineControlsTheme { DevotionSheet(account,hindi,{devotionSheet=false},onCustomize={devotionSheet=false;customizer=true},canCustomize=!busy,page=devotionPage,
             player=bhajan,onMusic={devotionSheet=false;musicSheet=true},
             onSignedIn={if(customizerDraft!=null) {devotionSheet=false;customizer=true}}) }
-        if(musicSheet) BhajanPlayerSheet(bhajan,hindi,{musicSheet=false})
+        if(musicSheet) BhajanPlayerSheet(bhajan,hindi,{musicSheet=false;if(customizerDraft!=null) customizer=true})
         ShrineControlsTheme {
             MandirNavigationDrawer(menu,{menu=false},hindi) {
                 if(bhajan.current != null || bhajan.loading) {
@@ -672,7 +672,7 @@ private fun MandirNavigationDrawer(open: Boolean, onDismiss: () -> Unit, hindi: 
                                 listOf(Color(0xFFFFFDF8), Color(0xFFFAF3E6), Color(0xFFF3E7D3))
                             )
                         )
-                        .systemBarsPadding()
+                        .safeDrawingPadding()
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
