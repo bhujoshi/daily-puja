@@ -105,14 +105,16 @@ func TestDefaultMarbleShrineNeedsNoCoinPurchase(t *testing.T) {
 	s, _ := New(filepath.Join(t.TempDir(), "accounts.json"))
 	_, auth := call(s, "POST", "register", "", `{"email":"marble@example.com","password":"long-password"}`)
 	token := auth["token"].(string)
-	selection := `{"selections":{"shrine":"marble","idols":"durga","flowers":"original","lamp":"brass","shankh":"ivory","aarti":"traditional","prasad":"laddu"}}`
-	code, profile := call(s, "PUT", "shrine", token, selection)
-	if code != 200 || profile["coins"] != float64(0) || profile["unlocked"] != false {
-		t.Fatal("default shrine blocked a free selection", code, profile)
+	for _, freeShrine := range []string{"marble", "divya_darshan", "kamal_peeth", "swarna_peeth"} {
+		selection := `{"selections":{"shrine":"` + freeShrine + `","idols":"durga","flowers":"original","lamp":"brass","shankh":"ivory","aarti":"traditional","prasad":"laddu"}}`
+		code, profile := call(s, "PUT", "shrine", token, selection)
+		if code != 200 || profile["coins"] != float64(0) || profile["unlocked"] != false {
+			t.Fatal("free shrine blocked a selection", freeShrine, code, profile)
+		}
 	}
 	// Even a legacy client sending an explicit unlock must not debit the wallet.
 	s.db.Accounts["marble@example.com"].Coins = 7
-	code, profile = call(s, "POST", "coins/unlock", token, `{"category":"shrine","item":"marble"}`)
+	code, profile := call(s, "POST", "coins/unlock", token, `{"category":"shrine","item":"marble"}`)
 	if code != 200 || profile["coins"] != float64(7) || profile["owned"].(map[string]any)["shrine:marble"] == true {
 		t.Fatal("free default consumed coins", code, profile)
 	}

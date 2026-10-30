@@ -177,6 +177,8 @@ fun DevotionStreak(
     today: LocalDate = LocalDate.now(ZoneId.of("Asia/Kolkata"))
 ) {
     fun tr(hi: String, en: String) = if (hindi) hi else en
+    val context = LocalContext.current
+    val analytics = remember(context) { MandirAnalytics.from(context) }
     val effectiveDays = remember(completedDays, streak, today) {
         if (completedDays.isNotEmpty() || streak <= 0) completedDays
         else (0 until streak).map { today.minusDays(it.toLong()).toString() }.toSet()
@@ -270,7 +272,11 @@ fun DevotionStreak(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     IconButton(
-                        onClick = { displayedMonth = displayedMonth.minusMonths(1) },
+                        onClick = {
+                            val next = displayedMonth.minusMonths(1)
+                            displayedMonth = next
+                            analytics.logStreakCalendarMonthChanged(next.toString(), "previous")
+                        },
                         modifier = Modifier.size(34.dp)
                     ) {
                         Icon(
@@ -288,7 +294,13 @@ fun DevotionStreak(
                     )
                     val canGoNext = displayedMonth < currentMonth
                     IconButton(
-                        onClick = { if (canGoNext) displayedMonth = displayedMonth.plusMonths(1) },
+                        onClick = {
+                            if (canGoNext) {
+                                val next = displayedMonth.plusMonths(1)
+                                displayedMonth = next
+                                analytics.logStreakCalendarMonthChanged(next.toString(), "next")
+                            }
+                        },
                         enabled = canGoNext,
                         modifier = Modifier.size(34.dp)
                     ) {
@@ -420,6 +432,8 @@ private fun CoinPassbookCard(
     onShare: () -> Unit
 ) {
     fun tr(hi: String, en: String) = if (hindi) hi else en
+    val context = LocalContext.current
+    val analytics = remember(context) { MandirAnalytics.from(context) }
     var filter by remember { mutableStateOf(PassbookFilter.ALL) }
     var expanded by remember { mutableStateOf(false) }
     val filteredEntries = remember(ledger, filter) { ledger.filtered(filter) }
@@ -606,7 +620,12 @@ private fun CoinPassbookCard(
                 tabs.forEach { (tab, label) ->
                     val selected = filter == tab
                     Surface(
-                        onClick = { filter = tab },
+                        onClick = {
+                            if (filter != tab) {
+                                filter = tab
+                                analytics.logPassbookFilterChanged(tab.name.lowercase())
+                            }
+                        },
                         shape = RoundedCornerShape(50),
                         color = if (selected) RitualInk else CardSurfaceWarm,
                         contentColor = if (selected) Color(0xFFFFFDF8) else RitualInk,
@@ -654,7 +673,10 @@ private fun CoinPassbookCard(
                     }
                     if (filteredEntries.size > 5) {
                         TextButton(
-                            onClick = { expanded = !expanded },
+                            onClick = {
+                                expanded = !expanded
+                                analytics.logPassbookExpandedToggled(expanded, filteredEntries.size)
+                            },
                             modifier = Modifier.align(Alignment.CenterHorizontally)
                         ) {
                             Text(
@@ -918,6 +940,16 @@ fun DevotionSheet(
     val sharing = destination == DevotionPage.SHARE || shareAfterLogin
     val signingIn = destination == DevotionPage.LOGIN || (!account.signedIn && destination == DevotionPage.PROFILE)
     val focused = sharing || signingIn
+    val activeDevotionScreen = when {
+        deleteConfirm -> "devotion_delete_confirm"
+        sharing -> "devotion_share"
+        signingIn -> "devotion_login"
+        destination == DevotionPage.PACKAGE -> "devotion_package"
+        else -> "devotion_profile"
+    }
+    LaunchedEffect(activeDevotionScreen) {
+        analytics.logScreenView(activeDevotionScreen, "DevotionSheet")
+    }
     val today = remember { LocalDate.now(ZoneId.of("Asia/Kolkata")) }
     val ledger = account.passbook(catalog, today)
 
@@ -990,7 +1022,7 @@ fun DevotionSheet(
                                 modifier = Modifier.size(36.dp)
                             ) {
                                 IconButton(
-                                    onClick = { run { account.sync() } },
+                                    onClick = { analytics.logAccountAction("refresh_sync"); run { account.sync() } },
                                     enabled = !busy,
                                     modifier = Modifier.fillMaxSize()
                                 ) {
@@ -1115,7 +1147,7 @@ fun DevotionSheet(
                             leadingIcon = { WhatsAppIcon() }
                         )
                         TextButton(
-                            onClick = { destination = DevotionPage.PROFILE; message = "" },
+                            onClick = { analytics.logAccountAction("view_profile_from_share"); destination = DevotionPage.PROFILE; message = "" },
                             enabled = !busy
                         ) {
                             Text(tr("मेरी प्रोफ़ाइल देखें", "View my profile"))
@@ -1129,7 +1161,7 @@ fun DevotionSheet(
                         account = account,
                         catalog = catalog,
                         hindi = hindi,
-                        onCustomize = onCustomize,
+                        onCustomize = { analytics.logAccountAction("customize_from_profile"); onCustomize() },
                         enabled = !busy && canCustomize
                     )
 
@@ -1148,6 +1180,7 @@ fun DevotionSheet(
                         hindi = hindi,
                         busy = busy,
                         onShare = {
+                            analytics.logAccountAction("share_from_passbook")
                             destination = DevotionPage.SHARE
                             if (account.googleAccount) {
                                 run(tr("निमंत्रण तैयार हो रहा है…", "Preparing your invitation…")) {
@@ -1162,7 +1195,7 @@ fun DevotionSheet(
 
                     if (!account.signedIn) {
                         OutlinedButton(
-                            onClick = { destination = DevotionPage.LOGIN },
+                            onClick = { analytics.logAccountAction("login_prompt_clicked"); destination = DevotionPage.LOGIN },
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(tr("सिक्के सहेजने के लिए लॉग इन करें", "Log in to keep your coins"))
@@ -1226,7 +1259,7 @@ fun DevotionSheet(
                             account = account,
                             catalog = catalog,
                             hindi = hindi,
-                            onCustomize = onCustomize,
+                            onCustomize = { analytics.logAccountAction("customize_from_login"); onCustomize() },
                             enabled = !busy && canCustomize
                         )
                     }
@@ -1260,7 +1293,7 @@ fun DevotionSheet(
 
                 if (account.signedIn && !focused) {
                     TextButton(
-                        onClick = { deleteConfirm = true },
+                        onClick = { analytics.logAccountAction("delete_confirm_opened"); deleteConfirm = true },
                         enabled = !busy,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     ) {
@@ -1277,7 +1310,7 @@ fun DevotionSheet(
 
     if (deleteConfirm) {
         AlertDialog(
-            onDismissRequest = { deleteConfirm = false },
+            onDismissRequest = { analytics.logAccountAction("delete_confirm_cancelled"); deleteConfirm = false },
             title = { Text(tr("खाता मिटाएँ?", "Delete account?")) },
             text = {
                 Text(
@@ -1298,7 +1331,7 @@ fun DevotionSheet(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { deleteConfirm = false }) {
+                TextButton(onClick = { analytics.logAccountAction("delete_confirm_cancelled"); deleteConfirm = false }) {
                     Text(tr("वापस", "Cancel"))
                 }
             }

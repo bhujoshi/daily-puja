@@ -16,10 +16,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.worship.nityamandir.data.MandirAnalytics
 import com.worship.nityamandir.data.model.AartiLyric
 import com.worship.nityamandir.ui.theme.*
 import kotlinx.coroutines.delay
@@ -33,8 +35,14 @@ fun AartiPlayerSheet(
     onComplete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val analytics = remember(context) { MandirAnalytics.from(context) }
     var isPlaying by remember { mutableStateOf(true) }
     var currentLineIndex by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        analytics.logScreenView("aarti_player", screenClass = "AartiPlayerSheet")
+    }
 
     // Lyric line progress simulation
     LaunchedEffect(isPlaying) {
@@ -85,7 +93,13 @@ fun AartiPlayerSheet(
                     )
                 }
 
-                IconButton(onClick = { isPlaying = !isPlaying }) {
+                IconButton(onClick = {
+                    isPlaying = !isPlaying
+                    analytics.logAartiLyricsAction(
+                        action = if (isPlaying) "play" else "pause",
+                        title = titleEn
+                    )
+                }) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = null,
@@ -134,7 +148,10 @@ fun AartiPlayerSheet(
             }
 
             Button(
-                onClick = onComplete,
+                onClick = {
+                    analytics.logAartiLyricsAction(action = "complete", title = titleEn)
+                    onComplete()
+                },
                 colors = ButtonDefaults.buttonColors(containerColor = SacredDeepSaffron),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()

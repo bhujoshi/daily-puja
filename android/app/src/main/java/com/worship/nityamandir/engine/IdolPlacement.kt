@@ -19,7 +19,7 @@ class IdolPlacement(selection:ShrineSelection) {
         "hanuman" -> 609f/969f
         else -> 723f/924f
     }
-    private val maxWidth=if(selection.deityCount==1) min(.37f,space.idolWidth) else space.idolWidth
+    private val maxWidth=if(selection.deityCount==1) min(space.singleIdolWidth,space.idolWidth) else space.idolWidth
     private val maxHeight=min(space.idolHeight,space.altarY-space.bellCeilingY)
     val width=min(maxWidth,maxHeight*aspect)
     val height=width/aspect

@@ -68,7 +68,7 @@ func (s *Server) initRewards() {
 
 func coinCost(category, item string) int {
 	if item == "original" ||
-		(category == "shrine" && item == "marble") ||
+		(category == "shrine" && (item == "marble" || item == "divya_darshan" || item == "kamal_peeth" || item == "swarna_peeth")) ||
 		(category == "lamp" && item == "brass") ||
 		(category == "shankh" && item == "ivory") ||
 		(category == "aarti" && item == "traditional") ||

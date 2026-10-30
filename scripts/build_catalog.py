@@ -9,6 +9,9 @@ def picture(id,en,hi,folder,name):return (id,en,hi,f'shrine/{folder}/{name}.png'
 category('shrine','Shrine','मंदिर',[
  picture('original','Wooden mandir','लकड़ी का मंदिर','backgrounds','wood'),
  picture('marble','Marble arch','संगमरमर मंदिर','backgrounds','marble'),
+ picture('divya_darshan','Divya Darshan (Big Idol)','दिव्य दर्शन (बड़ी मूर्ति)','backgrounds','divya_darshan'),
+ picture('kamal_peeth','Kamal Peeth (Big Idol)','कमल पीठ (बड़ी मूर्ति)','backgrounds','kamal_peeth'),
+ picture('swarna_peeth','Swarna Peeth (Big Idol)','स्वर्ण पीठ (बड़ी मूर्ति)','backgrounds','swarna_peeth'),
  picture('ivory','Ivory alcove','हाथीदाँत रंग का मंदिर','backgrounds','ivory'),
  picture('carved','Carved sanctuary','नक्काशीदार मंदिर','backgrounds','carved'),
  picture('swarna','Golden sanctum','स्वर्ण गर्भगृह मंदिर','backgrounds','swarna')])

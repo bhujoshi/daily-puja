@@ -157,5 +157,100 @@ class MandirAnalyticsTest {
         assertEquals(5L, completedParams["duration_minutes"])
         assertEquals(3L, completedParams["streak_days"])
         assertEquals(4L, completedParams["total_sessions"])
+        assertEquals("false", completedParams["completed_early"])
+        assertEquals(0L, completedParams["japa_count"])
+    }
+
+    @Test
+    fun `logs all page screen views and granular activity events across the app`() {
+        val sink = FakeSink()
+        val analytics = MandirAnalytics(sink)
+
+        // 1. Screen views and lifecycle
+        analytics.logAppLifecycle("foreground")
+        analytics.logScreenView("mandir_sanctum", "MandirHomeScreen")
+        analytics.logScreenView("shrine_customizer", "ShrineCustomizer")
+        analytics.logScreenView("mindfulness_active", "MindfulnessMeditationScreen")
+        analytics.logScreenView("music_player", "BhajanPlayerSheet")
+        analytics.logScreenView("devotion_profile", "DevotionSheet")
+        analytics.logScreenView("aarti_player", "AartiPlayerSheet")
+
+        // 2. Ritual and cleaning actions
+        analytics.logTempleCleaningStarted("swipe")
+        analytics.logRitualDiyaLit(source = "altar", step = WorshipStep.LIGHT)
+        analytics.logRitualDeityBathed(deityIndex = 0, source = "dock", step = WorshipStep.BATH)
+        analytics.logRitualTilakApplied(deityIndex = 1, source = "altar", step = WorshipStep.TILAK)
+        analytics.logRitualFlowerOffered(deityIndex = 0, flowerIndex = 1, source = "dock", step = WorshipStep.FLOWERS)
+        analytics.logRitualConchBlown(source = "altar", step = WorshipStep.CONCH)
+        analytics.logRitualPrasadOffered(source = "dock", step = WorshipStep.PRASAD)
+        analytics.logRitualAartiStarted(source = "altar", step = WorshipStep.AARTI)
+        analytics.logBellRung(source = "dock")
+
+        // 3. Drawer & Shrine Customizer interactions
+        analytics.logDrawerItemSelected("mindfulness")
+        analytics.logShrineOptionSelected(
+            categoryId = "idols",
+            itemId = "ram_darbar",
+            owned = false,
+            costCoins = 108,
+            selected = true
+        )
+        analytics.logShrineUnlockPrompted(
+            itemCount = 2,
+            totalCostCoins = 216,
+            sufficientCoins = true,
+            signedIn = true
+        )
+        analytics.logShrineUnlockCancelled(itemCount = 2, totalCostCoins = 216)
+        analytics.logShrineAccountClicked(signedIn = false, coins = 50)
+
+        // 4. Bhajan & Aarti player controls
+        analytics.logBhajanControlAction(action = "play", trackId = "hanuman-chalisa", source = "archive")
+        analytics.logAartiLyricsAction(action = "pause", title = "Om Jai Jagdish Hare")
+
+        // 5. Devotion sheet interactions
+        analytics.logStreakCalendarMonthChanged(yearMonth = "2026-10", direction = "previous")
+        analytics.logPassbookFilterChanged(filter = "earned")
+        analytics.logPassbookExpandedToggled(expanded = true, entryCount = 12)
+        analytics.logAccountAction(action = "refresh_sync")
+
+        // 6. Mindfulness setup & session interactions
+        analytics.logMindfulnessOptionSelected(optionType = "practice", value = "mantra_japa")
+        analytics.logMindfulnessSoundToggled(enabled = false)
+        analytics.logMindfulnessPauseToggled(practice = "mantra_japa", paused = true, elapsedSeconds = 45)
+        analytics.logMindfulnessJapaTap(mantra = "om_namah_shivaya", japaCount = 108, malaCompleted = true)
+        analytics.logMindfulnessCancelled(practice = "mantra_japa", elapsedSeconds = 90, japaCount = 54)
+        analytics.logMindfulnessRestarted(practice = "mantra_japa")
+
+        val byName = sink.events.associate { it.first to it.second }
+
+        assertEquals("foreground", byName["app_lifecycle"]?.get("state"))
+        assertEquals("AartiPlayerSheet", byName["screen_view"]?.get("screen_class"))
+        assertEquals("swipe", byName["temple_cleaning_started"]?.get("method"))
+        assertEquals("altar", byName["ritual_diya_lit"]?.get("source"))
+        assertEquals(0L, byName["ritual_deity_bathed"]?.get("deity_index"))
+        assertEquals(1L, byName["ritual_tilak_applied"]?.get("deity_index"))
+        assertEquals(1L, byName["ritual_flower_offered"]?.get("flower_index"))
+        assertEquals("altar", byName["ritual_conch_blown"]?.get("source"))
+        assertEquals("dock", byName["ritual_prasad_offered"]?.get("source"))
+        assertEquals("altar", byName["ritual_aarti_started"]?.get("source"))
+        assertEquals("dock", byName["ritual_bell_rung"]?.get("source"))
+        assertEquals("mindfulness", byName["drawer_item_selected"]?.get("item"))
+        assertEquals("ram_darbar", byName["shrine_option_selected"]?.get("item_id"))
+        assertEquals(216L, byName["shrine_unlock_prompted"]?.get("total_cost_coins"))
+        assertEquals(2L, byName["shrine_unlock_cancelled"]?.get("item_count"))
+        assertEquals(50L, byName["shrine_account_clicked"]?.get("coins"))
+        assertEquals("play", byName["bhajan_control_action"]?.get("action"))
+        assertEquals("pause", byName["aarti_lyrics_action"]?.get("action"))
+        assertEquals("2026-10", byName["streak_calendar_month_changed"]?.get("year_month"))
+        assertEquals("earned", byName["passbook_filter_changed"]?.get("filter"))
+        assertEquals("true", byName["passbook_expanded_toggled"]?.get("expanded"))
+        assertEquals("refresh_sync", byName["account_action"]?.get("action"))
+        assertEquals("mantra_japa", byName["mindfulness_option_selected"]?.get("value"))
+        assertEquals("false", byName["mindfulness_sound_toggled"]?.get("enabled"))
+        assertEquals("true", byName["mindfulness_pause_toggled"]?.get("paused"))
+        assertEquals("true", byName["mindfulness_japa_tap"]?.get("mala_completed"))
+        assertEquals(90L, byName["mindfulness_cancelled"]?.get("elapsed_seconds"))
+        assertEquals("mantra_japa", byName["mindfulness_restarted"]?.get("practice"))
     }
 }

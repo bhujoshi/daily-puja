@@ -66,6 +66,10 @@ class MandirAnalytics(private val sink: Sink) {
         )
     }
 
+    fun logAppLifecycle(state: String) {
+        logEvent("app_lifecycle", mapOf("state" to state))
+    }
+
     fun logTempleEntered(needsCleaning: Boolean, deityCount: Int, shrineId: String, idolsId: String) {
         logEvent(
             "temple_entered",
@@ -78,8 +82,99 @@ class MandirAnalytics(private val sink: Sink) {
         )
     }
 
+    fun logTempleCleaningStarted(method: String) {
+        logEvent("temple_cleaning_started", mapOf("method" to method))
+    }
+
     fun logTempleCleaned(method: String) {
         logEvent("temple_cleaned", mapOf("method" to method))
+    }
+
+    fun logRitualDiyaLit(source: String = "dock", step: WorshipStep = WorshipStep.LIGHT) {
+        logEvent(
+            "ritual_diya_lit",
+            mapOf(
+                "source" to source,
+                "step" to step.name.lowercase()
+            )
+        )
+    }
+
+    fun logRitualDeityBathed(
+        deityIndex: Int,
+        source: String = "dock",
+        step: WorshipStep = WorshipStep.BATH
+    ) {
+        logEvent(
+            "ritual_deity_bathed",
+            mapOf(
+                "deity_index" to deityIndex,
+                "source" to source,
+                "step" to step.name.lowercase()
+            )
+        )
+    }
+
+    fun logRitualTilakApplied(
+        deityIndex: Int,
+        source: String = "dock",
+        step: WorshipStep = WorshipStep.TILAK
+    ) {
+        logEvent(
+            "ritual_tilak_applied",
+            mapOf(
+                "deity_index" to deityIndex,
+                "source" to source,
+                "step" to step.name.lowercase()
+            )
+        )
+    }
+
+    fun logRitualFlowerOffered(
+        deityIndex: Int,
+        flowerIndex: Int,
+        source: String = "dock",
+        step: WorshipStep = WorshipStep.FLOWERS
+    ) {
+        logEvent(
+            "ritual_flower_offered",
+            mapOf(
+                "deity_index" to deityIndex,
+                "flower_index" to flowerIndex,
+                "source" to source,
+                "step" to step.name.lowercase()
+            )
+        )
+    }
+
+    fun logRitualConchBlown(source: String = "dock", step: WorshipStep = WorshipStep.CONCH) {
+        logEvent(
+            "ritual_conch_blown",
+            mapOf(
+                "source" to source,
+                "step" to step.name.lowercase()
+            )
+        )
+    }
+
+    fun logRitualPrasadOffered(source: String = "dock", step: WorshipStep = WorshipStep.PRASAD) {
+        logEvent(
+            "ritual_prasad_offered",
+            mapOf(
+                "source" to source,
+                "step" to step.name.lowercase()
+            )
+        )
+    }
+
+    fun logRitualAartiStarted(source: String = "dock", step: WorshipStep = WorshipStep.AARTI) {
+        logEvent(
+            "ritual_aarti_started",
+            mapOf(
+                "source" to source,
+                "step" to step.name.lowercase()
+            )
+        )
     }
 
     fun logRitualStepCompleted(step: WorshipStep, deityCount: Int) {
@@ -93,8 +188,8 @@ class MandirAnalytics(private val sink: Sink) {
         )
     }
 
-    fun logBellRung() {
-        logEvent("ritual_bell_rung")
+    fun logBellRung(source: String = "altar") {
+        logEvent("ritual_bell_rung", mapOf("source" to source))
     }
 
     fun logPujaCompleted(
@@ -116,8 +211,31 @@ class MandirAnalytics(private val sink: Sink) {
         )
     }
 
+    fun logDrawerItemSelected(item: String) {
+        logEvent("drawer_item_selected", mapOf("item" to item))
+    }
+
     fun logShrineCategoryViewed(categoryId: String) {
         logEvent("shrine_category_viewed", mapOf("category_id" to categoryId))
+    }
+
+    fun logShrineOptionSelected(
+        categoryId: String,
+        itemId: String,
+        owned: Boolean,
+        costCoins: Int,
+        selected: Boolean = true
+    ) {
+        logEvent(
+            "shrine_option_selected",
+            mapOf(
+                "category_id" to categoryId,
+                "item_id" to itemId,
+                "owned" to owned,
+                "cost_coins" to costCoins,
+                "selected" to selected
+            )
+        )
     }
 
     fun logShrinePreviewOpened(shrineId: String, idolsId: String) {
@@ -126,6 +244,33 @@ class MandirAnalytics(private val sink: Sink) {
             mapOf(
                 "shrine_id" to shrineId,
                 "idols_id" to idolsId
+            )
+        )
+    }
+
+    fun logShrineUnlockPrompted(
+        itemCount: Int,
+        totalCostCoins: Int,
+        sufficientCoins: Boolean,
+        signedIn: Boolean
+    ) {
+        logEvent(
+            "shrine_unlock_prompted",
+            mapOf(
+                "item_count" to itemCount,
+                "total_cost_coins" to totalCostCoins,
+                "sufficient_coins" to sufficientCoins,
+                "signed_in" to signedIn
+            )
+        )
+    }
+
+    fun logShrineUnlockCancelled(itemCount: Int, totalCostCoins: Int) {
+        logEvent(
+            "shrine_unlock_cancelled",
+            mapOf(
+                "item_count" to itemCount,
+                "total_cost_coins" to totalCostCoins
             )
         )
     }
@@ -149,6 +294,16 @@ class MandirAnalytics(private val sink: Sink) {
                 "idols_id" to selection["idols"],
                 "lamp_id" to selection["lamps"],
                 "flower_count" to selection.flowerIds.size
+            )
+        )
+    }
+
+    fun logShrineAccountClicked(signedIn: Boolean, coins: Int) {
+        logEvent(
+            "shrine_account_clicked",
+            mapOf(
+                "signed_in" to signedIn,
+                "coins" to coins
             )
         )
     }
@@ -182,6 +337,31 @@ class MandirAnalytics(private val sink: Sink) {
         )
     }
 
+    fun logBhajanControlAction(
+        action: String,
+        trackId: String = "",
+        source: String = "sheet"
+    ) {
+        val params = buildMap<String, Any> {
+            put("action", action)
+            put("source", source)
+            if (trackId.isNotBlank()) {
+                put("track_id", trackId)
+            }
+        }
+        logEvent("bhajan_control_action", params)
+    }
+
+    fun logAartiLyricsAction(action: String, title: String) {
+        logEvent(
+            "aarti_lyrics_action",
+            mapOf(
+                "action" to action,
+                "title" to title
+            )
+        )
+    }
+
     fun logLanguageChanged(hindi: Boolean) {
         val lang = if (hindi) "hi" else "en"
         setUserProperty("app_language", lang)
@@ -210,6 +390,44 @@ class MandirAnalytics(private val sink: Sink) {
         logEvent("account_action", mapOf("action" to action))
     }
 
+    fun logStreakCalendarMonthChanged(yearMonth: String, direction: String) {
+        logEvent(
+            "streak_calendar_month_changed",
+            mapOf(
+                "year_month" to yearMonth,
+                "direction" to direction
+            )
+        )
+    }
+
+    fun logPassbookFilterChanged(filter: String) {
+        logEvent("passbook_filter_changed", mapOf("filter" to filter.lowercase()))
+    }
+
+    fun logPassbookExpandedToggled(expanded: Boolean, entryCount: Int) {
+        logEvent(
+            "passbook_expanded_toggled",
+            mapOf(
+                "expanded" to expanded,
+                "entry_count" to entryCount
+            )
+        )
+    }
+
+    fun logMindfulnessOptionSelected(optionType: String, value: String) {
+        logEvent(
+            "mindfulness_option_selected",
+            mapOf(
+                "option_type" to optionType,
+                "value" to value
+            )
+        )
+    }
+
+    fun logMindfulnessSoundToggled(enabled: Boolean) {
+        logEvent("mindfulness_sound_toggled", mapOf("enabled" to enabled))
+    }
+
     fun logMindfulnessStarted(
         practice: String,
         durationMinutes: Int,
@@ -225,11 +443,58 @@ class MandirAnalytics(private val sink: Sink) {
         )
     }
 
+    fun logMindfulnessPauseToggled(
+        practice: String,
+        paused: Boolean,
+        elapsedSeconds: Int
+    ) {
+        logEvent(
+            "mindfulness_pause_toggled",
+            mapOf(
+                "practice" to practice,
+                "paused" to paused,
+                "elapsed_seconds" to elapsedSeconds
+            )
+        )
+    }
+
+    fun logMindfulnessJapaTap(
+        mantra: String,
+        japaCount: Int,
+        malaCompleted: Boolean
+    ) {
+        logEvent(
+            "mindfulness_japa_tap",
+            mapOf(
+                "mantra" to mantra,
+                "japa_count" to japaCount,
+                "mala_completed" to malaCompleted
+            )
+        )
+    }
+
+    fun logMindfulnessCancelled(
+        practice: String,
+        elapsedSeconds: Int,
+        japaCount: Int
+    ) {
+        logEvent(
+            "mindfulness_cancelled",
+            mapOf(
+                "practice" to practice,
+                "elapsed_seconds" to elapsedSeconds,
+                "japa_count" to japaCount
+            )
+        )
+    }
+
     fun logMindfulnessCompleted(
         practice: String,
         durationMinutes: Int,
         streakDays: Int,
-        totalSessions: Int
+        totalSessions: Int,
+        completedEarly: Boolean = false,
+        japaCount: Int = 0
     ) {
         logEvent(
             "mindfulness_completed",
@@ -237,9 +502,15 @@ class MandirAnalytics(private val sink: Sink) {
                 "practice" to practice,
                 "duration_minutes" to durationMinutes,
                 "streak_days" to streakDays,
-                "total_sessions" to totalSessions
+                "total_sessions" to totalSessions,
+                "completed_early" to completedEarly,
+                "japa_count" to japaCount
             )
         )
+    }
+
+    fun logMindfulnessRestarted(practice: String) {
+        logEvent("mindfulness_restarted", mapOf("practice" to practice))
     }
 
     companion object {

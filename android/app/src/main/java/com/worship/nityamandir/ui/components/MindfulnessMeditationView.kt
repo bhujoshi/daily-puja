@@ -3,6 +3,7 @@ package com.worship.nityamandir.ui.components
 import android.app.Activity
 import android.os.SystemClock
 import android.view.WindowManager
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
@@ -17,6 +18,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.VolumeUp
+import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -41,7 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.worship.nityamandir.R
+import com.worship.nityamandir.data.MandirAnalytics
 import com.worship.nityamandir.data.MindfulnessStats
 import com.worship.nityamandir.engine.*
 import com.worship.nityamandir.ui.theme.*
@@ -54,19 +57,29 @@ import kotlin.math.sin
 private enum class SessionStage { SETUP, ACTIVE, COMPLETED }
 
 @Composable
-fun MindfulnessMeditationOverlay(
+fun MindfulnessMeditationScreen(
     hindi: Boolean,
     stats: MindfulnessStats,
-    audio: RitualAudio,
     onSessionStarted: (MindfulnessPractice, Int, String) -> Unit,
-    onSessionCompleted: (MindfulnessPractice, Int) -> Unit,
+    onSessionCompleted: (MindfulnessPractice, Int, Boolean, Int) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     fun tr(hi: String, en: String) = if (hindi) hi else en
     val context = LocalContext.current
+    val analytics = remember(context) { MandirAnalytics.from(context) }
+    val audio = remember(context) { MindfulnessAudio(context.applicationContext) }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
     var stage by remember { mutableStateOf(SessionStage.SETUP) }
+    LaunchedEffect(stage) {
+        val screenName = when (stage) {
+            SessionStage.SETUP -> "mindfulness_setup"
+            SessionStage.ACTIVE -> "mindfulness_active"
+            SessionStage.COMPLETED -> "mindfulness_completed"
+        }
+        analytics.logScreenView(screenName, "MindfulnessMeditationScreen")
+    }
     var selectedPractice by remember {
         mutableStateOf(
             MindfulnessPractice.entries.firstOrNull { it.id == stats.lastPracticeId }
@@ -81,7 +94,7 @@ fun MindfulnessMeditationOverlay(
     var isPaused by remember { mutableStateOf(false) }
     var elapsedMs by remember { mutableLongStateOf(0L) }
     var japaCount by remember { mutableIntStateOf(0) }
-    var lastBellCueIndex by remember { mutableIntStateOf(0) }
+    var lastSoundCueIndex by remember { mutableIntStateOf(0) }
 
     val totalSeconds = durationMinutes * 60
     val snapshot = remember(elapsedMs, totalSeconds, selectedPractice, selectedPattern) {
@@ -91,6 +104,22 @@ fun MindfulnessMeditationOverlay(
             practice = selectedPractice,
             breathingPattern = selectedPattern
         )
+    }
+
+    BackHandler(onBack = onClose)
+    DisposableEffect(audio) {
+        onDispose { audio.release() }
+    }
+    val currentStage by rememberUpdatedState(stage)
+    DisposableEffect(lifecycleOwner, audio) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                audio.stop()
+                if (currentStage == SessionStage.ACTIVE) isPaused = true
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     // Keep screen awake during active meditation
@@ -119,21 +148,21 @@ fun MindfulnessMeditationOverlay(
             elapsedMs = nextElapsed
             if (nextElapsed >= totalSeconds * 1000L) {
                 if (soundCuesEnabled) {
-                    audio.cue(R.raw.bell)
+                    audio.cue()
                 }
-                onSessionCompleted(selectedPractice, durationMinutes)
+                onSessionCompleted(selectedPractice, durationMinutes, false, japaCount)
                 stage = SessionStage.COMPLETED
                 break
             }
         }
     }
 
-    // Play soft temple bell on Trataka or Mantra interval transitions
-    LaunchedEffect(snapshot.bellCueIndex, stage, soundCuesEnabled) {
-        if (stage == SessionStage.ACTIVE && snapshot.bellCueIndex > lastBellCueIndex && !snapshot.completed) {
-            lastBellCueIndex = snapshot.bellCueIndex
+    // Soft flute cue on flame-gazing or mantra interval transitions.
+    LaunchedEffect(snapshot.bellCueIndex, stage, soundCuesEnabled, isPaused) {
+        if (stage == SessionStage.ACTIVE && !isPaused && snapshot.bellCueIndex > lastSoundCueIndex && !snapshot.completed) {
+            lastSoundCueIndex = snapshot.bellCueIndex
             if (soundCuesEnabled) {
-                audio.cue(R.raw.bell)
+                audio.cue()
             }
         }
     }
@@ -141,11 +170,11 @@ fun MindfulnessMeditationOverlay(
     fun beginSession() {
         elapsedMs = 0L
         japaCount = 0
-        lastBellCueIndex = 0
+        lastSoundCueIndex = 0
         isPaused = false
         stage = SessionStage.ACTIVE
         if (soundCuesEnabled) {
-            audio.cue(R.raw.bell)
+            audio.cue()
         }
         val subOption = when (selectedPractice) {
             MindfulnessPractice.PRANAYAMA -> selectedPattern.id
@@ -158,9 +187,9 @@ fun MindfulnessMeditationOverlay(
     fun finishEarlyAndComplete() {
         val practicedMinutes = ((elapsedMs / 60_000L).toInt()).coerceAtLeast(1)
         if (soundCuesEnabled) {
-            audio.cue(R.raw.bell)
+            audio.cue()
         }
-        onSessionCompleted(selectedPractice, practicedMinutes)
+        onSessionCompleted(selectedPractice, practicedMinutes, true, japaCount)
         stage = SessionStage.COMPLETED
     }
 
@@ -170,13 +199,13 @@ fun MindfulnessMeditationOverlay(
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        Color(0xD90D0B0A),
-                        Color(0xBF140D0A),
-                        Color(0xEB0D0B0A)
+                        DarkSanctumBackground,
+                        AltarTeakDark,
+                        DarkSanctumBackground
                     )
                 )
             )
-            .testTag("mindfulness-overlay")
+            .testTag("mindfulness-screen")
     ) {
         Column(
             modifier = Modifier
@@ -190,9 +219,13 @@ fun MindfulnessMeditationOverlay(
             MindfulnessTopBar(
                 hindi = hindi,
                 soundCuesEnabled = soundCuesEnabled,
-                onToggleSound = { soundCuesEnabled = !soundCuesEnabled },
+                onToggleSound = {
+                    soundCuesEnabled = !soundCuesEnabled
+                    analytics.logMindfulnessSoundToggled(soundCuesEnabled)
+                    if (!soundCuesEnabled) audio.stop()
+                },
                 onClose = {
-                    audio.stopCue(R.raw.bell)
+                    audio.stop()
                     onClose()
                 }
             )
@@ -208,13 +241,25 @@ fun MindfulnessMeditationOverlay(
                         MindfulnessSetupContent(
                             hindi = hindi,
                             selectedPractice = selectedPractice,
-                            onSelectPractice = { selectedPractice = it },
+                            onSelectPractice = {
+                                selectedPractice = it
+                                analytics.logMindfulnessOptionSelected("practice", it.id)
+                            },
                             selectedPattern = selectedPattern,
-                            onSelectPattern = { selectedPattern = it },
+                            onSelectPattern = {
+                                selectedPattern = it
+                                analytics.logMindfulnessOptionSelected("breathing_pattern", it.id)
+                            },
                             selectedMantra = selectedMantra,
-                            onSelectMantra = { selectedMantra = it },
+                            onSelectMantra = {
+                                selectedMantra = it
+                                analytics.logMindfulnessOptionSelected("mantra", it.id)
+                            },
                             durationMinutes = durationMinutes,
-                            onSelectDuration = { durationMinutes = it },
+                            onSelectDuration = {
+                                durationMinutes = it
+                                analytics.logMindfulnessOptionSelected("duration", "$it")
+                            },
                             onStart = ::beginSession
                         )
                     }
@@ -229,15 +274,31 @@ fun MindfulnessMeditationOverlay(
                             japaCount = japaCount,
                             onIncrementJapa = {
                                 japaCount++
-                                if (japaCount % MindfulnessEngine.MALA_BEADS == 0 && soundCuesEnabled) {
-                                    audio.cue(R.raw.bell)
+                                val malaDone = japaCount % MindfulnessEngine.MALA_BEADS == 0
+                                analytics.logMindfulnessJapaTap(selectedMantra.id, japaCount, malaDone)
+                                if (malaDone && soundCuesEnabled) {
+                                    audio.cue()
                                 } else if (soundCuesEnabled) {
-                                    audio.cue(R.raw.flower_offering)
+                                    audio.mantraTap()
                                 }
                             },
-                            onTogglePause = { isPaused = !isPaused },
+                            onTogglePause = {
+                                isPaused = !isPaused
+                                analytics.logMindfulnessPauseToggled(
+                                    selectedPractice.id,
+                                    isPaused,
+                                    (elapsedMs / 1000L).toInt()
+                                )
+                                if (isPaused) audio.stop()
+                            },
                             onCompleteEarly = ::finishEarlyAndComplete,
                             onCancelToSetup = {
+                                analytics.logMindfulnessCancelled(
+                                    selectedPractice.id,
+                                    (elapsedMs / 1000L).toInt(),
+                                    japaCount
+                                )
+                                audio.stop()
                                 isPaused = false
                                 elapsedMs = 0L
                                 stage = SessionStage.SETUP
@@ -250,6 +311,8 @@ fun MindfulnessMeditationOverlay(
                             stats = stats,
                             japaCount = japaCount,
                             onMeditateAgain = {
+                                analytics.logMindfulnessRestarted(selectedPractice.id)
+                                audio.stop()
                                 elapsedMs = 0L
                                 stage = SessionStage.SETUP
                             },
@@ -296,7 +359,7 @@ private fun MindfulnessTopBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Sound Bell Cue Toggle
+            // Meditation sound toggle
             Surface(
                 onClick = onToggleSound,
                 shape = CircleShape,
@@ -306,15 +369,15 @@ private fun MindfulnessTopBar(
                     .size(48.dp)
                     .semantics {
                         contentDescription = if (soundCuesEnabled) {
-                            tr("घंटी ध्वनि चालू है", "Bell sound cues enabled")
+                            tr("ध्यान की ध्वनि चालू है", "Meditation sounds enabled")
                         } else {
-                            tr("घंटी ध्वनि बंद है", "Bell sound cues muted")
+                            tr("ध्यान की ध्वनि बंद है", "Meditation sounds muted")
                         }
                     }
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        imageVector = if (soundCuesEnabled) Icons.Outlined.NotificationsActive else Icons.Outlined.NotificationsOff,
+                        imageVector = if (soundCuesEnabled) Icons.AutoMirrored.Outlined.VolumeUp else Icons.AutoMirrored.Outlined.VolumeOff,
                         contentDescription = null,
                         tint = if (soundCuesEnabled) SacredGold else SacredTextSecondary,
                         modifier = Modifier.size(20.dp)
@@ -322,7 +385,7 @@ private fun MindfulnessTopBar(
                 }
             }
 
-            // Close Overlay Button
+            // Return to the mandir
             Surface(
                 onClick = onClose,
                 shape = CircleShape,
@@ -660,7 +723,7 @@ private fun MindfulnessActiveContent(
                             japaCount = japaCount,
                             lotusPulse = snapshot.lotusScale,
                             onTapMala = onIncrementJapa,
-                            interactive = true,
+                            interactive = !isPaused,
                             modifier = Modifier
                                 .size(230.dp)
                                 .testTag("mindfulness-japa-target")

@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
@@ -52,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
+import com.worship.nityamandir.data.MandirAnalytics
 import com.worship.nityamandir.engine.BhajanPlayer
 import com.worship.nityamandir.engine.BhajanSearch
 import kotlinx.coroutines.launch
@@ -418,6 +420,8 @@ private fun YouTubeStyleThumbnail(
 @Composable
 fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Unit) {
     fun tr(hi: String, en: String) = if (hindi) hi else en
+    val context = LocalContext.current
+    val analytics = remember(context) { MandirAnalytics.from(context) }
     var searchQuery by remember { mutableStateOf("") }
     // `isTypingSearch` is true while the user is typing in the search bar (shows ONLY text suggestions).
     // Once the user clicks a text suggestion or clicks the Search button, `isTypingSearch` becomes false
@@ -429,6 +433,15 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
 
     val gridState = rememberLazyGridState()
     val coroutineScope = rememberCoroutineScope()
+
+    val sheetScreenName = when {
+        isTypingSearch && searchQuery.isNotBlank() -> "music_search"
+        isPlayerMinimizedToSide && !isTypingSearch -> "music_player_minimized"
+        else -> "music_player"
+    }
+    LaunchedEffect(sheetScreenName) {
+        analytics.logScreenView(sheetScreenName, screenClass = "BhajanPlayerSheet")
+    }
 
     LaunchedEffect(Unit) { player.fetchCatalog() }
 
@@ -608,6 +621,11 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
                                         if (searchQuery.isNotBlank()) {
                                             IconButton(
                                                 onClick = {
+                                                    analytics.logBhajanControlAction(
+                                                        action = "clear_search",
+                                                        trackId = activeTrack?.id.orEmpty(),
+                                                        source = if (activeTrack?.isYoutubeOnly == true) "youtube" else "archive"
+                                                    )
                                                     searchQuery = ""
                                                     committedSearchQuery = ""
                                                     isTypingSearch = false
@@ -691,6 +709,11 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
                                         Modifier
                                             .fillMaxWidth()
                                             .clickable {
+                                                analytics.logBhajanControlAction(
+                                                    action = "suggestion_selected",
+                                                    trackId = activeTrack?.id.orEmpty(),
+                                                    source = if (activeTrack?.isYoutubeOnly == true) "youtube" else "archive"
+                                                )
                                                 commitSearch(suggestion)
                                             }
                                             .padding(horizontal = 18.dp, vertical = 14.dp),
@@ -731,6 +754,11 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
                                             modifier = Modifier
                                                 .size(20.dp)
                                                 .clickable {
+                                                    analytics.logBhajanControlAction(
+                                                        action = "suggestion_fill",
+                                                        trackId = activeTrack?.id.orEmpty(),
+                                                        source = if (activeTrack?.isYoutubeOnly == true) "youtube" else "archive"
+                                                    )
                                                     searchQuery = "$suggestion "
                                                     isTypingSearch = true
                                                     player.fetchYoutubeSuggestions(suggestion)
@@ -753,6 +781,11 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
                                         track = activeTrack,
                                         hindi = hindi,
                                         onMinimizeToSide = {
+                                            analytics.logBhajanControlAction(
+                                                action = "minimize_to_side",
+                                                trackId = activeTrack.id,
+                                                source = if (activeTrack.isYoutubeOnly) "youtube" else "archive"
+                                            )
                                             dismissDialogKeyboard()
                                             isPlayerMinimizedToSide = true
                                         }
@@ -766,7 +799,14 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
                             if (player.catalogError && recommendations.isEmpty()) {
                                 Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Text(tr("संग्रह लोड नहीं हुआ", "Couldn’t load music"), Modifier.weight(1f))
-                                    TextButton(onClick = player::fetchCatalog) { Text(tr("फिर प्रयास करें", "Retry")) }
+                                    TextButton(onClick = {
+                                        analytics.logBhajanControlAction(
+                                            action = "retry_catalog",
+                                            trackId = activeTrack?.id.orEmpty(),
+                                            source = "archive"
+                                        )
+                                        player.fetchCatalog()
+                                    }) { Text(tr("फिर प्रयास करें", "Retry")) }
                                 }
                             }
 
@@ -831,8 +871,22 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
                                 track = activeTrack,
                                 hindi = hindi,
                                 dockedLeft = sidePlayerOnLeft,
-                                onToggleSide = { sidePlayerOnLeft = !sidePlayerOnLeft },
-                                onExpand = { isPlayerMinimizedToSide = false }
+                                onToggleSide = {
+                                    sidePlayerOnLeft = !sidePlayerOnLeft
+                                    analytics.logBhajanControlAction(
+                                        action = "dock_side_toggle",
+                                        trackId = activeTrack.id,
+                                        source = if (activeTrack.isYoutubeOnly) "youtube" else "archive"
+                                    )
+                                },
+                                onExpand = {
+                                    analytics.logBhajanControlAction(
+                                        action = "expand_from_side",
+                                        trackId = activeTrack.id,
+                                        source = if (activeTrack.isYoutubeOnly) "youtube" else "archive"
+                                    )
+                                    isPlayerMinimizedToSide = false
+                                }
                             )
                         }
                     }

@@ -4,11 +4,23 @@
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {
+    "runtime": "android/app/src/main/assets/shrine/backgrounds/divya_darshan.png",
+    "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
+  },
+  {
     "runtime": "android/app/src/main/assets/shrine/backgrounds/ivory.png",
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {
+    "runtime": "android/app/src/main/assets/shrine/backgrounds/kamal_peeth.png",
+    "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
+  },
+  {
     "runtime": "android/app/src/main/assets/shrine/backgrounds/marble.png",
+    "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
+  },
+  {
+    "runtime": "android/app/src/main/assets/shrine/backgrounds/swarna_peeth.png",
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {

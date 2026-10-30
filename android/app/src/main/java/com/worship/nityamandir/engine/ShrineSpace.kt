@@ -10,6 +10,7 @@ data class ShrineSpace(
     val lamp: TemplePoint,
     val idolWidth: Float,
     val idolHeight: Float,
+    val singleIdolWidth: Float = .37f,
     val bellCeilingY: Float = .285f,
     val incense: TemplePoint = TempleSceneLayout.incense,
     val garlandSpec: FloatArray = floatArrayOf(.145f, .025f, .855f, .655f, .088f, .165f)
@@ -18,6 +19,20 @@ data class ShrineSpace(
     fun contains(point: TemplePoint) = point.x in left..right && point.y in archTop..(altarY + .04f)
     companion object {
         fun forId(id: String) = when (id) {
+            "divya_darshan", "kamal_peeth", "swarna_peeth" -> ShrineSpace(
+                altarY = .685f,
+                left = .15f,
+                right = .85f,
+                archTop = .04f,
+                floorY = .82f,
+                lamp = TemplePoint(.805f, .88f),
+                idolWidth = .66f,
+                idolHeight = .580f,
+                singleIdolWidth = .54f,
+                bellCeilingY = .105f,
+                incense = TempleSceneLayout.incense,
+                garlandSpec = floatArrayOf(.065f, .005f, .935f, .645f, .072f, .105f)
+            )
             "carved" -> ShrineSpace(
                 altarY = .680f,
                 left = .23f,

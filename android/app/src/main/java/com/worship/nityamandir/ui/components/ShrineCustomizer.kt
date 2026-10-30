@@ -56,7 +56,18 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
     val scope=rememberCoroutineScope()
     val optionsScroll=rememberScrollState()
     val newUnlockKeys=remember {account.newUnlocks(catalog).map {"${it.category.id}:${it.option.id}"}.toSet()}
-    LaunchedEffect(Unit) {account.markUnlocksSeen(catalog)}
+    val customizerScreen=when {
+        pendingUnlocks.isNotEmpty() -> "shrine_unlock_dialog"
+        showPreview -> "shrine_preview"
+        else -> "shrine_customizer"
+    }
+    LaunchedEffect(customizerScreen) {
+        analytics.logScreenView(customizerScreen,"ShrineCustomizer")
+    }
+    LaunchedEffect(Unit) {
+        account.markUnlocksSeen(catalog)
+        analytics.logShrineCategoryViewed(categoryId)
+    }
     LaunchedEffect(categoryId) {optionsScroll.scrollTo(0)}
     fun tr(hi:String,en:String)=if(hindi) hi else en
     fun label(option:ShrineOption)=if(hindi) option.hi else option.en
@@ -89,8 +100,10 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
         if(busy) return
         error="";message=""
         draft=items.fold(draft) {selection,item -> selection.selectItem(item.category.id,item.option.id)}
+        val totalCost=items.sumOf {it.cost}
+        analytics.logShrineUnlockPrompted(items.size,totalCost,account.coins>=totalCost,account.signedIn)
         if(!account.signedIn) onAccount(draft)
-        else if(account.coins<items.sumOf {it.cost}) message=notEnoughCoinsMessage
+        else if(account.coins<totalCost) message=notEnoughCoinsMessage
         else pendingUnlocks=items
     }
     val selectedUnlocks=catalog.categories.flatMap {category ->
@@ -135,7 +148,7 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
             Column(Modifier.fillMaxSize().safeDrawingPadding().testTag("mandir-safe-content").padding(horizontal=12.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                     Text(tr("मंदिर सजाएँ","Mandir Sajaye"),Modifier.weight(1f),fontSize=20.sp,fontWeight=FontWeight.SemiBold)
-                    TextButton(onClick={onAccount(draft)},enabled=!busy,modifier=Modifier.semantics {
+                    TextButton(onClick={analytics.logShrineAccountClicked(account.signedIn,account.coins);onAccount(draft)},enabled=!busy,modifier=Modifier.semantics {
                         contentDescription=if(account.signedIn) tr("${account.coins} सिक्के · सिक्के कमाएँ","${account.coins} coins · Earn coins")
                             else tr("${account.coins} सिक्के · साइन इन करें","${account.coins} coins · Sign in")
                     }) {
@@ -167,8 +180,13 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                         Surface(onClick={
                             error="";message=""
                             val baseDraft=revertUnownedOtherCategories(draft,category.id)
-                            if(category.id=="flowers" && selected && baseDraft.flowerIds.size==1) message=tr("कम से कम एक फूल की किस्म रखें।","Keep at least one flower variety.")
-                            else draft=if(category.id=="flowers") baseDraft.toggleFlower(option.id) else baseDraft.with(category.id,option.id)
+                            if(category.id=="flowers" && selected && baseDraft.flowerIds.size==1) {
+                                message=tr("कम से कम एक फूल की किस्म रखें।","Keep at least one flower variety.")
+                            } else {
+                                draft=if(category.id=="flowers") baseDraft.toggleFlower(option.id) else baseDraft.with(category.id,option.id)
+                                val nowSelected=if(category.id=="flowers") option.id in draft.flowerIds else draft[category.id]==option.id
+                                analytics.logShrineOptionSelected(category.id,option.id,owned,cost,nowSelected)
+                            }
                         },enabled=!busy,shape=RoundedCornerShape(16.dp),color=if(selected) Color(0xFFF1DFC1) else Color.White,border=BorderStroke(if(selected) 2.dp else 1.dp,if(selected) RitualGold else Color(0xFFE4D7C6)),modifier=Modifier.fillMaxWidth().semantics {
                             this.selected=selected
                             if(category.id=="flowers") {role=Role.Checkbox;toggleableState=if(selected) ToggleableState.On else ToggleableState.Off}
@@ -209,7 +227,7 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
     if(pendingUnlocks.isNotEmpty()) {
         val remaining=pendingUnlocks.filter {!account.owns(it.category.id,it.option.id)}
         val cost=remaining.sumOf {account.cost(it.category.id,it.option.id)}
-        AlertDialog(onDismissRequest={pendingUnlocks=emptyList()},
+        AlertDialog(onDismissRequest={analytics.logShrineUnlockCancelled(pendingUnlocks.size,cost);pendingUnlocks=emptyList()},
             title={Text(tr("आइटम अनलॉक करें?","Unlock items?"))},
             text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 Text(pendingUnlocks.joinToString("\n") {label(it.option)})
@@ -235,7 +253,7 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                     finally {busy=false}
                 }
             }) {Icon(Icons.Outlined.Lock,null,Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(tr("अनलॉक","Unlock"))}},
-            dismissButton={TextButton(onClick={pendingUnlocks=emptyList()}) {Text(tr("वापस","Cancel"))}})
+            dismissButton={TextButton(onClick={analytics.logShrineUnlockCancelled(pendingUnlocks.size,cost);pendingUnlocks=emptyList()}) {Text(tr("वापस","Cancel"))}})
     }
     if(showPreview) Dialog(onDismissRequest={if(!busy) showPreview=false},properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
         Box(Modifier.fillMaxSize().background(Color(0xFFFFF7EC))) {

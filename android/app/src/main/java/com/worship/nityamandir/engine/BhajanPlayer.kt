@@ -301,19 +301,38 @@ class BhajanPlayer(context: Context) {
 
     fun load(track: Track, autoplay: Boolean = true) = playCatalog(track, autoplay)
 
-    fun toggle() {
+    fun toggle(source: String = "player") {
+        val trackId = current?.id.orEmpty()
         if (current == null) { startAarti(); return }
         if (youtubeMode) {
-            if (failed) { playCatalog(current); return }
-            if (playing || loading) { pause(); return }
+            if (failed) {
+                analytics.logBhajanControlAction("retry", trackId, source)
+                playCatalog(current)
+                return
+            }
+            if (playing || loading) {
+                analytics.logBhajanControlAction("pause", trackId, source)
+                pause()
+                return
+            }
+            analytics.logBhajanControlAction("resume", trackId, source)
             youtubeAutoplay = true
             loading = true
             youtubeCommand?.invoke("playBhajan()")
             return
         }
-        if (playing || loading) { pause(); return }
-        if (failed || player?.mediaItemCount == 0) { playCatalog(current); return }
+        if (playing || loading) {
+            analytics.logBhajanControlAction("pause", trackId, source)
+            pause()
+            return
+        }
+        if (failed || player?.mediaItemCount == 0) {
+            analytics.logBhajanControlAction("retry", trackId, source)
+            playCatalog(current)
+            return
+        }
         val native = player ?: run { playCatalog(current); return }
+        analytics.logBhajanControlAction("resume", trackId, source)
         if (native.playbackState == Player.STATE_ENDED) native.seekTo(0L)
         native.play()
     }
@@ -328,6 +347,7 @@ class BhajanPlayer(context: Context) {
     }
 
     fun remove() {
+        analytics.logBhajanControlAction("remove", current?.id.orEmpty(), "player")
         pause()
         cancelPreload()
         player?.run { stop(); clearMediaItems() } ?: run { clearOnConnect = true }
@@ -340,6 +360,7 @@ class BhajanPlayer(context: Context) {
     }
 
     fun seek(ms: Long) {
+        analytics.logBhajanControlAction("seek", current?.id.orEmpty(), "sheet")
         if (youtubeMode) {
             youtubeCommand?.invoke("seekBhajan(${ms.coerceAtLeast(0L) / 1000.0})")
             return
@@ -350,6 +371,7 @@ class BhajanPlayer(context: Context) {
 
     fun toggleRepeat() {
         repeat = !repeat
+        analytics.logBhajanControlAction(if (repeat) "repeat_on" else "repeat_off", current?.id.orEmpty(), "sheet")
         youtubeCommand?.invoke("repeatBhajan($repeat)")
         player?.repeatMode = if (repeat) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
     }
@@ -359,7 +381,9 @@ class BhajanPlayer(context: Context) {
             .distinctBy { if (it.isYoutubeOnly) it.youtubeId else it.id }
         if (queue.isEmpty()) return
         val index = queue.indexOfFirst { it.id == current?.id }.coerceAtLeast(0)
-        playCatalog(queue[Math.floorMod(index + delta, queue.size)])
+        val nextTrack = queue[Math.floorMod(index + delta, queue.size)]
+        analytics.logBhajanControlAction(if (delta >= 0) "skip_next" else "skip_previous", nextTrack.id, "player")
+        playCatalog(nextTrack)
     }
 
     fun attachYoutube(generation: Int, command: (String) -> Unit) {

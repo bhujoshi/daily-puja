@@ -37,6 +37,30 @@
           "thumbnail": "shrine/backgrounds/marble.png"
         },
         {
+          "id": "divya_darshan",
+          "label_en": "Divya Darshan (Big Idol)",
+          "label_hi": "दिव्य दर्शन (बड़ी मूर्ति)",
+          "path": "shrine/backgrounds/divya_darshan.png",
+          "kind": "image",
+          "thumbnail": "shrine/backgrounds/divya_darshan.png"
+        },
+        {
+          "id": "kamal_peeth",
+          "label_en": "Kamal Peeth (Big Idol)",
+          "label_hi": "कमल पीठ (बड़ी मूर्ति)",
+          "path": "shrine/backgrounds/kamal_peeth.png",
+          "kind": "image",
+          "thumbnail": "shrine/backgrounds/kamal_peeth.png"
+        },
+        {
+          "id": "swarna_peeth",
+          "label_en": "Swarna Peeth (Big Idol)",
+          "label_hi": "स्वर्ण पीठ (बड़ी मूर्ति)",
+          "path": "shrine/backgrounds/swarna_peeth.png",
+          "kind": "image",
+          "thumbnail": "shrine/backgrounds/swarna_peeth.png"
+        },
+        {
           "id": "ivory",
           "label_en": "Ivory alcove",
           "label_hi": "हाथीदाँत रंग का मंदिर",
