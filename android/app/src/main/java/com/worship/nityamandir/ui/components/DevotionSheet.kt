@@ -780,6 +780,7 @@ fun DevotionSheet(
     fun tr(hi: String, en: String) = if (hindi) hi else en
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val analytics = remember(context) { MandirAnalytics.from(context) }
     val catalog = remember(context) { ShrineCatalog(context) }
     var destination by remember(page) { mutableStateOf(page) }
     var shareAfterLogin by remember(page) { mutableStateOf(page == DevotionPage.SHARE) }
@@ -839,6 +840,7 @@ fun DevotionSheet(
             "Join me for daily puja on Pavitra Mandir. Install and sign in with Google:\n"
         ) + invitation.getString("url")
         WhatsAppShare.open(context, text)
+        analytics.logWhatsAppShareOpened()
         account.queueShareOpened(invitation.getString("share_id"))
         message = tr("आपका निमंत्रण WhatsApp में खुल गया।", "WhatsApp opened with your invitation.")
         messageIsError = false
@@ -853,12 +855,24 @@ fun DevotionSheet(
     }
 
     fun signIn() = run(tr("Google से साइन इन हो रहा है…", "Signing in with Google…")) {
-        if (!account.signInWithGoogle(context, "")) {
+        analytics.logGoogleSignInStarted(account.referredInstall)
+        val signedInSuccess = try {
+            account.signInWithGoogle(context, "")
+        } catch (error: GoogleSignInFailure) {
+            analytics.logGoogleSignInResult("failed", error.reason.name.lowercase())
+            throw error
+        } catch (error: Exception) {
+            analytics.logGoogleSignInResult("failed", error.javaClass.simpleName)
+            throw error
+        }
+        if (!signedInSuccess) {
+            analytics.logGoogleSignInResult("cancelled")
             message = tr(
                 "साइन इन पूरा नहीं हुआ। तैयार हों तो फिर कोशिश करें।",
                 "Sign-in was not completed. Try again when you’re ready."
             )
         } else {
+            analytics.logGoogleSignInResult("completed")
             val continueToShare = shareAfterLogin || destination == DevotionPage.SHARE
             shareAfterLogin = false
             destination = if (continueToShare) DevotionPage.SHARE
@@ -1044,7 +1058,7 @@ fun DevotionSheet(
                                 }
                             }
                             TextButton(
-                                onClick = { run { account.signOut(); destination = DevotionPage.LOGIN } },
+                                onClick = { run { account.signOut(); analytics.logAccountAction("sign_out"); destination = DevotionPage.LOGIN } },
                                 enabled = !busy,
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                             ) {
@@ -1277,7 +1291,7 @@ fun DevotionSheet(
                 TextButton(
                     onClick = {
                         deleteConfirm = false
-                        run { account.delete() }
+                        run { account.delete(); analytics.logAccountAction("delete_account") }
                     }
                 ) {
                     Text(tr("मिटाएँ", "Delete"))

@@ -1,0 +1,218 @@
+default_platform(:android)
+
+# Helper to resolve the signed release Android App Bundle (.aab)
+def resolve_release_aab
+  explicit_aab = ENV["PLAY_STORE_AAB"]
+  return File.expand_path(explicit_aab) if explicit_aab && !explicit_aab.strip.empty?
+
+  # Read versionName from app/build.gradle.kts
+  gradle_file = File.expand_path("../app/build.gradle.kts", __dir__)
+  version_match = File.read(gradle_file).match(/versionName\s*=\s*"([^"]+)"/)
+  version_name = version_match ? version_match[1] : "1.0.18"
+
+  archived_aab = File.expand_path("../app/build/outputs/releases/#{version_name}/pavitra-mandir-#{version_name}.aab", __dir__)
+  return archived_aab if File.exist?(archived_aab)
+
+  default_aab = File.expand_path("../app/build/outputs/bundle/release/app-release.aab", __dir__)
+  return default_aab if File.exist?(default_aab)
+
+  UI.user_error!("No signed release AAB found at #{archived_aab} or #{default_aab}. Run `fastlane android build_release` first.")
+end
+
+def resolve_key_file
+  key_path = ENV["PLAY_STORE_JSON_KEY"] || File.expand_path("play-service-account.json", __dir__)
+  unless File.exist?(key_path)
+    UI.user_error!(
+      "Google Play Service Account JSON key not found at: #{key_path}\n" \
+      "Place your service account JSON key at `android/fastlane/play-service-account.json` " \
+      "or set `export PLAY_STORE_JSON_KEY=/absolute/path/to/key.json`."
+    )
+  end
+  key_path
+end
+
+def resolve_release_status
+  status = (ENV["PLAY_RELEASE_STATUS"] || "completed").strip
+  status
+end
+
+platform :android do
+  desc "Validate Play Store metadata character limits, screenshots, icon, feature graphic, and release AAB"
+  lane :validate_metadata do
+    sh("python3", File.expand_path("../../scripts/verify_play_store_assets.py", __dir__))
+  end
+
+  desc "Build signed release AAB and APK and run unit tests"
+  lane :build_release do
+    gradle(
+      task: ":app:bundleRelease :app:assembleRelease :app:testDebugUnitTest",
+      project_dir: File.expand_path("..", __dir__)
+    )
+  end
+
+  desc "Upload only text metadata (title, short/full description) to Google Play"
+  lane :sync_metadata do
+    validate_metadata
+    key_file = resolve_key_file
+
+    upload_to_play_store(
+      package_name: "com.pavitramandir.app",
+      json_key: key_file,
+      metadata_path: File.expand_path("metadata/android", __dir__),
+      skip_upload_aab: true,
+      skip_upload_apk: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_metadata: false,
+      skip_upload_changelogs: true
+    )
+  end
+
+  desc "Upload icons, feature graphics, and phone/7-inch/10-inch screenshots to Google Play"
+  lane :sync_graphics do
+    validate_metadata
+    key_file = resolve_key_file
+
+    upload_to_play_store(
+      package_name: "com.pavitramandir.app",
+      json_key: key_file,
+      metadata_path: File.expand_path("metadata/android", __dir__),
+      skip_upload_aab: true,
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: false,
+      skip_upload_screenshots: false
+    )
+  end
+
+  desc "Upload all store listing text metadata, icons, feature graphics, and screenshots without uploading a binary"
+  lane :sync_all_listing do
+    validate_metadata
+    key_file = resolve_key_file
+
+    upload_to_play_store(
+      package_name: "com.pavitramandir.app",
+      json_key: key_file,
+      metadata_path: File.expand_path("metadata/android", __dir__),
+      skip_upload_aab: true,
+      skip_upload_apk: true,
+      skip_upload_metadata: false,
+      skip_upload_changelogs: true,
+      skip_upload_images: false,
+      skip_upload_screenshots: false
+    )
+  end
+
+  desc "Publish signed release AAB + changelogs to the Internal Testing track (set SYNC_IMAGES=true to also re-upload screenshots)"
+  lane :internal do
+    validate_metadata
+    key_file = resolve_key_file
+    aab_path = resolve_release_aab
+    sync_imgs = ENV["SYNC_IMAGES"] == "true"
+
+    upload_to_play_store(
+      package_name: "com.pavitramandir.app",
+      json_key: key_file,
+      track: "internal",
+      release_status: resolve_release_status,
+      aab: aab_path,
+      metadata_path: File.expand_path("metadata/android", __dir__),
+      skip_upload_apk: true,
+      skip_upload_aab: false,
+      skip_upload_metadata: false,
+      skip_upload_changelogs: false,
+      skip_upload_images: !sync_imgs,
+      skip_upload_screenshots: !sync_imgs
+    )
+  end
+
+  desc "Publish signed release AAB + changelogs to the Closed Testing (Alpha) track"
+  lane :alpha do
+    validate_metadata
+    key_file = resolve_key_file
+    aab_path = resolve_release_aab
+    sync_imgs = ENV["SYNC_IMAGES"] == "true"
+
+    upload_to_play_store(
+      package_name: "com.pavitramandir.app",
+      json_key: key_file,
+      track: "alpha",
+      release_status: resolve_release_status,
+      aab: aab_path,
+      metadata_path: File.expand_path("metadata/android", __dir__),
+      skip_upload_apk: true,
+      skip_upload_aab: false,
+      skip_upload_metadata: false,
+      skip_upload_changelogs: false,
+      skip_upload_images: !sync_imgs,
+      skip_upload_screenshots: !sync_imgs
+    )
+  end
+
+  desc "Publish signed release AAB + changelogs to the Open Testing (Beta) track"
+  lane :beta do
+    validate_metadata
+    key_file = resolve_key_file
+    aab_path = resolve_release_aab
+    sync_imgs = ENV["SYNC_IMAGES"] == "true"
+
+    upload_to_play_store(
+      package_name: "com.pavitramandir.app",
+      json_key: key_file,
+      track: "beta",
+      release_status: resolve_release_status,
+      aab: aab_path,
+      metadata_path: File.expand_path("metadata/android", __dir__),
+      skip_upload_apk: true,
+      skip_upload_aab: false,
+      skip_upload_metadata: false,
+      skip_upload_changelogs: false,
+      skip_upload_images: !sync_imgs,
+      skip_upload_screenshots: !sync_imgs
+    )
+  end
+
+  desc "Publish signed release AAB + changelogs to the Production track (or promotes from internal if this versionCode was already uploaded)"
+  lane :production do
+    validate_metadata
+    key_file = resolve_key_file
+    aab_path = resolve_release_aab
+    sync_imgs = ENV["SYNC_IMAGES"] == "true"
+
+    begin
+      upload_to_play_store(
+        package_name: "com.pavitramandir.app",
+        json_key: key_file,
+        track: "production",
+        release_status: resolve_release_status,
+        aab: aab_path,
+        metadata_path: File.expand_path("metadata/android", __dir__),
+        skip_upload_apk: true,
+        skip_upload_aab: false,
+        skip_upload_metadata: false,
+        skip_upload_changelogs: false,
+        skip_upload_images: !sync_imgs,
+        skip_upload_screenshots: !sync_imgs
+      )
+    rescue => ex
+      raise ex unless ex.message.to_s.include?("already been used")
+      UI.message("AAB versionCode already uploaded (#{ex.message}); promoting from internal to production...")
+      upload_to_play_store(
+        package_name: "com.pavitramandir.app",
+        json_key: key_file,
+        track: "internal",
+        track_promote_to: "production",
+        release_status: resolve_release_status,
+        track_promote_release_status: resolve_release_status,
+        metadata_path: File.expand_path("metadata/android", __dir__),
+        skip_upload_apk: true,
+        skip_upload_aab: true,
+        skip_upload_metadata: false,
+        skip_upload_changelogs: false,
+        skip_upload_images: !sync_imgs,
+        skip_upload_screenshots: !sync_imgs
+      )
+    end
+  end
+end

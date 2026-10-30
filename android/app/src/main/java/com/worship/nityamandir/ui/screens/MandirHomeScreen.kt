@@ -44,13 +44,18 @@ import com.worship.nityamandir.engine.*
 import com.worship.nityamandir.ui.components.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 @Composable
 fun MandirHomeScreen(modifier:Modifier=Modifier) {
     val context=LocalContext.current
     val hostView=LocalView.current
     val prefs=remember {context.getSharedPreferences("worship",Context.MODE_PRIVATE)}
+    val analytics=remember {com.worship.nityamandir.data.MandirAnalytics.from(context)}
     val account=remember {com.worship.nityamandir.data.DevotionAccount(context.applicationContext)}
+    val mindfulnessTracker=remember {com.worship.nityamandir.data.MindfulnessTracker(context.applicationContext)}
+    val scope=rememberCoroutineScope()
+    var mindfulnessSheet by remember {mutableStateOf(false)}
     var devotionSheet by remember {mutableStateOf(false)}
     var devotionPage by remember {mutableStateOf(DevotionPage.PROFILE)}
     LaunchedEffect(Unit) {
@@ -100,10 +105,11 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
     val cleanedAreas=remember(selection) {mutableStateListOf<TemplePoint>()}
     val shrineSpace=remember(selection) {ShrineSpace.forId(selection["shrine"])}
     var cleaningSweep by remember {mutableStateOf(false)}
-    fun finishCleaning() {
+    fun finishCleaning(method:String) {
         clean=System.currentTimeMillis()+timeOffset;now=clean
         prefs.edit().putLong("clean",clean).apply()
         wipe=0f;cleanedAreas.clear();cleaningSweep=false
+        analytics.logTempleCleaned(method)
     }
     LaunchedEffect(cleaningSweep) {
         if(cleaningSweep) {
@@ -111,7 +117,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                 cleanedAreas.add(point);wipe=ShrineCleaning.coverage(shrineSpace,cleanedAreas)
                 delay(22)
             }
-            finishCleaning()
+            finishCleaning("tap")
         }
     }
     var bathTarget by remember {mutableStateOf<Int?>(null)}
@@ -226,6 +232,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
             bell.snapTo(0f);bell.animateTo(1f,tween(3500,easing=LinearEasing))
             session=session.copy(bellRung=true)
             bellRunning=false
+            analytics.logBellRung()
         } finally {audio.stopCue(com.worship.nityamandir.R.raw.bell)}
     }
     LaunchedEffect(conchRunning,foreground) {
@@ -240,7 +247,9 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
     }
     LaunchedEffect(session, busy, entered, foreground, aging.needsCleaning) {
         if(!entered || !foreground || aging.needsCleaning || busy || session.complete || !session.canContinue) return@LaunchedEffect
+        val completedStep=session.step
         delay(650)
+        analytics.logRitualStepCompleted(completedStep,selection.deityCount)
         session=session.next()
         if(session.complete) {
             last=System.currentTimeMillis()+timeOffset;clean=last;now=last
@@ -250,10 +259,37 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
     LaunchedEffect(session.aartiComplete) {
         if(session.aartiComplete) {
             account.recordCompletion()
+            analytics.logPujaCompleted(
+                deityCount=selection.deityCount,
+                shrineId=selection["shrine"],
+                idolsId=selection["idols"],
+                streakDays=account.streakDays,
+                signedIn=account.signedIn
+            )
             try {account.sync()} catch(_:Exception) { /* Retry explicitly from the account screen. */ }
         }
     }
-    LaunchedEffect(entered) {if(entered) bhajan.preload()}
+    LaunchedEffect(entered) {
+        if(entered) {
+            analytics.logTempleEntered(aging.needsCleaning,selection.deityCount,selection["shrine"],selection["idols"])
+            bhajan.preload()
+        }
+    }
+    LaunchedEffect(hindi,account.signedIn,selection["idols"]) {
+        analytics.syncUserContext(hindi,account.signedIn,selection["idols"])
+    }
+    val activeScreen=when {
+        customizer -> "shrine_customizer"
+        mindfulnessSheet -> "mindfulness_meditation"
+        musicSheet -> "music_player"
+        devotionSheet -> "devotion_${devotionPage.name.lowercase()}"
+        menu -> "navigation_drawer"
+        entered -> "mandir_sanctum"
+        else -> "mandir_entrance"
+    }
+    LaunchedEffect(activeScreen) {
+        analytics.logScreenView(activeScreen)
+    }
     val cream=Color(0xFFFAF6EE)
     Box(modifier.fillMaxSize().background(com.worship.nityamandir.ui.theme.DarkSanctumBackground)) {
         Box(Modifier.fillMaxSize().onGloballyPositioned {sceneSize=it.size;val location=IntArray(2);hostView.getLocationOnScreen(location);sceneOrigin=it.positionInRoot()+Offset(location[0].toFloat(),location[1].toFloat())}) {
@@ -296,13 +332,13 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                         val point=TemplePoint((change.position.x-viewport.left)/viewport.imageWidth,change.position.y/viewport.imageWidth)
                         if(ShrineCleaning.contains(shrineSpace,point) && cleanedAreas.none {kotlin.math.hypot(it.x-point.x,it.y-point.y)<.018f}) {
                             cleanedAreas.add(point);wipe=ShrineCleaning.coverage(shrineSpace,cleanedAreas)
-                            if(wipe>=.9f) {finishCleaning();session=WorshipSession(deityCount=selection.deityCount)}
+                            if(wipe>=.9f) {finishCleaning("swipe");session=WorshipSession(deityCount=selection.deityCount)}
                         }
                     }
                 }
             })
             // Show the ritual dock only after the entrance has fully opened.
-            if(entered && !curtainMoving && !musicSheet && !devotionSheet && !customizer) Box(Modifier.align(Alignment.BottomCenter)) { RitualGlassPanel(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)).padding(horizontal=14.dp,vertical=10.dp)
+            if(entered && !curtainMoving && !musicSheet && !devotionSheet && !customizer && !mindfulnessSheet) Box(Modifier.align(Alignment.BottomCenter)) { RitualGlassPanel(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)).padding(horizontal=14.dp,vertical=10.dp)
                 .fillMaxWidth().heightIn(max=270.dp).verticalScroll(rememberScrollState()).testTag("ritual-dock"),sceneSize,sceneOrigin,backgroundPath="shrine/backgrounds/${selection["shrine"]}.png") {
                 val buttonColors=ButtonDefaults.buttonColors(containerColor=RitualInk,contentColor=cream,disabledContainerColor=Color(0xCFE2D9CF),disabledContentColor=Color(0xFF81766C))
                 if(aging.needsCleaning) {
@@ -338,7 +374,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
             } }
         }
         // Global options stay outside the ritual dock, so a single action needs only one row.
-        if(entered && curtain.value >= 1f && !menu && !musicSheet && !devotionSheet && !customizer && !curtainMoving) {
+        if(entered && curtain.value >= 1f && !menu && !musicSheet && !devotionSheet && !customizer && !mindfulnessSheet && !curtainMoving) {
             val hasMusic=bhajan.current!=null || bhajan.loading
             Box(Modifier.align(if(hasMusic) Alignment.TopCenter else Alignment.TopEnd)) {
                 Row((if(hasMusic) Modifier.fillMaxWidth() else Modifier).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)).padding(horizontal=14.dp,vertical=8.dp),
@@ -353,11 +389,30 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                 }
             }
         }
+        if(mindfulnessSheet) ShrineControlsTheme {
+            MindfulnessMeditationOverlay(
+                hindi=hindi,
+                stats=mindfulnessTracker.stats,
+                audio=audio,
+                onSessionStarted={practice,mins,subOption ->
+                    analytics.logMindfulnessStarted(practice.id,mins,subOption)
+                },
+                onSessionCompleted={practice,mins ->
+                    val updated=mindfulnessTracker.recordSession(mins,practice)
+                    account.recordCompletion()
+                    analytics.logMindfulnessCompleted(practice.id,mins,updated.streakDays,updated.totalSessions)
+                    scope.launch {
+                        try { account.sync() } catch(_:Exception) { /* Retain pending completion for retry. */ }
+                    }
+                },
+                onClose={mindfulnessSheet=false}
+            )
+        }
         if(customizer) ShrineControlsTheme { ShrineCustomizer(account,customizerDraft ?: selection,hindi,
             onDismiss={customizer=false;customizerDraft=null},onAccount={customizerDraft=it;customizer=false;devotionPage=if(account.signedIn) DevotionPage.PACKAGE else DevotionPage.LOGIN;devotionSheet=true},
             onApplied={selection=it;customizerDraft=null;session=WorshipSession(deityCount=it.deityCount);customizer=false},
             player=bhajan,onMusic={customizerDraft=it;customizer=false;musicSheet=true}) }
-        if(devotionSheet) ShrineControlsTheme { DevotionSheet(account,hindi,{devotionSheet=false},onCustomize={devotionSheet=false;customizer=true},canCustomize=!busy,page=devotionPage,
+        if(devotionSheet) ShrineControlsTheme { DevotionSheet(account,hindi,{devotionSheet=false},onCustomize={devotionSheet=false;customizerDraft=null;customizer=true},canCustomize=!busy,page=devotionPage,
             player=bhajan,onMusic={devotionSheet=false;musicSheet=true},
             onSignedIn={if(customizerDraft!=null) {devotionSheet=false;customizer=true}}) }
         if(musicSheet) BhajanPlayerSheet(bhajan,hindi,{musicSheet=false;if(customizerDraft!=null) customizer=true})
@@ -399,6 +454,33 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                     featured=true,
                     enabled=!busy,
                     onClick={menu=false;customizerDraft=null;customizer=true}
+                )
+
+                // Mindfulness & Meditation Card: Dhyan Sadhana
+                SacredDrawerCard(
+                    title=tr("ध्यान","Mindfulness"),
+                    subtitle=tr("साँस, दीपक की लौ या मंत्र पर ध्यान दें","Breathing, flame gazing or mantra"),
+                    leadingIcon={Icon(Icons.Outlined.SelfImprovement,null,tint=RitualGold,modifier=Modifier.size(22.dp))},
+                    trailingContent=mindfulnessTracker.stats.totalMinutes.takeIf {it>0}?.let {mins ->
+                        {
+                            Surface(
+                                shape=RoundedCornerShape(50),
+                                color=Color(0xFFF3E2C3),
+                                border=BorderStroke(1.dp,Color(0x66B3833B))
+                            ) {
+                                Text(
+                                    if(hindi) "$mins मि." else "${mins}m",
+                                    Modifier.padding(horizontal=9.dp,vertical=4.dp),
+                                    fontSize=12.sp,
+                                    fontWeight=FontWeight.Bold,
+                                    color=RitualInk
+                                )
+                            }
+                        }
+                    },
+                    enabled=!busy,
+                    modifier=Modifier.testTag("drawer-mindfulness"),
+                    onClick={menu=false;mindfulnessSheet=true}
                 )
 
                 // Music Player Card
@@ -446,7 +528,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                             }
                         }
                     },
-                    onClick={hindi=!hindi;prefs.edit().putBoolean("hindi",hindi).apply();menu=false}
+                    onClick={hindi=!hindi;prefs.edit().putBoolean("hindi",hindi).apply();analytics.logLanguageChanged(hindi);menu=false}
                 )
 
                 if(BuildConfig.DEBUG) {

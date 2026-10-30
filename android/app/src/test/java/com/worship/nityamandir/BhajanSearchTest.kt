@@ -485,6 +485,169 @@ class BhajanSearchTest {
         assertFalse(feed.any { it.id == "jai_ganesh_deva" })
         assertTrue(feed.all { it.isYoutubeOnly && it.needsStreamResolution })
     }
+
+    @Test fun jaiGaneshRecommendationsFilterOutAllSameSongVariantsAndDisplayVarietyOfChoices() {
+        val jaiGaneshAnchor = BhajanPlayer.Track(
+            title = "Jai Ganesh Jai Ganesh Deva",
+            url = "https://archive.org/download/JaiGanesh.mp3",
+            id = "jai_ganesh_deva",
+            deity = "ganesh",
+            collection = "ganesh",
+            artist = "Anuradha Paudwal • Ganesh Aarti",
+            youtubeId = "87Y-OH_mJxM",
+            isYoutube = false
+        )
+
+        val liveYoutubeClutter = listOf(
+            BhajanPlayer.Track(
+                title = "Jai Ganesh Deva Aarti | Anuradha Paudwal | Ganesh Chaturthi Special",
+                url = "https://www.youtube.com/watch?v=dupGanesh01",
+                id = "yt_dup1",
+                deity = "ganesh",
+                youtubeId = "dupGanesh01",
+                isYoutube = true
+            ),
+            BhajanPlayer.Track(
+                title = "जय गणेश जय गणेश देवा | श्री गणेश आरती",
+                url = "https://www.youtube.com/watch?v=dupGanesh02",
+                id = "yt_dup2",
+                deity = "ganesh",
+                youtubeId = "dupGanesh02",
+                isYoutube = true
+            ),
+            BhajanPlayer.Track(
+                title = "Ganesh Aarti : Jai Ganesh Jai Ganesh Deva Full HD",
+                url = "https://www.youtube.com/watch?v=dupGanesh03",
+                id = "yt_dup3",
+                deity = "ganesh",
+                youtubeId = "dupGanesh03",
+                isYoutube = true
+            ),
+            BhajanPlayer.Track(
+                title = "Shri Ganesh Ji Ki Aarti | Morning Bhakti",
+                url = "https://www.youtube.com/watch?v=dupGanesh04",
+                id = "yt_dup4",
+                deity = "ganesh",
+                youtubeId = "dupGanesh04",
+                isYoutube = true
+            ),
+            BhajanPlayer.Track(
+                title = "Sukhkarta Dukhharta | Ganpati Aarti",
+                url = "https://www.youtube.com/watch?v=sukhDup0001",
+                id = "yt_sukh_dup",
+                deity = "ganesh",
+                youtubeId = "sukhDup0001",
+                isYoutube = true
+            )
+        )
+
+        val catalog = listOf(
+            jaiGaneshAnchor,
+            BhajanPlayer.Track("Sukh Karta Dukh Harta", "https://www.youtube.com/watch?v=87Y-OH_mJxM", id = "73", deity = "ganesh", youtubeId = "87Y-OH_mJxM", isYoutube = true),
+            BhajanPlayer.Track("Vakratunda Mahakaya", "https://www.youtube.com/watch?v=UrxGRHMf7XQ", id = "75", deity = "ganesh", youtubeId = "UrxGRHMf7XQ", isYoutube = true),
+            BhajanPlayer.Track("Ganesh Chalisa", "https://www.youtube.com/watch?v=tqbY8Mqy5pE", id = "78", deity = "ganesh", youtubeId = "tqbY8Mqy5pE", isYoutube = true),
+            BhajanPlayer.Track("Hanuman Chalisa", "https://www.youtube.com/watch?v=AETFvQonfV8", id = "46", deity = "hanuman", youtubeId = "AETFvQonfV8", isYoutube = true),
+            BhajanPlayer.Track("Shiv Tandav Stotram", "https://www.youtube.com/watch?v=hMBKmQEPNzI", id = "36", deity = "shiva", youtubeId = "hMBKmQEPNzI", isYoutube = true),
+            BhajanPlayer.Track("Mere Banke Bihari Laal", "https://www.youtube.com/watch?v=L1s4jaR0TpM", id = "81", deity = "krishna", youtubeId = "L1s4jaR0TpM", isYoutube = true),
+            BhajanPlayer.Track("Ram Aayenge To Angana Sajaungi", "https://www.youtube.com/watch?v=3TylP-ux8W0", id = "91", deity = "rama", youtubeId = "3TylP-ux8W0", isYoutube = true),
+            BhajanPlayer.Track("Durga Chalisa", "https://www.youtube.com/watch?v=WnDOYHRbZ00", id = "68", deity = "durga", youtubeId = "WnDOYHRbZ00", isYoutube = true)
+        )
+
+        val feed = BhajanSearch.youtubeFeedRecommendations(
+            anchor = jaiGaneshAnchor,
+            catalog = catalog,
+            youtubeResults = liveYoutubeClutter,
+            idol = "original",
+            rotationSeed = 1
+        )
+
+        // None of the Jai Ganesh re-uploads/variants should appear
+        assertFalse(feed.any { it.id in setOf("jai_ganesh_deva", "yt_dup1", "yt_dup2", "yt_dup3", "yt_dup4") })
+        // Only one version of Sukh Karta Dukh Harta should appear
+        assertEquals(1, feed.count { BhajanSearch.canonicalSongKey(it.title) == "song_sukh_karta_dukh_harta" })
+        // Top 5 recommendations should span at least 3 distinct deities (variety of choices, not all Ganesh)
+        val top5Deities = feed.take(5).map { it.deity }.toSet()
+        assertTrue("Expected variety of deities in top 5, got $top5Deities", top5Deities.size >= 3)
+    }
+
+    @Test fun whenLiveYoutubeTracksAvailableFeedShowsYoutubeSongsOnly() {
+        val anchor = BhajanPlayer.Track(
+            title = "Jai Ganesh Jai Ganesh Deva",
+            url = "https://archive.org/download/JaiGanesh.mp3",
+            id = "jai_ganesh_deva",
+            deity = "ganesh",
+            isYoutube = false
+        )
+        val localCatalog = listOf(
+            anchor,
+            BhajanPlayer.Track("Local Shiva Song", "https://archive.org/download/s1.mp3", id = "31", deity = "shiva", youtubeId = "nVib8eC2JDI", isYoutube = true),
+            BhajanPlayer.Track("Local Hanuman Song", "https://archive.org/download/h1.mp3", id = "46", deity = "hanuman", youtubeId = "AETFvQonfV8", isYoutube = true)
+        )
+        val liveYoutubeResults = listOf(
+            BhajanPlayer.Track("Vakratunda Mahakaya", "https://www.youtube.com/watch?v=ytLive00001", id = "yt_ytLive00001", deity = "ganesh", youtubeId = "ytLive00001", isYoutube = true),
+            BhajanPlayer.Track("Bajrang Baan Live", "https://www.youtube.com/watch?v=ytLive00002", id = "yt_ytLive00002", deity = "hanuman", youtubeId = "ytLive00002", isYoutube = true),
+            BhajanPlayer.Track("Karpur Gauram Live", "https://www.youtube.com/watch?v=ytLive00003", id = "yt_ytLive00003", deity = "shiva", youtubeId = "ytLive00003", isYoutube = true),
+            BhajanPlayer.Track("Achyutam Keshavam Live", "https://www.youtube.com/watch?v=ytLive00004", id = "yt_ytLive00004", deity = "krishna", youtubeId = "ytLive00004", isYoutube = true)
+        )
+
+        val feed = BhajanSearch.youtubeFeedRecommendations(
+            anchor = anchor,
+            catalog = localCatalog,
+            youtubeResults = liveYoutubeResults,
+            idol = "original"
+        )
+
+        assertEquals(4, feed.size)
+        assertTrue(feed.all { it.id.startsWith("yt_ytLive") })
+        assertFalse(feed.any { it.id in setOf("31", "46", "jai_ganesh_deva") })
+    }
+
+    @Test fun parseYoutubeSearchResultsExtractsDurationWithNestedAccessibilityAndSkipsShorts() {
+        val innertubePayload = """
+            {
+              "contents": {
+                "sectionListRenderer": {
+                  "contents": [
+                    {
+                      "videoRenderer": {
+                        "videoId": "hMBKmQEPNzI",
+                        "title": { "runs": [{ "text": "Shiv Tandav Stotram" }] },
+                        "ownerText": { "runs": [{ "text": "Times Music Spiritual" }] },
+                        "lengthText": {
+                          "accessibility": {
+                            "accessibilityData": {
+                              "label": "6 minutes, 29 seconds"
+                            }
+                          },
+                          "simpleText": "6:29"
+                        }
+                      }
+                    },
+                    {
+                      "videoRenderer": {
+                        "videoId": "shortVid001",
+                        "title": { "runs": [{ "text": "Ganesh Short Status" }] },
+                        "lengthText": {
+                          "accessibility": {
+                            "accessibilityData": {
+                              "label": "30 seconds"
+                            }
+                          },
+                          "simpleText": "0:30"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+        """.trimIndent()
+
+        val tracks = BhajanSearch.parseYoutubeSearchResults(innertubePayload)
+        assertEquals(1, tracks.size)
+        assertEquals("hMBKmQEPNzI", tracks[0].youtubeId)
+        assertEquals(389L, tracks[0].durationSeconds)
+    }
 }
 
 

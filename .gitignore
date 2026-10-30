@@ -18,6 +18,14 @@ keystore.properties
 *.hprof
 .cxx/
 .externalNativeBuild/
+play-service-account.json
+*service-account*.json
+android/fastlane/report.xml
+android/fastlane/README.md
+android/fastlane/metadata/android/*/images/
+android/vendor/
+android/.bundle/
+.bundle/
 
 # Swift / Xcode outputs
 .build/

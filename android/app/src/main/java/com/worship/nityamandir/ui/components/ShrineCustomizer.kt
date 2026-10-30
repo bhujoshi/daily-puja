@@ -35,9 +35,19 @@ import kotlinx.coroutines.CancellationException
 fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boolean,onDismiss:()->Unit,onAccount:(ShrineSelection)->Unit,onApplied:(ShrineSelection)->Unit,
     player:BhajanPlayer,onMusic:(ShrineSelection)->Unit) {
     val context=LocalContext.current
+    val analytics=remember {MandirAnalytics.from(context)}
     val catalog=remember {ShrineCatalog(context)}
-    var draft by remember {mutableStateOf(catalog.normalize(current))}
-    var categoryId by remember {mutableStateOf("shrine")}
+    val baseline=remember(current) {catalog.normalize(current)}
+    var draft by remember {mutableStateOf(baseline)}
+    var categoryId by remember {
+        mutableStateOf(
+            catalog.categories.firstOrNull {cat ->
+                cat.options.any {opt ->
+                    (if(cat.id=="flowers") opt.id in draft.flowerIds else draft[cat.id]==opt.id) && !account.owns(cat.id,opt.id)
+                }
+            }?.id ?: "shrine"
+        )
+    }
     var busy by remember {mutableStateOf(false)}
     var error by remember {mutableStateOf("")}
     var message by remember {mutableStateOf("")}
@@ -50,19 +60,37 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
     LaunchedEffect(categoryId) {optionsScroll.scrollTo(0)}
     fun tr(hi:String,en:String)=if(hindi) hi else en
     fun label(option:ShrineOption)=if(hindi) option.hi else option.en
+    val notEnoughCoinsMessage=tr(
+        "पर्याप्त सिक्के नहीं हैं। सिक्के कमाने के लिए दैनिक पूजा पूरी करें या मित्रों को आमंत्रित करें।",
+        "Not enough coins. Complete daily puja or invite friends to earn coins."
+    )
     fun failure(e:Exception)=when {
         !account.signedIn -> tr("साइन इन करके फिर कोशिश करें। आपके चुने हुए विकल्प बने रहेंगे।","Sign in and try again. Your choices are kept.")
         e is java.io.IOException -> tr("इंटरनेट जाँचें और फिर कोशिश करें। अनलॉक किए गए आइटम आपके पास रहेंगे।","Check your connection and try again. Unlocked items stay yours.")
-        e.message?.startsWith("Not enough coins")==true -> tr("सिक्के कम हैं। प्रोफ़ाइल में प्रगति ताज़ा करें या और सिक्के कमाएँ।","Not enough coins. Refresh your profile or earn more coins.")
+        e.message?.startsWith("Not enough coins")==true -> notEnoughCoinsMessage
         else -> tr("पूरा नहीं हो पाया। फिर कोशिश करें। अनलॉक किए गए आइटम आपके पास रहेंगे।","Could not complete this action. Try again. Unlocked items stay yours.")
     }
+    fun revertUnownedOtherCategories(selection:ShrineSelection,keepCategoryId:String):ShrineSelection =
+        catalog.categories.fold(selection) {acc,cat ->
+            if(cat.id==keepCategoryId) acc
+            else if(cat.id=="flowers") {
+                val ownedFlowers=acc.flowerIds.filter {account.owns("flowers",it)}
+                    .ifEmpty {baseline.flowerIds.filter {account.owns("flowers",it)}}
+                    .ifEmpty {listOf(cat.options.first().id)}
+                acc.with("flowers",ownedFlowers.joinToString(","))
+            } else if(!account.owns(cat.id,acc[cat.id])) {
+                val fallback=baseline[cat.id].takeIf {account.owns(cat.id,it)}
+                    ?: cat.options.firstOrNull {account.owns(cat.id,it.id)}?.id
+                    ?: cat.options.first().id
+                acc.with(cat.id,fallback)
+            } else acc
+        }
     fun requestUnlock(items:List<ShrineUnlock>) {
         if(busy) return
         error="";message=""
-        if(!account.signedIn || account.coins<items.sumOf {it.cost}) {
-            draft=items.fold(draft) {selection,item -> selection.selectItem(item.category.id,item.option.id)}
-            onAccount(draft)
-        }
+        draft=items.fold(draft) {selection,item -> selection.selectItem(item.category.id,item.option.id)}
+        if(!account.signedIn) onAccount(draft)
+        else if(account.coins<items.sumOf {it.cost}) message=notEnoughCoinsMessage
         else pendingUnlocks=items
     }
     val selectedUnlocks=catalog.categories.flatMap {category ->
@@ -82,14 +110,17 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
     val applyOrUnlock:()->Unit = action@{
         if(busy) return@action
         if(selectedUnlocks.isNotEmpty()) {
-            // Leave the scene preview before opening account or purchase dialogs.
-            showPreview=false
+            if(!account.signedIn || account.coins>=selectedCost) {
+                // Leave the scene preview before opening account or purchase dialogs.
+                showPreview=false
+            }
             requestUnlock(selectedUnlocks)
         } else {
             busy=true;error="";message=""
             scope.launch {
                 try {
                     account.saveSelection(draft)
+                    analytics.logShrineSelectionApplied(draft)
                     showPreview=false
                     onApplied(draft)
                 }
@@ -118,7 +149,12 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                 if(player.current!=null || player.loading) BhajanMiniPlayer(player,hindi,{onMusic(draft)},Modifier.testTag("mandir-choice-music"),compact=true)
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     catalog.categories.forEach {category ->
-                        FilterChip(selected=categoryId==category.id,onClick={categoryId=category.id},enabled=!busy,label={Text(if(hindi) category.hi else category.en)})
+                        FilterChip(selected=categoryId==category.id,onClick={
+                            error="";message=""
+                            draft=revertUnownedOtherCategories(draft,category.id)
+                            categoryId=category.id
+                            analytics.logShrineCategoryViewed(category.id)
+                        },enabled=!busy,label={Text(if(hindi) category.hi else category.en)})
                     }
                 }
                 val category=catalog.categories.first {it.id==categoryId}
@@ -130,8 +166,9 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                         val cost=account.cost(category.id,option.id)
                         Surface(onClick={
                             error="";message=""
-                            if(category.id=="flowers" && selected && draft.flowerIds.size==1) message=tr("कम से कम एक फूल की किस्म रखें।","Keep at least one flower variety.")
-                            else draft=if(category.id=="flowers") draft.toggleFlower(option.id) else draft.with(category.id,option.id)
+                            val baseDraft=revertUnownedOtherCategories(draft,category.id)
+                            if(category.id=="flowers" && selected && baseDraft.flowerIds.size==1) message=tr("कम से कम एक फूल की किस्म रखें।","Keep at least one flower variety.")
+                            else draft=if(category.id=="flowers") baseDraft.toggleFlower(option.id) else baseDraft.with(category.id,option.id)
                         },enabled=!busy,shape=RoundedCornerShape(16.dp),color=if(selected) Color(0xFFF1DFC1) else Color.White,border=BorderStroke(if(selected) 2.dp else 1.dp,if(selected) RitualGold else Color(0xFFE4D7C6)),modifier=Modifier.fillMaxWidth().semantics {
                             this.selected=selected
                             if(category.id=="flowers") {role=Role.Checkbox;toggleableState=if(selected) ToggleableState.On else ToggleableState.Off}
@@ -162,7 +199,7 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                     if(message.isNotEmpty()) Text(message,color=RitualInk,modifier=Modifier.semantics {liveRegion=LiveRegionMode.Polite})
                 }
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
-                    RitualChoice(tr("देखें","Preview"),false,{showPreview=true},Modifier.weight(1f).testTag("mandir-preview-button"),enabled=!busy)
+                    RitualChoice(tr("देखें","Preview"),false,{showPreview=true;analytics.logShrinePreviewOpened(draft["shrine"],draft["idols"])},Modifier.weight(1f).testTag("mandir-preview-button"),enabled=!busy)
                     RitualChoice(selectionActionLabel,false,applyOrUnlock,Modifier.weight(1f).testTag("mandir-selection-action"),enabled=!busy,leadingIcon=selectionActionIcon)
                 }
                 Text(selectionHint,fontSize=12.sp)
@@ -186,7 +223,10 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                 scope.launch {
                     try {
                         purchase.forEach {item ->
-                            if(!account.owns(item.category.id,item.option.id)) account.unlock(item.category.id,item.option.id)
+                            if(!account.owns(item.category.id,item.option.id)) {
+                                account.unlock(item.category.id,item.option.id)
+                                analytics.logShrineItemUnlocked(item.category.id,item.option.id,item.cost)
+                            }
                             draft=draft.selectItem(item.category.id,item.option.id)
                         }
                         message=tr("अनलॉक हो गया · लगाने के लिए तैयार","Unlocked · ready to use")
@@ -210,6 +250,7 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                     Column(Modifier.testTag("mandir-preview-actions").padding(10.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)) {
                         if(busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                         if(error.isNotEmpty()) Text(error,color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics {liveRegion=LiveRegionMode.Polite})
+                        if(message.isNotEmpty()) Text(message,color=RitualInk,textAlign=TextAlign.Center,modifier=Modifier.semantics {liveRegion=LiveRegionMode.Polite})
                         RitualChoice(selectionActionLabel,false,applyOrUnlock,Modifier.fillMaxWidth().testTag("mandir-preview-action"),enabled=!busy,leadingIcon=selectionActionIcon)
                         Text(selectionHint,Modifier.fillMaxWidth(),fontSize=12.sp,textAlign=TextAlign.Center)
                     }

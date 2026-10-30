@@ -400,19 +400,39 @@ class MandirSajayeFlowTest {
     }
 
     @Test fun insufficientCoinsRoutesToEarningWithTheRequestedDesign() {
-        fixture(coins = 1)
+        fixture(coins = 2)
         showCustomizer()
         compose.onNodeWithText("Ivory alcove").performScrollTo().performClick().assertIsSelected()
         compose.onNodeWithText("Cost: 7 coins").assertIsDisplayed()
         compose.runOnIdle { assertNull(routed.get()) }
         compose.onNode(hasTestTag("mandir-selection-action") and hasText("Unlock")).performClick()
+        compose.onNodeWithText("Not enough coins. Complete daily puja or invite friends to earn coins.")
+            .assertIsDisplayed()
+        compose.onNodeWithText("Ivory alcove").assertIsSelected()
         compose.runOnIdle {
-            assertEquals("ivory", routed.get()!!["shrine"])
-            assertEquals(1, account.coins)
+            assertNull(routed.get())
+            assertEquals(2, account.coins)
             assertFalse(account.owns("shrine", "ivory"))
         }
         compose.onNodeWithText("Unlock items?").assertDoesNotExist()
+        compose.onNodeWithText("Preview").performClick()
+        compose.onNode(hasTestTag("mandir-preview-action") and hasText("Unlock"))
+            .assertIsDisplayed().performClick()
+        compose.onNode(
+            hasText("Not enough coins. Complete daily puja or invite friends to earn coins.") and
+                hasAnyAncestor(hasTestTag("mandir-preview-actions"))
+        ).assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back to choices").assertIsDisplayed().performClick()
+        compose.runOnIdle { assertNull(routed.get()) }
         assertEquals(0, origin.requests.get())
+        // Switching to an affordable category resets the unowned 7-coin shrine so 2-coin flowers can be bought.
+        compose.onNodeWithText("Flowers").performScrollTo().performClick()
+        compose.onNodeWithText("Orchid").performScrollTo().performClick()
+        compose.onNodeWithText("Cost: 2 coins").assertIsDisplayed()
+        compose.onNode(hasTestTag("mandir-selection-action") and hasText("Unlock")).performClick()
+        confirmUnlock(2)
+        compose.waitUntil(5_000) { account.coins == 0 && account.owns("flowers", "orchid") }
+        assertNull(routed.get())
         assertNull(applied.get())
     }
 

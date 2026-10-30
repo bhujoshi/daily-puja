@@ -28,7 +28,7 @@ internal object BhajanAudioCache {
     }
 
     fun httpSource() = DefaultHttpDataSource.Factory()
-        .setUserAgent("com.google.android.apps.youtube.vr.oculus/1.56.21 (Linux; U; Android 14; en_IN) gzip")
+        .setUserAgent("PavitraMandir/1.0 music")
         .setAllowCrossProtocolRedirects(true)
         .setConnectTimeoutMs(10_000)
         .setReadTimeoutMs(10_000)

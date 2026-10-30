@@ -1,0 +1,7 @@
+# Google Play Console Service Account JSON key path.
+# Override with PLAY_STORE_JSON_KEY=/path/to/key.json or place the key at:
+# android/fastlane/play-service-account.json
+json_key_file(ENV["PLAY_STORE_JSON_KEY"] || File.expand_path("play-service-account.json", __dir__))
+
+# Official Google Play application ID for Pavitra Mandir (पवित्र मंदिर)
+package_name("com.pavitramandir.app")

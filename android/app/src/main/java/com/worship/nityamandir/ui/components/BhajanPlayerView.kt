@@ -187,7 +187,11 @@ fun BhajanMiniPlayer(
                         color = YouTubeTextPrimary
                     )
 
-                    IconButton(onClick = player::toggle, modifier = Modifier.size(40.dp)) {
+                    IconButton(onClick = {
+                        val expand = player.youtubeMode && !player.playing
+                        player.toggle()
+                        if (expand) onExpand()
+                    }, modifier = Modifier.size(40.dp)) {
                         Icon(
                             if (player.failed) Icons.Default.Refresh else if (player.playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                             if (player.failed) {
@@ -274,7 +278,7 @@ fun BhajanMiniPlayer(
                             if (hindi) "लोड हो रहा है…" else "Loading…"
                         } else {
                             val artist = activeTrack?.artist?.replace("• YouTube", "")?.trim().orEmpty()
-                            if (artist.isNotBlank()) "$artist • YouTube"
+                            if (artist.isNotBlank()) "$artist • ${if (activeTrack?.isYoutubeOnly == true) "YouTube" else if (hindi) "संगीत संग्रह" else "Music catalog"}"
                             else if (hindi) "YouTube भजन" else "YouTube Bhajan"
                         },
                         fontSize = 11.sp,
@@ -284,11 +288,15 @@ fun BhajanMiniPlayer(
                     )
                 }
                 if (showTrackNavigation) {
-                    IconButton(onClick = { player.skip(-1) }, enabled = player.tracks.size > 1 || player.catalog.size > 1) {
+                    IconButton(onClick = { player.skip(-1); if (player.youtubeMode) onExpand() }, enabled = player.catalog.size > 1) {
                         Icon(Icons.Default.SkipPrevious, if (hindi) "पिछला" else "Previous", tint = YouTubeTextPrimary)
                     }
                 }
-                IconButton(onClick = player::toggle) {
+                IconButton(onClick = {
+                    val expand = player.youtubeMode && !player.playing
+                    player.toggle()
+                    if (expand) onExpand()
+                }) {
                     Icon(
                         if (player.failed) Icons.Default.Refresh else if (player.playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                         if (hindi) "चलाएँ / रोकें" else "Play / pause / retry",
@@ -296,7 +304,7 @@ fun BhajanMiniPlayer(
                     )
                 }
                 if (showTrackNavigation) {
-                    IconButton(onClick = { player.skip(1) }, enabled = player.tracks.size > 1 || player.catalog.size > 1) {
+                    IconButton(onClick = { player.skip(1); if (player.youtubeMode) onExpand() }, enabled = player.catalog.size > 1) {
                         Icon(Icons.Default.SkipNext, if (hindi) "अगला" else "Next", tint = YouTubeTextPrimary)
                     }
                 }
@@ -331,7 +339,7 @@ private fun YouTubeStyleThumbnail(
     val thumbUrl = remember(track.thumbnail, track.youtubeId) {
         if (track.thumbnail.startsWith("https://") || track.thumbnail.startsWith("http://")) {
             track.thumbnail
-        } else if (track.youtubeId.isNotBlank()) {
+        } else if (track.isYoutubeOnly && track.youtubeId.isNotBlank()) {
             "https://i.ytimg.com/vi/${track.youtubeId}/hqdefault.jpg"
         } else {
             ""
@@ -434,48 +442,21 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
         }
     }
 
-    val activeTrack = player.current
-        ?: player.catalog.firstOrNull { it.isYoutubeOnly }
-        ?: player.catalog.firstOrNull()
+    val activeTrack = player.current ?: player.defaultTrack
 
-    // Dynamic video recommendations list for the active song or committed search query.
-    // Strictly excludes the currently playing / active song and reshuffles on every track transition.
-    val recommendations = remember(
-        activeTrack?.id,
-        activeTrack?.title,
-        player.catalog,
-        player.youtubeSearchResults,
-        player.relatedYoutubeTracks,
-        player.recentHistoryIds,
-        player.recommendationSeed,
-        committedSearchQuery
-    ) {
-        val q = committedSearchQuery.trim()
-        val ytPool = if (q.isNotEmpty()) {
-            player.youtubeSearchResults
-        } else {
-            player.relatedYoutubeTracks
+    // Preserve the original feed layout with one catalog/default + YouTube song list.
+    val recommendations = remember(activeTrack?.id, player.catalog, player.youtubeSearchResults, committedSearchQuery) {
+        val query = committedSearchQuery.trim()
+        val local = player.catalog.filter { track ->
+            query.isEmpty() || BhajanSearch.matchesTrack(query, track.title, track.artist, track.deity, track.collection)
         }
-        val feed = BhajanSearch.youtubeFeedRecommendations(
-            anchor = activeTrack,
-            catalog = player.catalog,
-            youtubeResults = ytPool,
-            searchQuery = q,
-            categoryFilter = "all",
-            idol = player.idol,
-            playedTrackIds = player.recentHistoryIds,
-            rotationSeed = player.recommendationSeed
-        )
-        if (q.isEmpty()) {
-            feed.filterNot { BhajanSearch.isSameSong(it, activeTrack) }.distinctBy { it.id }
-        } else {
-            feed.distinctBy { it.id }
-        }
+        (player.youtubeSearchResults + local)
+            .filterNot { it.id == activeTrack?.id }
+            .distinctBy { if (it.isYoutubeOnly) it.youtubeId else it.id }
     }
 
-    // Scroll video list to the top whenever the song changes, committed search changes, or live search results arrive
-    LaunchedEffect(activeTrack?.id, player.recommendationSeed, committedSearchQuery, player.youtubeSearchResults.size) {
-        runCatching { gridState.scrollToItem(0) }
+    LaunchedEffect(activeTrack?.id, committedSearchQuery, player.youtubeSearchResults.size) {
+        gridState.scrollToItem(0)
     }
 
     // Text search suggestions shown ONLY while typing
@@ -485,7 +466,6 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
         activeTrack,
         player.catalog,
         player.youtubeSearchResults,
-        player.relatedYoutubeTracks,
         player.youtubeSuggestions
     ) {
         val q = searchQuery.trim()
@@ -496,7 +476,7 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
                 query = q,
                 hindi = hindi,
                 catalog = player.catalog,
-                youtubeResults = player.youtubeSearchResults + player.relatedYoutubeTracks,
+                youtubeResults = player.youtubeSearchResults,
                 remoteSuggestions = player.youtubeSuggestions,
                 anchor = activeTrack,
                 idol = player.idol
@@ -506,7 +486,7 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
                 hindi = hindi,
                 anchor = activeTrack,
                 catalog = player.catalog,
-                youtubeResults = player.youtubeSearchResults + player.relatedYoutubeTracks,
+                youtubeResults = player.youtubeSearchResults,
                 idol = player.idol
             ).map { nw ->
                 val tokens = q.split(Regex("\\s+")).filter { it.isNotBlank() }
@@ -565,7 +545,7 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
                     if (player.current != null) {
                         isPlayerMinimizedToSide = true
                     }
-                    player.searchYoutube(clean, autoplayFirst = false)
+                    player.searchYoutube(clean)
                 } else {
                     player.clearYoutubeSearch()
                 }
@@ -823,8 +803,7 @@ fun BhajanPlayerSheet(player: BhajanPlayer, hindi: Boolean, onDismiss: () -> Uni
                                             isPlayerMinimizedToSide = false
                                             player.playCatalog(
                                                 selected = track,
-                                                autoplay = true,
-                                                preferYoutube = true
+                                                autoplay = true
                                             )
                                             coroutineScope.launch {
                                                 runCatching { gridState.scrollToItem(0) }
@@ -933,10 +912,11 @@ private fun YouTubeSideMiniPlayer(
                 IconButton(
                     onClick = {
                         if (player.current == null) {
-                            player.playCatalog(track, autoplay = true, preferYoutube = true)
+                            player.playCatalog(track, autoplay = true)
                         } else {
                             player.toggle()
                         }
+                        if (player.youtubeMode) onExpand()
                     },
                     modifier = Modifier.size(34.dp)
                 ) {
@@ -950,7 +930,7 @@ private fun YouTubeSideMiniPlayer(
                     )
                 }
                 IconButton(
-                    onClick = { player.skip(1) },
+                    onClick = { player.skip(1); if (player.youtubeMode) onExpand() },
                     modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
@@ -1023,7 +1003,9 @@ private fun YouTubeBhajanFeedCard(
                 verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                YouTubeBadgeIcon(hindi = hindi)
+                if (track.isYoutubeOnly) YouTubeBadgeIcon(hindi = hindi)
+            else Icon(Icons.Default.MusicNote, if (hindi) "संगीत संग्रह" else "Music catalog",
+                tint = YouTubeTextSecondary, modifier = Modifier.size(36.dp))
 
                 Column(Modifier.weight(1f)) {
                     Text(
@@ -1036,7 +1018,7 @@ private fun YouTubeBhajanFeedCard(
                         lineHeight = 18.sp
                     )
                     Text(
-                        text = "$cleanArtist • YouTube",
+                        text = "$cleanArtist • ${if (track.isYoutubeOnly) "YouTube" else if (hindi) "संगीत संग्रह" else "Music catalog"}",
                         fontSize = 12.sp,
                         color = YouTubeTextSecondary,
                         maxLines = 1,
@@ -1060,6 +1042,10 @@ private fun UnifiedYouTubeStylePlayer(
     hindi: Boolean,
     onMinimizeToSide: () -> Unit
 ) {
+    if (player.youtubeMode) {
+        EmbeddedYouTubeStage(player, track, hindi, onMinimizeToSide)
+        return
+    }
     fun tr(hi: String, en: String) = if (hindi) hi else en
     var dragPosition by remember(track.id) { mutableStateOf<Float?>(null) }
     val effectiveDuration = player.duration.takeIf { it > 0 } ?: (track.durationSeconds * 1000L)
@@ -1135,7 +1121,7 @@ private fun UnifiedYouTubeStylePlayer(
             ) {
                 IconButton(
                     onClick = { player.skip(-1) },
-                    enabled = player.tracks.isNotEmpty() || player.catalog.isNotEmpty(),
+                    enabled = player.catalog.isNotEmpty(),
                     modifier = Modifier
                         .size(42.dp)
                         .background(Color(0x99000000), CircleShape)
@@ -1151,7 +1137,7 @@ private fun UnifiedYouTubeStylePlayer(
                         .size(56.dp)
                         .clickable {
                             if (player.current == null) {
-                                player.playCatalog(track, autoplay = true, preferYoutube = true)
+                                player.playCatalog(track, autoplay = true)
                             } else {
                                 player.toggle()
                             }
@@ -1178,7 +1164,7 @@ private fun UnifiedYouTubeStylePlayer(
 
                 IconButton(
                     onClick = { player.skip(1) },
-                    enabled = player.tracks.isNotEmpty() || player.catalog.isNotEmpty(),
+                    enabled = player.catalog.isNotEmpty(),
                     modifier = Modifier
                         .size(42.dp)
                         .background(Color(0x99000000), CircleShape)
@@ -1244,7 +1230,9 @@ private fun UnifiedYouTubeStylePlayer(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            YouTubeBadgeIcon(hindi = hindi)
+            if (track.isYoutubeOnly) YouTubeBadgeIcon(hindi = hindi)
+            else Icon(Icons.Default.MusicNote, if (hindi) "संगीत संग्रह" else "Music catalog",
+                tint = YouTubeTextSecondary, modifier = Modifier.size(36.dp))
             Column(Modifier.weight(1f)) {
                 Text(
                     text = if (player.current != null) player.title else track.title,
@@ -1255,12 +1243,51 @@ private fun UnifiedYouTubeStylePlayer(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "$cleanArtist • YouTube",
+                    text = "$cleanArtist • ${if (track.isYoutubeOnly) "YouTube" else if (hindi) "संगीत संग्रह" else "Music catalog"}",
                     fontSize = 12.sp,
                     color = YouTubeTextSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+            }
+        }
+    }
+}
+
+
+/** The existing watch surface and title row, using the real YouTube video for YouTube songs. */
+@Composable
+private fun EmbeddedYouTubeStage(
+    player: BhajanPlayer,
+    track: BhajanPlayer.Track,
+    hindi: Boolean,
+    onMinimizeToSide: () -> Unit
+) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
+        BoxWithConstraints(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))) {
+            key(player.playbackGeneration) {
+                YouTubeBhajanPlayer(player, track,
+                    Modifier.fillMaxWidth().height(maxOf(200.dp, maxWidth * 9f / 16f)))
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            YouTubeBadgeIcon(hindi = hindi)
+            Column(Modifier.weight(1f)) {
+                Text(track.title, fontWeight = FontWeight.Bold, fontSize = 15.sp,
+                    color = YouTubeTextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${track.artist.replace("• YouTube", "").trim()} • YouTube",
+                    fontSize = 12.sp, color = YouTubeTextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            // Keep app actions outside the video so they never cover YouTube's controls.
+            IconButton(onClick = player::toggleRepeat, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Default.RepeatOne, if (hindi) "दोहराएँ" else "Repeat",
+                    tint = if (player.repeat) YouTubeRed else Color.White, modifier = Modifier.size(17.dp))
+            }
+            IconButton(onClick = onMinimizeToSide,
+                modifier = Modifier.size(34.dp).testTag("youtube-minimize-chevron")) {
+                Icon(Icons.Default.KeyboardArrowDown, if (hindi) "प्लेयर छोटा करें" else "Minimize player",
+                    tint = Color.White, modifier = Modifier.size(22.dp))
             }
         }
     }

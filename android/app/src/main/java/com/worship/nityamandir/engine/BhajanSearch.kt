@@ -107,7 +107,9 @@ object BhajanSearch {
     private val videoIdPattern = Regex(""""videoId"\s*:\s*"([a-zA-Z0-9_-]{11})"""")
     private val titleRunPattern = Regex(""""title"\s*:\s*\{\s*(?:"runs"\s*:\s*\[\s*\{\s*"text"\s*:\s*"([^"]+)"|"simpleText"\s*:\s*"([^"]+)"|"accessibility"\s*:\s*\{\s*"accessibilityData"\s*:\s*\{\s*"label"\s*:\s*"([^"]+)")""")
     private val ownerRunPattern = Regex("""(?:"ownerText"|"longBylineText"|"shortBylineText")\s*:\s*\{\s*(?:"runs"\s*:\s*\[\s*\{\s*"text"\s*:\s*"([^"]+)"|"simpleText"\s*:\s*"([^"]+)")""")
-    private val lengthPattern = Regex(""""lengthText"\s*:\s*\{[^}]*(?:"simpleText"\s*:\s*"([0-9:]+)"|"runs"\s*:\s*\[\s*\{\s*"text"\s*:\s*"([0-9:]+)")""")
+    private val lengthPattern = Regex(
+        """"lengthText"\s*:\s*\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*?(?:"simpleText"\s*:\s*"([0-9:]+)"|"runs"\s*:\s*\[\s*\{\s*"text"\s*:\s*"([0-9:]+)")"""
+    )
 
     /** Extracts playable YouTube bhajan tracks from YouTube Innertube or search results payloads. */
     fun parseYoutubeSearchResults(payload: String, defaultDeity: String = "mixed", limit: Int = 18): List<BhajanPlayer.Track> {
@@ -137,8 +139,9 @@ object BhajanSearch {
                 lenMatch?.groupValues?.getOrNull(1),
                 lenMatch?.groupValues?.getOrNull(2)
             ).firstOrNull { it.isNotBlank() }.orEmpty()
-            val seconds = parseDurationSeconds(durationStr)
-            if (seconds in 1..44) continue // Skip YouTube Shorts
+            val parsedSeconds = parseDurationSeconds(durationStr)
+            if (parsedSeconds in 1..44) continue // Skip YouTube Shorts
+            val seconds = if (parsedSeconds > 0L) parsedSeconds else 240L
             val inferredDeity = inferDeity("$cleanTitle $artist", defaultDeity)
             results.add(
                 BhajanPlayer.Track(
@@ -468,12 +471,20 @@ object BhajanSearch {
 
     private val hindiToLatinSongTokens = mapOf(
         "श्री" to "",
+        "जी" to "",
+        "की" to "",
+        "के" to "",
+        "का" to "",
+        "जय" to "jai",
+        "देवा" to "deva",
+        "देव" to "deva",
         "हनुमान" to "hanuman",
         "चालीसा" to "chalisa",
         "संकट" to "sankat",
         "मोचन" to "mochan",
         "अष्टक" to "ashtak",
         "बजरंग" to "bajrang",
+        "बजरंगबली" to "bajrang bali",
         "बाण" to "baan",
         "शिव" to "shiv",
         "तांडव" to "tandav",
@@ -482,31 +493,74 @@ object BhajanSearch {
         "महादेव" to "mahadev",
         "भोला" to "bhola",
         "भोले" to "bhola",
+        "भोलेनाथ" to "bhola",
         "भंडारी" to "bhandari",
         "महामृत्युंजय" to "mahamrityunjaya",
         "मंत्र" to "mantra",
+        "कर्पूर" to "karpur",
+        "गौरं" to "gauram",
+        "हर" to "har",
+        "शंभू" to "shambhu",
+        "शम्भू" to "shambhu",
+        "ॐ" to "om",
+        "ओम" to "om",
+        "नमो" to "namah",
+        "नमः" to "namah",
+        "शिवाय" to "shivay",
         "गणेश" to "ganesh",
         "गणपति" to "ganpati",
+        "गणपतये" to "ganpataye",
         "बप्पा" to "bappa",
         "मोरया" to "morya",
         "गजानन" to "gajanan",
         "सुखकर्ता" to "sukh karta",
+        "सुख" to "sukh",
+        "कर्ता" to "karta",
         "दुखहर्ता" to "dukh harta",
+        "दुख" to "dukh",
+        "दुःख" to "dukh",
+        "हर्ता" to "harta",
+        "वक्रतुंड" to "vakratunda",
+        "वक्रतुण्ड" to "vakratunda",
+        "महाकाय" to "mahakaya",
+        "अथर्वशीर्ष" to "atharvashirsha",
+        "पधारो" to "padharo",
+        "घर" to "ghar",
+        "में" to "mein",
+        "वंदना" to "vandana",
+        "स्तुति" to "stuti",
+        "धुन" to "dhun",
+        "अमृतवाणी" to "amritwani",
         "दुर्गा" to "durga",
         "अम्बे" to "ambe",
         "जगदम्बे" to "jagdambe",
         "काली" to "kali",
         "माता" to "mata",
         "राम" to "ram",
+        "रामचंद्र" to "ramachandra",
+        "कृपालु" to "kripalu",
         "आएंगे" to "aayenge",
+        "सिया" to "siya",
         "कृष्ण" to "krishna",
         "बांके" to "banke",
         "बिहारी" to "bihari",
         "श्याम" to "shyam",
+        "श्यामा" to "shyama",
+        "वृंदावन" to "vrindavan",
+        "वृन्दावन" to "vrindavan",
+        "राधे" to "radhe",
+        "अच्युतम" to "achyutam",
+        "केशवम" to "keshavam",
         "नारायण" to "narayan",
+        "जगदीश" to "jagdish",
+        "हरे" to "hare",
         "लक्ष्मी" to "lakshmi",
         "आरती" to "aarti",
         "भजन" to "bhajan"
+    )
+
+    private val genericTitleFormWords = setOf(
+        "aarti", "bhajan", "bhajans", "mantra", "stuti", "dhun", "kirtan", "vandana", "prarthana"
     )
 
     /**
@@ -519,6 +573,10 @@ object BhajanSearch {
             .substringBefore("[")
             .substringBefore("|")
             .substringBefore(" - ")
+            .substringBefore(" — ")
+            .substringBefore(" – ")
+            .substringBefore(" : ")
+            .substringBefore(": ")
             .substringBefore(" __ ")
         return normalizeSegment(core).ifBlank { normalizeSegment(raw) }
     }
@@ -530,42 +588,144 @@ object BhajanSearch {
                 text = text.replace(hi, " $en ")
             }
         }
+        text = text
+            .replace("sukhkarta", "sukh karta")
+            .replace("dukhharta", "dukh harta")
+            .replace("bholenath", "bhola")
+            .replace("ganapati", "ganpati")
+            .replace("gajanana", "gajanan")
+            .replace("mahadeva", "mahadev")
+            .replace("shivaya", "shivay")
+            .replace("ramchandra", "ramachandra")
+
         val words = text
             .replace(Regex("[^\\p{L}\\p{M}\\p{N}\\s]"), " ")
             .trim()
             .split(Regex("\\s+"))
             .mapNotNull { token ->
                 when (token) {
-                    "", "shree", "shri", "sri", "o", "oh", "original", "official",
-                    "video", "audio", "full", "hd", "4k", "lyrics", "lyrical", "song" -> null
-                    "raam" -> "ram"
+                    "", "shree", "shri", "sri", "o", "oh", "ji", "ki", "ke", "ka",
+                    "lord", "god", "bhagwan", "baba", "maa", "mata", "original", "official",
+                    "video", "audio", "full", "hd", "4k", "lyrics", "lyrical", "song", "songs",
+                    "bhakti", "devotional", "special", "popular", "top", "best", "superhit",
+                    "hit", "nonstop", "jukebox", "fast", "slow", "lofi", "morning", "evening",
+                    "by", "with", "mp3", "new", "latest", "hindi", "sagar", "series", "tseries" -> null
+                    "jay" -> "jai"
+                    "raam", "rama" -> "ram"
                     "moriya" -> "morya"
                     "chalisha" -> "chalisa"
                     "arti", "arati" -> "aarti"
                     "ambey" -> "ambe"
                     "jagdambey" -> "jagdambe"
-                    "shanker" -> "shankar"
+                    "shanker", "shankara" -> "shankar"
                     "tandava" -> "tandav"
                     "shiva" -> "shiv"
                     "lala" -> "laal"
                     "ban" -> "baan"
                     "bechne" -> "bechane"
+                    "namo", "namaha" -> "namah"
+                    "vakratund" -> "vakratunda"
+                    "mahakay" -> "mahakaya"
+                    "stotram", "stotra" -> "stotram"
                     else -> token
                 }
             }
+            .distinct()
         return words.joinToString(" ")
+    }
+
+    /**
+     * Maps any variation/upload of a known devotional song to a single canonical identity
+     * so multiple uploads of "Jai Ganesh Deva", "Sukh Karta", "Hanuman Chalisa", etc.
+     * never clutter the recommendation feed.
+     */
+    fun canonicalSongKey(raw: String): String {
+        val fullNorm = normalizeSegment(raw)
+        if (fullNorm.isBlank()) return ""
+        val tokens = fullNorm.split(' ').filter { it.isNotBlank() }.toSet()
+
+        return when {
+            tokens.containsAll(listOf("sukh", "karta")) || tokens.containsAll(listOf("dukh", "harta")) ->
+                "song_sukh_karta_dukh_harta"
+            tokens.containsAll(listOf("jai", "ganesh")) ||
+                (tokens.contains("aarti") && (tokens.contains("ganesh") || tokens.contains("ganpati")) &&
+                    !tokens.contains("sukh") && !tokens.contains("bappa")) ||
+                tokens == setOf("ganesh", "deva") ->
+                "song_jai_ganesh_deva"
+            tokens.containsAll(listOf("ganpati", "bappa")) || tokens.containsAll(listOf("bappa", "morya")) ->
+                "song_ganpati_bappa_morya"
+            tokens.containsAll(listOf("padharo", "gajanan")) || tokens.containsAll(listOf("ghar", "gajanan")) ->
+                "song_ghar_mein_padharo_gajanan"
+            tokens.contains("vakratunda") || tokens.contains("mahakaya") ->
+                "song_vakratunda_mahakaya"
+            tokens.contains("atharvashirsha") ->
+                "song_ganesh_atharvashirsha"
+            tokens.contains("ganpataye") ->
+                "song_om_gan_ganpataye"
+            tokens.containsAll(listOf("ganesh", "chalisa")) || tokens.containsAll(listOf("ganpati", "chalisa")) ->
+                "song_ganesh_chalisa"
+            tokens.containsAll(listOf("ganesh", "vandana")) || tokens.containsAll(listOf("ganpati", "vandana")) ->
+                "song_ganesh_vandana"
+            tokens.containsAll(listOf("hanuman", "chalisa")) ->
+                "song_hanuman_chalisa"
+            tokens.containsAll(listOf("sankat", "mochan")) || tokens.containsAll(listOf("hanuman", "ashtak")) ->
+                "song_sankat_mochan"
+            tokens.containsAll(listOf("bajrang", "baan")) ->
+                "song_bajrang_baan"
+            tokens.containsAll(listOf("dukh", "bhanjan")) ->
+                "song_hey_dukh_bhanjan"
+            tokens.containsAll(listOf("shiv", "tandav")) ->
+                "song_shiv_tandav"
+            tokens.containsAll(listOf("bhola", "bhandari")) ->
+                "song_bhola_bhandari"
+            tokens.contains("mahamrityunjaya") ->
+                "song_mahamrityunjaya"
+            tokens.containsAll(listOf("karpur", "gauram")) ->
+                "song_karpur_gauram"
+            tokens.containsAll(listOf("shiv", "chalisa")) ->
+                "song_shiv_chalisa"
+            tokens.containsAll(listOf("namah", "shivay")) ->
+                "song_om_namah_shivay"
+            tokens.containsAll(listOf("har", "mahadev")) || tokens.containsAll(listOf("har", "shambhu")) ->
+                "song_har_har_mahadev"
+            tokens.containsAll(listOf("ambe", "jagdambe")) || tokens.containsAll(listOf("ambe", "kali")) ->
+                "song_ambe_tu_hai"
+            tokens.containsAll(listOf("durga", "chalisa")) ->
+                "song_durga_chalisa"
+            tokens.containsAll(listOf("ram", "aayenge")) ->
+                "song_ram_aayenge"
+            tokens.containsAll(listOf("ramachandra", "kripalu")) ->
+                "song_ramachandra_kripalu"
+            tokens.containsAll(listOf("banke", "bihari")) ->
+                "song_banke_bihari"
+            tokens.containsAll(listOf("shyama", "baso")) || tokens.containsAll(listOf("baso", "vrindavan")) ->
+                "song_shyama_aan_baso"
+            tokens.containsAll(listOf("chudi", "bechane")) ->
+                "song_shyam_chudi_bechane"
+            tokens.containsAll(listOf("achyutam", "keshavam")) ->
+                "song_achyutam_keshavam"
+            tokens.containsAll(listOf("shriman", "narayan")) ->
+                "song_shriman_narayan"
+            tokens.containsAll(listOf("jagdish", "hare")) ->
+                "song_om_jai_jagdish"
+            else -> {
+                val primaryTokens = normalizeSongTitle(raw).split(' ').filter { it.isNotBlank() }
+                val stripped = primaryTokens.filterNot { it in genericTitleFormWords }
+                if (stripped.size >= 2) stripped.joinToString(" ") else primaryTokens.joinToString(" ")
+            }
+        }
     }
 
     private fun normalizedTitleSegments(raw: String): List<String> {
         val primary = normalizeSongTitle(raw)
-        val parts = raw.split('|', '(', ')', '[', ']')
+        val parts = raw.split('|', '(', ')', '[', ']', ':', '-')
             .map { normalizeSegment(it) }
-            .filter { it.length >= 8 }
+            .filter { it.length >= 6 }
         return (listOf(primary) + parts).filter { it.isNotBlank() }.distinct()
     }
 
     /**
-     * Returns true if [a] and [b] represent the same song (by id, base audio URL, or normalized title).
+     * Returns true if [a] and [b] represent the same song (by id, base audio URL, canonical song key, or normalized title).
      */
     fun isSameSong(a: BhajanPlayer.Track?, b: BhajanPlayer.Track?): Boolean {
         if (a == null || b == null) return false
@@ -575,16 +735,17 @@ object BhajanSearch {
         val urlB = b.url.substringBefore('#').trim()
         if (urlA.isNotBlank() && urlA.equals(urlB, ignoreCase = true)) return true
 
+        val canonA = canonicalSongKey(a.title)
+        val canonB = canonicalSongKey(b.title)
+        if (canonA.isNotBlank() && canonA == canonB) return true
+
         val normA = normalizeSongTitle(a.title)
         val normB = normalizeSongTitle(b.title)
         if (normA.isNotBlank() && normA == normB) return true
 
         // If both share the same non-blank YouTube video ID and are not two distinct catalog songs
         if (a.youtubeId.isNotBlank() && a.youtubeId.equals(b.youtubeId, ignoreCase = true)) {
-            val bothAreDistinctCatalogTitles = normA.isNotBlank() && normB.isNotBlank() &&
-                !normA.contains(normB) && !normB.contains(normA) &&
-                !normA.startsWith(normB.take(10)) && !normB.startsWith(normA.take(10)) &&
-                (normA.contains("jai ganesh") != normB.contains("jai ganesh"))
+            val bothAreDistinctCatalogTitles = canonA.startsWith("song_") && canonB.startsWith("song_") && canonA != canonB
             if (!bothAreDistinctCatalogTitles) return true
         }
 
@@ -597,6 +758,15 @@ object BhajanSearch {
                     return true
                 }
             }
+        }
+
+        // Token-level similarity check for re-uploads with reordered or slightly padded words
+        val coreTokensA = normA.split(' ').filter { it.length >= 3 && it !in genericTitleFormWords }.toSet()
+        val coreTokensB = normB.split(' ').filter { it.length >= 3 && it !in genericTitleFormWords }.toSet()
+        if (coreTokensA.size >= 2 && coreTokensB.size >= 2) {
+            val overlap = coreTokensA.intersect(coreTokensB).size
+            val minSize = minOf(coreTokensA.size, coreTokensB.size)
+            if (overlap >= 2 && overlap * 4 >= minSize * 3) return true
         }
         return false
     }
@@ -749,6 +919,16 @@ object BhajanSearch {
         val youtubeCatalog = catalog.filter { it.id != "jai_ganesh_deva" }
         if (q.isNotEmpty()) {
             val inferredSearchDeity = inferDeity(q, "")
+            val liveYoutubeMatches = deduplicateTracks(
+                tracks = youtubeResults.map { track ->
+                    if (!track.isYoutube && track.youtubeId.isNotBlank()) track.copy(isYoutube = true) else track
+                },
+                exclude = null
+            )
+            if (liveYoutubeMatches.size >= 4) {
+                return liveYoutubeMatches.distinctBy { it.id }
+            }
+
             val allCandidates = deduplicateTracks(
                 tracks = (youtubeResults + youtubeCatalog).map { track ->
                     if (!track.isYoutube && track.youtubeId.isNotBlank()) track.copy(isYoutube = true) else track
@@ -795,49 +975,78 @@ object BhajanSearch {
             else -> idol
         }
 
-        // Prefer YouTube-flagged entries first when deduplicating twins, and promote all tracks with a YouTube ID
-        // so the entire catalog participates equally in dynamic recommendations instead of static top-12 locking.
-        val rawPool = (
-            youtubeResults +
-                youtubeCatalog.filter { it.isYoutubeOnly } +
-                youtubeCatalog.filter { !it.isYoutubeOnly }
-            ).map { track ->
-            if (!track.isYoutube && track.youtubeId.isNotBlank()) track.copy(isYoutube = true) else track
+        // When live YouTube recommendations are available, show live YouTube tracks only (no local catalog tracks).
+        // Fall back to the YouTube-flagged catalog only when offline or before live YouTube tracks have loaded.
+        val liveYoutubePool = deduplicateTracks(
+            tracks = youtubeResults.map { track ->
+                if (!track.isYoutube && track.youtubeId.isNotBlank()) track.copy(isYoutube = true) else track
+            },
+            exclude = anchor
+        )
+        val uniqueCandidates = if (liveYoutubePool.size >= 4) {
+            liveYoutubePool
+        } else {
+            val fallbackPool = (
+                liveYoutubePool +
+                    youtubeCatalog.filter { it.isYoutubeOnly } +
+                    youtubeCatalog.filter { !it.isYoutubeOnly }
+                ).map { track ->
+                if (!track.isYoutube && track.youtubeId.isNotBlank()) track.copy(isYoutube = true) else track
+            }
+            deduplicateTracks(fallbackPool, exclude = anchor)
         }
-
-        val uniqueCandidates = deduplicateTracks(rawPool, exclude = anchor)
         val anchorKey = normalizeSongTitle(anchor?.title.orEmpty()).ifBlank { anchor?.id ?: idol }
         val anchorHash = anchorKey.hashCode()
+        val normTarget = targetDeity.lowercase(Locale.ROOT)
+        val anchorForm = inferSongForm(anchor?.title.orEmpty(), anchor?.artist.orEmpty())
+        val anchorArtist = anchor?.artist?.substringBefore("•")?.trim()?.lowercase(Locale.ROOT).orEmpty()
 
-        val dynamicallyRanked = uniqueCandidates.sortedByDescending { track ->
+        val scoredCandidates = uniqueCandidates.map { track ->
             val isLiveYt = youtubeResults.any { isSameSong(it, track) }
             val isYtReady = track.isYoutubeOnly || track.youtubeId.isNotBlank()
             val wasRecentlyPlayed = track.id in playedTrackIds
             val candDeity = track.deity.lowercase(Locale.ROOT)
-            val normTarget = targetDeity.lowercase(Locale.ROOT)
             val sameDeity = candDeity == normTarget
             val relatedDeity = !sameDeity && areRelatedDeities(candDeity, normTarget)
+            val candForm = inferSongForm(track.title, track.artist)
+            val candArtist = track.artist.substringBefore("•").trim().lowercase(Locale.ROOT)
 
-            // Deterministic per-anchor + per-play dynamic jitter (0..84) that reshuffles recommendations
+            // Deterministic per-anchor + per-play dynamic jitter (0..94) that reshuffles recommendations
             // every time the user plays a different song or presses Next.
             val dynamicJitter = mixDynamicSeed(
                 anchorHash = anchorHash,
                 candidateHash = normalizeSongTitle(track.title).hashCode(),
                 rotationSeed = rotationSeed
-            ) % 85
+            ) % 95
 
-            val artistBonus = if (anchor != null) {
-                val anchorArtist = anchor.artist.substringBefore("•").trim().lowercase(Locale.ROOT)
-                if (anchorArtist.length >= 4 && track.artist.lowercase(Locale.ROOT).contains(anchorArtist)) 22 else 0
+            // Prefer variety in song style (e.g. when an Aarti is playing, surface Chalisas, Mantras, Stotrams, and Bhajans)
+            val formVarietyBonus = if (anchor != null && anchorForm.isNotBlank()) {
+                if (candForm == anchorForm) -25 else 20
             } else 0
 
-            (if (isLiveYt) 160 else 0) +
+            val artistVarietyBonus = if (anchorArtist.length >= 4 && candArtist.isNotBlank()) {
+                if (candArtist.contains(anchorArtist)) -15 else 10
+            } else 0
+
+            val score = (if (isLiveYt) 115 else 0) +
                 (if (isYtReady) 40 else 0) +
-                (if (sameDeity) 95 else if (relatedDeity) 55 else 20) +
-                artistBonus +
+                (if (sameDeity) 65 else if (relatedDeity) 50 else 35) +
+                formVarietyBonus +
+                artistVarietyBonus +
                 dynamicJitter -
-                (if (wasRecentlyPlayed) 180 else 0)
-        }.distinctBy { it.id }
+                (if (wasRecentlyPlayed) 220 else 0)
+
+            ScoredCandidate(
+                track = track,
+                score = score,
+                deity = candDeity,
+                form = candForm,
+                artist = candArtist,
+                isLiveYt = isLiveYt
+            )
+        }.sortedByDescending { it.score }.distinctBy { it.track.id }
+
+        val dynamicallyRanked = diversifyRecommendations(scoredCandidates, normTarget)
 
         val filterLower = categoryFilter.lowercase(Locale.ROOT)
         if (filterLower == "all" || filterLower == "up_next") return dynamicallyRanked
@@ -849,6 +1058,98 @@ object BhajanSearch {
                 else -> track.deity.equals(filterLower, ignoreCase = true) || track.collection.equals(filterLower, ignoreCase = true)
             }
         }.ifEmpty { dynamicallyRanked }
+    }
+
+    private data class ScoredCandidate(
+        val track: BhajanPlayer.Track,
+        val score: Int,
+        val deity: String,
+        val form: String,
+        val artist: String,
+        val isLiveYt: Boolean
+    )
+
+    private fun inferSongForm(title: String, artist: String = ""): String {
+        val text = "$title $artist".lowercase(Locale.ROOT)
+        return when {
+            text.contains("aarti") || text.contains("arti") || text.contains("arati") || text.contains("आरती") -> "aarti"
+            text.contains("chalisa") || text.contains("chalisha") || text.contains("चालीसा") -> "chalisa"
+            text.contains("stotram") || text.contains("stotra") || text.contains("tandav") || text.contains("atharvashirsha") || text.contains("स्तोत्र") -> "stotram"
+            text.contains("ashtak") || text.contains("baan") || text.contains("अष्टक") || text.contains("बाण") -> "ashtak"
+            text.contains("mantra") || text.contains("namah") || text.contains("gayatri") || text.contains("महामृत्युंजय") || text.contains("मंत्र") -> "mantra"
+            text.contains("vandana") || text.contains("stuti") || text.contains("वंदना") || text.contains("स्तुति") -> "vandana"
+            text.contains("dhun") || text.contains("kirtan") || text.contains("धुन") -> "dhun"
+            else -> "bhajan"
+        }
+    }
+
+    /**
+     * Greedily slots candidates so the recommendation list offers a wide variety of deities,
+     * devotional forms (Bhajan, Chalisa, Stotram, Mantra, Aarti), and artists instead of
+     * clustering similar songs at the top.
+     */
+    private fun diversifyRecommendations(
+        candidates: List<ScoredCandidate>,
+        targetDeity: String
+    ): List<BhajanPlayer.Track> {
+        if (candidates.size <= 2) return candidates.map { it.track }
+        val remaining = candidates.toMutableList()
+        val selected = mutableListOf<ScoredCandidate>()
+
+        // Slot 0 keeps the highest-scored recommendation for immediate relevance
+        selected.add(remaining.removeAt(0))
+
+        while (remaining.isNotEmpty()) {
+            val prev = selected.last()
+            val recentWindow = selected.takeLast(3)
+            val targetDeityCount = selected.count { it.deity == targetDeity }
+
+            var bestIdx = 0
+            var bestAdjustedScore = Int.MIN_VALUE
+
+            for (i in remaining.indices) {
+                val cand = remaining[i]
+                var adjusted = cand.score
+
+                // Penalize back-to-back same deity to interleave diverse deities
+                if (cand.deity.isNotBlank() && cand.deity == prev.deity) {
+                    adjusted -= 110
+                }
+                // Penalize deities already represented in the last 3 slots
+                val recentSameDeity = recentWindow.count { it.deity.isNotBlank() && it.deity == cand.deity }
+                adjusted -= recentSameDeity * 65
+
+                // Prevent target deity from monopolizing the top of the feed
+                if (cand.deity == targetDeity && targetDeityCount >= 2 && selected.size < 8) {
+                    adjusted -= 85
+                }
+
+                // Penalize back-to-back identical devotional form (e.g. two Aartis in a row)
+                if (cand.form.isNotBlank() && cand.form == prev.form) {
+                    adjusted -= 60
+                }
+
+                // Penalize back-to-back same primary artist
+                if (cand.artist.length >= 4 && prev.artist.length >= 4 &&
+                    (cand.artist.contains(prev.artist) || prev.artist.contains(cand.artist))
+                ) {
+                    adjusted -= 55
+                }
+
+                // Interleave live YouTube tracks with curated catalog tracks
+                if (cand.isLiveYt && selected.takeLast(2).count { it.isLiveYt } >= 2) {
+                    adjusted -= 50
+                }
+
+                if (adjusted > bestAdjustedScore) {
+                    bestAdjustedScore = adjusted
+                    bestIdx = i
+                }
+            }
+            selected.add(remaining.removeAt(bestIdx))
+        }
+
+        return selected.map { it.track }
     }
 
     private fun relevanceScore(

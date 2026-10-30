@@ -1,7 +1,15 @@
 # Android release builds
 
 Application ID: `com.pavitramandir.app`  
-Version: `1.0.17` (version code `18`)
+Version: `1.0.18` (version code `19`)
+
+## Version 1.0.18
+
+Includes verified Bhajan & Aarti video/audio playback (`BhajanSources`,
+`YouTubeBhajanPlayer`), expanded Hindi/English transliteration search, and
+privacy-preserving product analytics (`MandirAnalytics` with `AD_ID` disabled).
+Signed APK and AAB outputs are stored in
+`android/app/build/outputs/releases/1.0.18/`.
 
 ## Version 1.0.17
 
@@ -188,3 +196,23 @@ Before publishing a later release, increase `versionCode` in
 `android/app/build.gradle.kts` and update `versionName` as appropriate. The bundle
 is a build artifact; store listing, Play App Signing setup, and Play Console
 policy checks are separate publishing steps.
+
+## Fastlane Play Store Automation (`supply`)
+
+Complete Fastlane store listing and release automation is configured in
+[`android/fastlane/`](../android/fastlane) for locales `en-US`, `en-IN`, and `hi-IN`,
+with full documentation in [`docs/PLAY_STORE_SUBMISSION_GUIDE.md`](PLAY_STORE_SUBMISSION_GUIDE.md).
+
+1. Place your Google Play Service Account JSON key at
+   `android/fastlane/play-service-account.json` (or set `PLAY_STORE_JSON_KEY`).
+2. Validate all store copy, changelogs, icons, feature graphics, and screenshots:
+   ```bash
+   python3 scripts/verify_play_store_assets.py
+   ```
+3. Sync store listing metadata and graphics, or publish a track from `android/`:
+   ```bash
+   cd android
+   bundle install
+   bundle exec fastlane android sync_all_listing
+   bundle exec fastlane android internal
+   ```

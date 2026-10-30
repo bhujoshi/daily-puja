@@ -1,0 +1,5 @@
+• New Golden Sanctum, Carved Sanctuary, Ivory Alcove & Marble Arch shrines with 8 revered deities.
+• Expanded Dhoop & Diya catalog including Royal Kamal, Mayur Dhoop, Loban & Panchmukhi lamps.
+• Punya Coin Passbook with transparent transaction history, daily streak tracking & WhatsApp invite rewards.
+• Enhanced Bhajan & Aarti player with instant search, deity filters, queue controls & offline caching.
+• Full-screen edge-to-edge UI polish and smoother ritual transitions.

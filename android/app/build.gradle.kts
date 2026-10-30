@@ -5,6 +5,18 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// Apply the Google Services plugin automatically when google-services.json is present.
+// Keeping this conditional ensures local/CI builds and unit tests succeed even before
+// the Firebase config file is placed in android/app/google-services.json.
+val hasGoogleServicesConfig = listOf(
+    "google-services.json",
+    "src/debug/google-services.json",
+    "src/release/google-services.json"
+).any { file(it).isFile }
+if (hasGoogleServicesConfig) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 val releaseSigningFile = rootProject.file("keystore.properties")
 val releaseSigning = Properties().apply {
     if (releaseSigningFile.isFile) {
@@ -20,8 +32,8 @@ android {
         applicationId = "com.pavitramandir.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 18
-        versionName = "1.0.17"
+        versionCode = 19
+        versionName = "1.0.18"
         // Use the Google-enabled backend by default; local development can override this URL.
         buildConfigField("String", "ACCOUNT_API_URL", "\"${providers.gradleProperty("accountApiUrl").getOrElse("https://mcp-daily-puja-backend-staging-b3mqb.sprites.app")}\"")
 
@@ -137,4 +149,8 @@ dependencies {
 
     // SceneView 3D
     implementation("io.github.sceneview:sceneview:2.3.0")
+
+    // Firebase Analytics (privacy-preserving product analytics; AD_ID disabled in manifest)
+    implementation(platform("com.google.firebase:firebase-bom:33.10.0"))
+    implementation("com.google.firebase:firebase-analytics")
 }

@@ -29,7 +29,7 @@ class BhajanPlaybackService : MediaSessionService() {
                 setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA)
                     .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), true)
                 setHandleAudioBecomingNoisy(true)
-                repeatMode = Player.REPEAT_MODE_ALL
+                repeatMode = Player.REPEAT_MODE_OFF
             }
         val activity = PendingIntent.getActivity(this, 0,
             Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
