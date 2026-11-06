@@ -9,7 +9,7 @@ import org.junit.Test
 import kotlin.math.hypot
 
 class GaneshMouseAnimationTest {
-    private val shrines = listOf("original", "marble", "ivory", "carved", "swarna", "divya_darshan", "kamal_peeth", "swarna_peeth")
+    private val shrines = listOf("original", "marble", "diwali", "ivory", "carved", "swarna", "divya_darshan", "kamal_peeth", "swarna_peeth")
     private val ganeshIdols = listOf("original", "ganesh_hanuman")
     private fun selection(shrine: String = "original", idol: String = "original", prasad: String = "original") =
         ShrineSelection(mapOf("shrine" to shrine, "idols" to idol, "prasad" to prasad))

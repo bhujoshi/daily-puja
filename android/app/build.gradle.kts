@@ -32,8 +32,8 @@ android {
         applicationId = "com.pavitramandir.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 19
-        versionName = "1.0.18"
+        versionCode = 21
+        versionName = "1.0.20"
         // Use the Google-enabled backend by default; local development can override this URL.
         buildConfigField("String", "ACCOUNT_API_URL", "\"${providers.gradleProperty("accountApiUrl").getOrElse("https://mcp-daily-puja-backend-staging-b3mqb.sprites.app")}\"")
 
@@ -82,6 +82,14 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+    androidResources {
+        val taskNames = gradle.startParameter.taskNames
+        val isReleaseBuild = taskNames.any { it.contains("Release", ignoreCase = true) } &&
+            taskNames.none { it.contains("AndroidTest", ignoreCase = true) }
+        if (isReleaseBuild) {
+            ignoreAssetsPatterns += listOf("*.glb", "wood.png")
+        }
     }
     packaging {
         resources {
@@ -147,8 +155,8 @@ dependencies {
     // Size-aware artwork decoding with shared memory/disk caching.
     implementation("io.coil-kt:coil-compose:2.7.0")
 
-    // SceneView 3D
-    implementation("io.github.sceneview:sceneview:2.3.0")
+    // SceneView 3D (used only by ModelAssetsTest instrumentation test, not production UI)
+    androidTestImplementation("io.github.sceneview:sceneview:2.3.0")
 
     // Firebase Analytics (privacy-preserving product analytics; AD_ID disabled in manifest)
     implementation(platform("com.google.firebase:firebase-bom:33.10.0"))

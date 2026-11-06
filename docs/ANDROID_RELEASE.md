@@ -1,7 +1,25 @@
 # Android release builds
 
 Application ID: `com.pavitramandir.app`  
-Version: `1.0.18` (version code `19`)
+Version: `1.0.20` (version code `21`)
+
+## Version 1.0.20
+
+Includes direct sanctum entry without the entrance door screen, optimized
+shrine and deity PNG assets with unused 3D/background assets excluded from
+release packaging (~81% smaller APK size at ~18 MB), and post-aarti Play Store
+review prompts (`PlayStoreReviewHelper`). Signed APK and AAB outputs are stored
+in `android/app/build/outputs/releases/1.0.20/`.
+
+## Version 1.0.19
+
+Includes the Diwali Utsav Mandir shrine (`diwali.png`, `DiwaliDecorations`,
+`OccasionAartiOverlay`), Divya Darshan, Kamal Peeth, and Swarna Peeth shrines,
+guided mindfulness meditation with bansuri flute and temple resonance audio,
+ceremonial Chandan-Kumkum-Akshat tilak (`TilakOverlay`), language selection
+onboarding (`LanguageSelectionScreen`) with direct temple entry, and expanded
+analytics and playback refinements. Signed APK and AAB outputs are stored in
+`android/app/build/outputs/releases/1.0.19/`.
 
 ## Version 1.0.18
 

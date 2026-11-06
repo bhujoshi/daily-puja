@@ -75,10 +75,57 @@ class MandirPreviewApplyTest {
     private fun openTemple() {
         compose.onNode(SemanticsMatcher("Open temple") {
             it.config.getOrNull(SemanticsActions.OnClick)?.label == "Open temple"
-        }).performClick()
+        }).assertDoesNotExist()
+        compose.onNodeWithTag("language-selection").assertDoesNotExist()
         compose.waitUntil(10_000) {
             runCatching { compose.onNodeWithText("Light oil lamp").assertIsDisplayed() }.isSuccess
         }
+    }
+
+    private fun relaunchWithLanguageUnset(existingUser: Boolean = false) {
+        scenario!!.close()
+        val editor = context.getSharedPreferences("worship", Context.MODE_PRIVATE).edit().clear()
+        if (existingUser) editor.putLong("last", System.currentTimeMillis())
+        editor.commit()
+        scenario = ActivityScenario.launch(MainActivity::class.java)
+    }
+
+    @Test fun firstLaunchEnglishChoiceOpensTempleAndSurvivesRecreation() {
+        relaunchWithLanguageUnset()
+        compose.onNodeWithTag("language-selection").assertIsDisplayed()
+        compose.onNodeWithTag("ritual-dock").assertDoesNotExist()
+        compose.onNodeWithText("हिंदी").assertIsDisplayed()
+        compose.onNodeWithText("English").performClick()
+        openTemple()
+        assertEquals(false, context.getSharedPreferences("worship", Context.MODE_PRIVATE).getBoolean("hindi", true))
+        scenario!!.recreate()
+        openTemple()
+        captureLayout("startup-english-temple")
+    }
+
+    @Test fun firstLaunchHindiChoiceIsRememberedAndCanBeChangedFromMenu() {
+        relaunchWithLanguageUnset()
+        captureLayout("startup-language-selection")
+        scenario!!.recreate()
+        compose.onNodeWithTag("language-selection").assertIsDisplayed()
+        compose.onNodeWithText("हिंदी").performClick()
+        compose.onNodeWithTag("language-selection").assertDoesNotExist()
+        compose.onNodeWithTag("ritual-dock").assertIsDisplayed()
+        assertEquals(true, context.getSharedPreferences("worship", Context.MODE_PRIVATE).getBoolean("hindi", false))
+        scenario!!.recreate()
+        compose.onNodeWithTag("language-selection").assertDoesNotExist()
+        compose.onNodeWithContentDescription("मंदिर विकल्प").performClick()
+        compose.onNodeWithText("Switch app language to English").performScrollTo().performClick()
+        openTemple()
+        scenario!!.recreate()
+        openTemple()
+    }
+
+    @Test fun existingUserWithDefaultHindiSkipsLanguageSelection() {
+        relaunchWithLanguageUnset(existingUser = true)
+        compose.onNodeWithTag("language-selection").assertDoesNotExist()
+        compose.onNodeWithTag("ritual-dock").assertIsDisplayed()
+        compose.onNodeWithContentDescription("मंदिर विकल्प").assertIsDisplayed()
     }
 
     @Test fun pujaGuideExplainsTheCurrentStepAndKeepsTheDockCompact() {

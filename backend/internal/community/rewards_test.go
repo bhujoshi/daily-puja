@@ -105,7 +105,7 @@ func TestDefaultMarbleShrineNeedsNoCoinPurchase(t *testing.T) {
 	s, _ := New(filepath.Join(t.TempDir(), "accounts.json"))
 	_, auth := call(s, "POST", "register", "", `{"email":"marble@example.com","password":"long-password"}`)
 	token := auth["token"].(string)
-	for _, freeShrine := range []string{"marble", "divya_darshan", "kamal_peeth", "swarna_peeth"} {
+	for _, freeShrine := range []string{"marble", "diwali", "divya_darshan", "kamal_peeth", "swarna_peeth"} {
 		selection := `{"selections":{"shrine":"` + freeShrine + `","idols":"durga","flowers":"original","lamp":"brass","shankh":"ivory","aarti":"traditional","prasad":"laddu"}}`
 		code, profile := call(s, "PUT", "shrine", token, selection)
 		if code != 200 || profile["coins"] != float64(0) || profile["unlocked"] != false {

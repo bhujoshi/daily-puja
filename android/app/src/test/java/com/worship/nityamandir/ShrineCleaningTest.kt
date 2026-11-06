@@ -6,7 +6,7 @@ import org.junit.Test
 
 class ShrineCleaningTest {
     @Test fun cleaningMeasuresSurfaceCoverageRatherThanSwipeDistance() {
-        for(id in listOf("original","marble","ivory","carved","swarna","divya_darshan","kamal_peeth","swarna_peeth")) {
+        for(id in listOf("original","marble","diwali","ivory","carved","swarna","divya_darshan","kamal_peeth","swarna_peeth")) {
             val space=ShrineSpace.forId(id)
             assertEquals(0f,ShrineCleaning.coverage(space,listOf(TemplePoint(0f,1.5f))),.0001f)
             val point=ShrineCleaning.samples(space).first()

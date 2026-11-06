@@ -4,6 +4,10 @@
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {
+    "runtime": "android/app/src/main/assets/shrine/backgrounds/diwali.png",
+    "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
+  },
+  {
     "runtime": "android/app/src/main/assets/shrine/backgrounds/divya_darshan.png",
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },

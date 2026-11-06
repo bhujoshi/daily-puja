@@ -10,16 +10,19 @@ Firebase Analytics (Google Analytics 4) is integrated into the Android app throu
 
 ## 1. Connect Firebase & Add `google-services.json`
 
-1. Open the **[Firebase Console](https://console.firebase.google.com/)** and click **Add project** (or select your existing Google Cloud project `gen-lang-client-0511734124` / `653836355193`).
-2. Enable **Google Analytics** when prompted during project setup.
-3. In Project Overview, click **Add app → Android**:
-   - **Android package name**: `com.pavitramandir.app`
-   - **App nickname**: `Pavitra Mandir`
-4. Download **`google-services.json`** and place it at:
-   ```text
-   android/app/google-services.json
-   ```
-5. Rebuild the app (`./gradlew :app:assembleDebug` or `./gradlew :app:bundleRelease`). The `com.google.gms.google-services` plugin will automatically detect `android/app/google-services.json` and embed the Firebase resources.
+The Android app (`com.pavitramandir.app`) is registered under the **`pavitra-mandir`** Firebase project (`533723616353`, App ID `1:533723616353:android:0edeef6332e64051c4c620`) and its configuration is stored at [`android/app/google-services.json`](../android/app/google-services.json).
+
+If you ever need to re-download `google-services.json`:
+- **Via Firebase CLI**:
+  ```sh
+  npx -y firebase-tools@latest apps:sdkconfig ANDROID 1:533723616353:android:0edeef6332e64051c4c620 --project pavitra-mandir --out android/app/google-services.json
+  ```
+- **Via Firebase Console**:
+  1. Open **[Firebase Console](https://console.firebase.google.com/project/pavitra-mandir/settings/general/)** → **Project settings** (gear icon) → **General**.
+  2. Scroll down to **Your apps** → select **`com.pavitramandir.app`**.
+  3. Click **Download `google-services.json`** and place it at `android/app/google-services.json`.
+
+When `android/app/google-services.json` is present, Gradle (`./gradlew :app:assembleDebug` or `./gradlew :app:bundleRelease`) automatically applies `com.google.gms.google-services` and embeds the Firebase resources.
 
 ---
 

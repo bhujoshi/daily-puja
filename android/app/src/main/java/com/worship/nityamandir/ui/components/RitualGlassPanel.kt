@@ -28,7 +28,7 @@ import com.worship.nityamandir.engine.TempleViewport
 val RitualInk=Color(0xFF261C16)
 val RitualGold=Color(0xFFB3833B)
 
-/** Samples the actual carpet beneath the dock, then adds frosting and reflective edges. */
+/** Lightly frosts the scene while letting the live altar show through the glass. */
 @Composable
 fun RitualGlassPanel(
     modifier:Modifier=Modifier,
@@ -40,24 +40,28 @@ fun RitualGlassPanel(
     val shape=RoundedCornerShape(28.dp)
     val hostView=LocalView.current
     val context=LocalContext.current
-    // The backdrop is blurred with an 18dp radius, so a 4x downsampled cached bitmap
-    // preserves visual fidelity while reducing memory footprint by 16x.
+    val hasScene=sceneSize.width>0 && sceneSize.height>0
+    // A faint, downsampled backdrop softens the glass without hiding live offerings.
+    // Keep the standalone panel opaque enough for the language-selection screen.
     val backdrop=if(backgroundPath==null) ImageBitmap.imageResource(R.drawable.temple_portrait)
         else remember(backgroundPath) {AssetImageCache.image(context,backgroundPath,sampleSize=4)}
     var origin by remember { mutableStateOf(Offset.Zero) }
     Box(modifier.onGloballyPositioned {val location=IntArray(2);hostView.getLocationOnScreen(location);origin=it.positionInRoot()+Offset(location[0].toFloat(),location[1].toFloat())-sceneOrigin}
-        .shadow(16.dp,shape,ambientColor=Color(0x661A1108),spotColor=Color(0x661A1108))
-        .clip(shape).border(1.dp,Brush.linearGradient(listOf(Color(0xFFFAF4E8),Color(0x80D8AF52),Color(0xFFF2E6D0))),shape)) {
-        if(sceneSize.width>0 && sceneSize.height>0) Canvas(Modifier.matchParentSize().blur(18.dp)) {
+        .shadow(10.dp,shape,ambientColor=Color(0x381A1108),spotColor=Color(0x381A1108))
+        .clip(shape).border(1.dp,TempleGlassRim,shape)) {
+        if(hasScene) Canvas(Modifier.matchParentSize().blur(8.dp)) {
             val viewport=TempleViewport(sceneSize.width.toFloat(),sceneSize.height.toFloat())
             val factor=backdrop.width/viewport.imageWidth
             val x=((origin.x-viewport.left)*factor).toInt().coerceIn(0,backdrop.width-1)
             val y=(origin.y*factor).toInt().coerceIn(0,backdrop.height-1)
             val w=(size.width*factor).toInt().coerceIn(1,backdrop.width-x)
             val h=(size.height*factor).toInt().coerceIn(1,backdrop.height-y)
-            drawImage(backdrop,srcOffset=IntOffset(x,y),srcSize=IntSize(w,h),dstSize=IntSize(size.width.toInt(),size.height.toInt()))
+            drawImage(backdrop,srcOffset=IntOffset(x,y),srcSize=IntSize(w,h),dstSize=IntSize(size.width.toInt(),size.height.toInt()),alpha=.18f)
         }
-        Box(Modifier.matchParentSize().background(Brush.linearGradient(listOf(Color(0xF5FFFDF8),Color(0xEEFAF3E6),Color(0xF5FFFDF8)))))
+        Box(Modifier.matchParentSize().background(
+            if(hasScene) TempleGlassTint else Brush.linearGradient(listOf(Color(0xF5FFFDF8),Color(0xEEFAF3E6),Color(0xF5FFFDF8)))
+        ))
+        if(hasScene) Box(Modifier.matchParentSize().background(TempleGlassSheen))
         Column(Modifier.padding(horizontal=16.dp,vertical=14.dp),verticalArrangement=Arrangement.spacedBy(9.dp),content=content)
     }
 }

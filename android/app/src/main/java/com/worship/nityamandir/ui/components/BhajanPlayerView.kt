@@ -120,7 +120,7 @@ private fun YouTubeBadgeIcon(
 }
 
 /**
- * YouTube-style Miniplayer Bar used on the Mandir screen, Customizer, and Drawer.
+ * Glass music bar used on the Mandir screen, Customizer, and Drawer.
  */
 @Composable
 fun BhajanMiniPlayer(
@@ -139,12 +139,11 @@ fun BhajanMiniPlayer(
 
     if (compact) {
         Surface(
-            modifier = modifier.fillMaxWidth(),
+            modifier = modifier.fillMaxWidth().templeGlass(RoundedCornerShape(14.dp), TempleGlassControlTint),
             shape = RoundedCornerShape(14.dp),
-            color = YouTubeElevated,
-            contentColor = YouTubeTextPrimary,
-            border = BorderStroke(0.8.dp, Color(0x33FFFFFF)),
-            shadowElevation = 8.dp
+            color = Color.Transparent,
+            contentColor = RitualInk,
+            tonalElevation = 0.dp
         ) {
             Column(
                 Modifier.clickable(
@@ -186,7 +185,7 @@ fun BhajanMiniPlayer(
                         overflow = TextOverflow.Ellipsis,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 13.sp,
-                        color = YouTubeTextPrimary
+                        color = RitualInk
                     )
 
                     IconButton(onClick = {
@@ -203,14 +202,14 @@ fun BhajanMiniPlayer(
                             } else {
                                 if (hindi) "संगीत चलाएँ" else "Play music"
                             },
-                            tint = YouTubeTextPrimary
+                            tint = RitualInk
                         )
                     }
                     IconButton(onClick = player::remove, modifier = Modifier.size(38.dp)) {
                         Icon(
                             Icons.Default.Close,
                             if (hindi) "संगीत हटाएँ" else "Remove music player",
-                            tint = YouTubeTextSecondary
+                            tint = RitualInk.copy(alpha = .8f)
                         )
                     }
                 }
@@ -219,8 +218,8 @@ fun BhajanMiniPlayer(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(2.dp),
-                    color = YouTubeRed,
-                    trackColor = Color(0x33FFFFFF)
+                    color = RitualGold,
+                    trackColor = RitualInk.copy(alpha = .12f)
                 )
             }
         }
@@ -228,12 +227,11 @@ fun BhajanMiniPlayer(
     }
 
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().templeGlass(RoundedCornerShape(14.dp), TempleGlassControlTint),
         shape = RoundedCornerShape(14.dp),
-        color = YouTubeElevated,
-        contentColor = YouTubeTextPrimary,
-        border = BorderStroke(0.8.dp, Color(0x33FFFFFF)),
-        shadowElevation = 8.dp
+        color = Color.Transparent,
+        contentColor = RitualInk,
+        tonalElevation = 0.dp
     ) {
         Column(
             Modifier.clickable(
@@ -271,7 +269,7 @@ fun BhajanMiniPlayer(
                         overflow = TextOverflow.Ellipsis,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
-                        color = YouTubeTextPrimary
+                        color = RitualInk
                     )
                     Text(
                         if (player.failed) {
@@ -284,14 +282,14 @@ fun BhajanMiniPlayer(
                             else if (hindi) "YouTube भजन" else "YouTube Bhajan"
                         },
                         fontSize = 11.sp,
-                        color = YouTubeTextSecondary,
+                        color = RitualInk.copy(alpha = .8f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
                 if (showTrackNavigation) {
                     IconButton(onClick = { player.skip(-1); if (player.youtubeMode) onExpand() }, enabled = player.catalog.size > 1) {
-                        Icon(Icons.Default.SkipPrevious, if (hindi) "पिछला" else "Previous", tint = YouTubeTextPrimary)
+                        Icon(Icons.Default.SkipPrevious, if (hindi) "पिछला" else "Previous", tint = RitualInk)
                     }
                 }
                 IconButton(onClick = {
@@ -302,16 +300,16 @@ fun BhajanMiniPlayer(
                     Icon(
                         if (player.failed) Icons.Default.Refresh else if (player.playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                         if (hindi) "चलाएँ / रोकें" else "Play / pause / retry",
-                        tint = YouTubeTextPrimary
+                        tint = RitualInk
                     )
                 }
                 if (showTrackNavigation) {
                     IconButton(onClick = { player.skip(1); if (player.youtubeMode) onExpand() }, enabled = player.catalog.size > 1) {
-                        Icon(Icons.Default.SkipNext, if (hindi) "अगला" else "Next", tint = YouTubeTextPrimary)
+                        Icon(Icons.Default.SkipNext, if (hindi) "अगला" else "Next", tint = RitualInk)
                     }
                 }
                 IconButton(onClick = player::remove) {
-                    Icon(Icons.Default.Close, if (hindi) "संगीत हटाएँ" else "Remove music player", tint = YouTubeTextSecondary)
+                    Icon(Icons.Default.Close, if (hindi) "संगीत हटाएँ" else "Remove music player", tint = RitualInk.copy(alpha = .8f))
                 }
             }
             LinearProgressIndicator(
@@ -319,8 +317,8 @@ fun BhajanMiniPlayer(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(2.5.dp),
-                color = YouTubeRed,
-                trackColor = Color(0x33FFFFFF)
+                color = RitualGold,
+                trackColor = RitualInk.copy(alpha = .12f)
             )
         }
     }

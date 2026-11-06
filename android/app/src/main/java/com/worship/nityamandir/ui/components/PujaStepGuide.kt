@@ -19,7 +19,7 @@ fun PujaStepGuide(step: WorshipStep, hindi: Boolean, modifier: Modifier = Modifi
     val instruction = when (step) {
         WorshipStep.LIGHT -> if (hindi) "दीप जलाकर पूजा शुरू करें" else "Light the diya to begin"
         WorshipStep.BATH -> if (hindi) "हर देवता का स्नान कराएँ" else "Bathe each deity"
-        WorshipStep.TILAK -> if (hindi) "हर देवता को तिलक लगाएँ" else "Apply tilak to each deity"
+        WorshipStep.TILAK -> if (hindi) "हर देवता को चंदन व तिलक लगाएँ" else "Apply chandan & tilak to each deity"
         WorshipStep.FLOWERS -> if (hindi) "हर देवता को फूल अर्पित करें" else "Place flowers before each deity"
         WorshipStep.CONCH -> if (hindi) "प्रार्थना में शंख बजाएँ" else "Sound the conch in prayer"
         WorshipStep.PRASAD -> if (hindi) "श्रद्धा से भोग अर्पित करें" else "Offer food with a grateful heart"

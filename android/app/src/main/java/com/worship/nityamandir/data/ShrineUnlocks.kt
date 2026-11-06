@@ -8,7 +8,7 @@ data class ShrineUnlock(val category: ShrineCategory, val option: ShrineOption, 
 internal object ShrineUnlocks {
     fun cost(category: String, item: String, categoryCost: Int? = null): Int {
         if (item == "original" ||
-            (category == "shrine" && (item == "marble" || item == "divya_darshan" || item == "kamal_peeth" || item == "swarna_peeth")) ||
+            (category == "shrine" && (item == "marble" || item == "diwali" || item == "divya_darshan" || item == "kamal_peeth" || item == "swarna_peeth")) ||
             (category == "lamp" && item == "brass") ||
             (category == "shankh" && item == "ivory") ||
             (category == "aarti" && item == "traditional") ||

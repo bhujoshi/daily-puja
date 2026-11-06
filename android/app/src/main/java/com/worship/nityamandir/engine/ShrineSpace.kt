@@ -46,7 +46,7 @@ data class ShrineSpace(
                 incense = TempleSceneLayout.incense,
                 garlandSpec = floatArrayOf(.140f, .025f, .860f, .655f, .088f, .165f)
             )
-            "marble", "ivory", "swarna" -> ShrineSpace(
+            "marble", "ivory", "swarna", "diwali" -> ShrineSpace(
                 altarY = .680f,
                 left = .23f,
                 right = .77f,

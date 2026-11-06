@@ -23,7 +23,7 @@ class ShrineSelectionTest {
         assertEquals(listOf("rose"),ShrineSelection(mapOf("flowers" to "rose")).flowerIds)
     }
     @Test fun effectsAndOfferingsFollowEveryIdolAndAltar() {
-        val standardShrines=listOf("original","marble","ivory","carved","swarna")
+        val standardShrines=listOf("original","marble","diwali","ivory","carved","swarna")
         val bigIdolShrines=listOf("divya_darshan","kamal_peeth","swarna_peeth")
         for(shrine in standardShrines + bigIdolShrines) {
             for(idol in listOf("original","ganesh_hanuman","radha_krishna","shiva","lakshmi","durga","ram_darbar","hanuman")) {

@@ -151,6 +151,18 @@ def main():
             errors,
         )
         check_text_limit(
+            loc_dir / "changelogs" / "20.txt",
+            500,
+            f"[{locale}] changelogs/20.txt",
+            errors,
+        )
+        check_text_limit(
+            loc_dir / "changelogs" / "21.txt",
+            500,
+            f"[{locale}] changelogs/21.txt",
+            errors,
+        )
+        check_text_limit(
             loc_dir / "changelogs" / "default.txt",
             500,
             f"[{locale}] changelogs/default.txt",

@@ -95,6 +95,12 @@ with larger text.
 The normal unit suite covers unlock availability, account-specific acknowledgements,
 server pricing, and selecting purchased flowers without removing existing choices.
 
+`MandirPreviewApplyTest` also checks Android startup: new installations choose
+Hindi or English before the temple appears, the choice survives activity recreation,
+and language can still be changed from the menu. Existing installations (including
+those using the default Hindi without a saved language preference) open directly
+into the temple. The Android entrance door and its tap-to-open step are removed.
+
 ### 3.3 iOS Automated Tests (`ios/`)
 Execute via Swift Package Manager / Xcode:
 ```bash

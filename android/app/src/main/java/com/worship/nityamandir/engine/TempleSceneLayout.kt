@@ -31,6 +31,9 @@ object TempleSceneLayout {
     const val BELL_DISPLAY_WIDTH = .090f
     const val STANDING_LAMP_WIDTH = .098f
     val plate = TemplePoint(.50f,1.14f)
+    val kumkumKatori = TemplePoint(plate.x - .031f, plate.y - .112f)
+    val chandanKatori = TemplePoint(plate.x + .0335f, plate.y - .112f)
+    val akshatKatori = TemplePoint(plate.x + .001f, plate.y - .090f)
     val conch = TemplePoint(.625f,1.125f)
     val conchVisual = TemplePoint(.633f,1.147f)
     const val CONCH_DISPLAY_WIDTH = .132f

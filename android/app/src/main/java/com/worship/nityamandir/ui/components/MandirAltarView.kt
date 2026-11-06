@@ -161,7 +161,8 @@ fun MandirAltarView(
     selection: ShrineSelection = ShrineSelection(),
     modifier: Modifier = Modifier,
     cleanedAreas: List<TemplePoint> = emptyList(),
-    showModels: Boolean = true
+    showModels: Boolean = true,
+    activeOccasion: TempleOccasion? = null
 ) {
     val context = LocalContext.current
     val catalog = remember { ShrineCatalog(context) }
@@ -302,6 +303,19 @@ fun MandirAltarView(
             viewport = viewport
         )
 
+        if (selection["shrine"] == "diwali") {
+            DiwaliDecorations(viewport = viewport, animate = showModels)
+        }
+
+        // Floor decorations sit behind idols, offerings and standing ritual objects.
+        if (OccasionAartiAnimation.isEligible(selection, activeOccasion)) OccasionAartiOverlay(
+            placement = idolPlacement,
+            selection = selection,
+            activeOccasion = activeOccasion,
+            aartiComplete = session.aartiComplete && !aartiRunning,
+            visible = showModels
+        )
+
         if (showModels && session.aartiComplete && !aartiRunning) {
             DeityHalosOverlay(heads = idolPlacement.heads)
         }
@@ -319,8 +333,6 @@ fun MandirAltarView(
             contentScale = ContentScale.Fit,
             alignment = Alignment.BottomCenter
         )
-
-        TilakOverlay(session.tilak, idolPlacement)
 
         val prasadLift = if (prasadRunning) TempleSceneLayout.pickup(prasadProgress) else if (session.prasadOffered) 1f else 0f
         val aartiLift = if (aartiRunning) TempleSceneLayout.pickup(aartiProgress) else 0f
@@ -526,6 +538,9 @@ fun MandirAltarView(
                 )
             }
         }
+
+        // Sacred Chandan, Kumkum & Akshat Tilak overlay and offering flight from the Puja Thali katoris
+        TilakOverlay(session.tilak, idolPlacement, step = session.step)
 
         // 10. Active Foreground 2D Ritual Animations
         if (showModels) {

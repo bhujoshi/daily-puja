@@ -178,7 +178,7 @@ platform :android do
     validate_metadata
     key_file = resolve_key_file
     aab_path = resolve_release_aab
-    sync_imgs = ENV["SYNC_IMAGES"] == "true"
+    sync_imgs = ENV.fetch("SYNC_IMAGES", "true") == "true"
 
     begin
       upload_to_play_store(

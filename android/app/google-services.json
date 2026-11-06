@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "533723616353",
+    "project_id": "pavitra-mandir",
+    "storage_bucket": "pavitra-mandir.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:533723616353:android:0edeef6332e64051c4c620",
+        "android_client_info": {
+          "package_name": "com.pavitramandir.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyClJLKE_S93eCBYKPOUXcB4dcyJ21mgC40"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

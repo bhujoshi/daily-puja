@@ -1,0 +1,4 @@
+• Direct Home Screen Sanctum Entry: Removed the entrance door screen so you step straight into your illuminated Garbhagriha for immediate darshan & daily puja.
+• 75% Smaller App Download (~15 MB): Optimized temple artwork and stripped unused 3D assets for fast installation even on mobile data.
+• 8 Sacred Shrines & 8 Deities: Customize Golden Sanctum, Kamal Peeth, Swarna Peeth, Divya Darshan, Diwali Utsav & Marble shrines.
+• Added post-aarti Play Store rating & smoother rituals.

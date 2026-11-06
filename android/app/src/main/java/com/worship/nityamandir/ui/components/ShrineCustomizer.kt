@@ -28,12 +28,14 @@ import androidx.compose.ui.window.DialogProperties
 import com.worship.nityamandir.data.*
 import com.worship.nityamandir.engine.WorshipSession
 import com.worship.nityamandir.engine.BhajanPlayer
+import com.worship.nityamandir.engine.OccasionAartiAnimation
+import com.worship.nityamandir.engine.TempleOccasion
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 
 @Composable
 fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boolean,onDismiss:()->Unit,onAccount:(ShrineSelection)->Unit,onApplied:(ShrineSelection)->Unit,
-    player:BhajanPlayer,onMusic:(ShrineSelection)->Unit) {
+    player:BhajanPlayer,onMusic:(ShrineSelection)->Unit,activeOccasion:TempleOccasion?=null) {
     val context=LocalContext.current
     val analytics=remember {MandirAnalytics.from(context)}
     val catalog=remember {ShrineCatalog(context)}
@@ -160,6 +162,59 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                 }
                 Column(Modifier.weight(1f).verticalScroll(optionsScroll),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 if(player.current!=null || player.loading) BhajanMiniPlayer(player,hindi,{onMusic(draft)},Modifier.testTag("mandir-choice-music"),compact=true)
+                if(activeOccasion!=null) {
+                    val presetActive = activeOccasion.matchesSelection(draft)
+                    Surface(
+                        onClick = {
+                            error = ""; message = ""
+                            draft = catalog.normalize(activeOccasion.presetSelection)
+                        },
+                        enabled = !busy,
+                        shape = RoundedCornerShape(16.dp),
+                        color = if (presetActive) Color(0xFFF3E2C3) else Color(0xFFFFFBF3),
+                        border = BorderStroke(if (presetActive) 2.dp else 1.5.dp, RitualGold),
+                        modifier = Modifier.fillMaxWidth().testTag("occasion-preset-banner")
+                    ) {
+                        Row(
+                            Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    text = "🪔 ${activeOccasion.badge(hindi)}",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFA82424)
+                                )
+                                Text(
+                                    text = activeOccasion.title(hindi),
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = RitualInk
+                                )
+                                Text(
+                                    text = activeOccasion.subtitle(hindi),
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF6E5D4F)
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(50),
+                                color = if (presetActive) RitualInk else Color(0xFFF0E0C8),
+                                border = BorderStroke(1.dp, RitualGold)
+                            ) {
+                                Text(
+                                    text = if (presetActive) tr("✓ चयनित", "✓ Selected") else tr("उत्सव चुनें", "Use Preset"),
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (presetActive) Color(0xFFFAF6EE) else RitualInk
+                                )
+                            }
+                        }
+                    }
+                }
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     catalog.categories.forEach {category ->
                         FilterChip(selected=categoryId==category.id,onClick={
@@ -173,10 +228,11 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                 val category=catalog.categories.first {it.id==categoryId}
                 if(categoryId=="flowers") Text(tr("कई किस्में चुनें · ${draft.flowerIds.size} चुनी गईं","Select multiple · ${draft.flowerIds.size} selected"),fontSize=14.sp)
                 Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                    category.options.forEach {option ->
+                    catalog.visibleOptions(category, activeOccasion, draft).forEach {option ->
                         val selected=if(category.id=="flowers") option.id in draft.flowerIds else draft[category.id]==option.id
                         val owned=account.owns(category.id,option.id)
                         val cost=account.cost(category.id,option.id)
+                        val isOccasionExclusive = category.id == "shrine" && activeOccasion?.exclusiveShrineId == option.id
                         Surface(onClick={
                             error="";message=""
                             val baseDraft=revertUnownedOtherCategories(draft,category.id)
@@ -198,6 +254,9 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)) {
                                         if(!owned) Icon(Icons.Outlined.Lock,tr("लॉक है","Locked"),Modifier.size(14.dp),tint=RitualGold)
                                         Text(if(!owned) tr("$cost सिक्के","$cost coins") else if(cost==0) tr("मुफ़्त","Free") else tr("अनलॉक है","Unlocked"),color=RitualGold,fontSize=14.sp)
+                                        if (isOccasionExclusive) {
+                                            Text("· 🪔 ${activeOccasion.badge(hindi)}", color=Color(0xFFA82424), fontWeight=FontWeight.SemiBold, fontSize=13.sp)
+                                        }
                                     }
                                     if("${category.id}:${option.id}" in newUnlockKeys) Text(tr("नया अनलॉक","New unlock"),color=RitualGold,fontWeight=FontWeight.SemiBold,fontSize=13.sp)
                                 }
@@ -257,11 +316,13 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
     }
     if(showPreview) Dialog(onDismissRequest={if(!busy) showPreview=false},properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
         Box(Modifier.fillMaxSize().background(Color(0xFFFFF7EC))) {
+            val previewOccasionEligible = OccasionAartiAnimation.isEligible(draft, activeOccasion)
             key(draft) {MandirAltarView(
-                session=WorshipSession(deityCount=draft.deityCount),dustLevel=0f,flowerWitherFactor=0f,bathTarget=null,bathProgress=0f,
+                session=WorshipSession(deityCount=draft.deityCount, lit=previewOccasionEligible, aartiComplete=previewOccasionEligible),
+                dustLevel=0f,flowerWitherFactor=0f,bathTarget=null,bathProgress=0f,
                 flowerFlights=emptyList(),aartiRunning=false,aartiProgress=0f,onDeityClick={},onDiyaClick={},onBellClick={},
                 bellRunning=false,bellProgress=0f,conchRunning=false,conchProgress=0f,prasadRunning=false,prasadProgress=0f,
-                onFlowerClick={},onConchClick={},onAartiClick={},selection=draft)}
+                onFlowerClick={},onConchClick={},onAartiClick={},selection=draft,activeOccasion=activeOccasion)}
             // Popup stays above SceneView's surface.
             androidx.compose.ui.window.Popup(alignment=Alignment.BottomCenter) {
                 Surface(color=Color(0xFFFFF7EC),shape=RoundedCornerShape(20.dp),modifier=Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)).padding(horizontal=12.dp,vertical=8.dp)) {

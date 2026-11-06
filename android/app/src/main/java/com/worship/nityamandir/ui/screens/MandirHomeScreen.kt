@@ -4,7 +4,6 @@ import android.content.Context
 import com.worship.nityamandir.BuildConfig
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
@@ -19,7 +18,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -52,6 +50,21 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
     val hostView=LocalView.current
     val prefs=remember {context.getSharedPreferences("worship",Context.MODE_PRIVATE)}
     val analytics=remember {com.worship.nityamandir.data.MandirAnalytics.from(context)}
+    var hindi by remember {mutableStateOf(prefs.getBoolean("hindi",true))}
+    // Earlier versions save `last` on the first temple visit, even if the language
+    // was never changed. Preserve that experience for existing installations.
+    var needsLanguageSelection by remember {
+        mutableStateOf(!prefs.contains("hindi") && !prefs.contains("last"))
+    }
+    if(needsLanguageSelection) {
+        LanguageSelectionScreen(onSelectLanguage={selectedHindi ->
+            prefs.edit().putBoolean("hindi",selectedHindi).apply()
+            hindi=selectedHindi
+            analytics.logLanguageChanged(selectedHindi)
+            needsLanguageSelection=false
+        },modifier=modifier)
+        return
+    }
     val account=remember {com.worship.nityamandir.data.DevotionAccount(context.applicationContext)}
     val mindfulnessTracker=remember {com.worship.nityamandir.data.MindfulnessTracker(context.applicationContext)}
     val scope=rememberCoroutineScope()
@@ -94,19 +107,31 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
     LaunchedEffect(foreground) {
         if(foreground) try { account.sync() } catch(_:Exception) { /* Retain pending completion for retry. */ }
     }
-    var hindi by remember {mutableStateOf(prefs.getBoolean("hindi",true))}
     var menu by remember {mutableStateOf(false)}
-    var entered by remember {mutableStateOf(false)}
-    val curtain=remember {Animatable(0f)}
-    val curtainMoving=curtain.isRunning || curtain.value != (if(entered) 1f else 0f)
-    LaunchedEffect(entered) {
-        curtain.animateTo(if(entered) 1f else 0f,tween(1600,easing=FastOutSlowInEasing))
-    }
     var session by remember {mutableStateOf(WorshipSession(deityCount=selection.deityCount))}
     var last by remember {mutableLongStateOf(prefs.getLong("last",System.currentTimeMillis()))}
     var clean by remember {mutableLongStateOf(prefs.getLong("clean",last))}
     var timeOffset by remember {mutableLongStateOf(if(BuildConfig.DEBUG) prefs.getLong("agingOffset",0L) else 0L)}
     var now by remember {mutableLongStateOf(System.currentTimeMillis()+timeOffset)}
+    var occasionOverride by remember {mutableStateOf(if(BuildConfig.DEBUG) prefs.getString("occasionOverride",null) else null)}
+    val currentLocalDate=remember(now) {
+        java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.of("Asia/Kolkata")).toLocalDate()
+    }
+    val activeOccasion=remember(currentLocalDate,occasionOverride) {
+        TempleOccasions.activeOccasion(currentLocalDate,occasionOverride)
+    }
+    val currentSceneOccasion=remember(selection,activeOccasion) {
+        TempleOccasions.forSelection(selection,activeOccasion)
+    }
+    LaunchedEffect(activeOccasion?.id,account.profile) {
+        val occasion=activeOccasion ?: return@LaunchedEffect
+        val autoKey="auto_occasion_${occasion.id}_${currentLocalDate.year}"
+        if(!prefs.getBoolean(autoKey,false) && account.selection().original) {
+            prefs.edit().putBoolean(autoKey,true).apply()
+            selection=occasion.presetSelection
+            try { account.saveSelection(occasion.presetSelection) } catch(_:Exception) { }
+        }
+    }
     LaunchedEffect(Unit) {prefs.edit().putLong("last",last).putLong("clean",clean).apply()}
     var wipe by remember {mutableFloatStateOf(0f)}
     val cleanedAreas=remember(selection) {mutableStateListOf<TemplePoint>()}
@@ -147,7 +172,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
         while(isActive) {now=System.currentTimeMillis()+timeOffset;delay(30000)}
     }
     val aging=AgingEngine.calculateAging(last,clean,now)
-    val ritualBusy=curtainMoving || bathTarget!=null || aartiRunning || bellRunning || conchRunning || prasadRunning
+    val ritualBusy=bathTarget!=null || aartiRunning || bellRunning || conchRunning || prasadRunning
     val busy=ritualBusy || flowerFlights.isNotEmpty()
     LaunchedEffect(selection) {
         bathTarget=null;flowerFlights.clear();aartiRunning=false;bellRunning=false;conchRunning=false;prasadRunning=false
@@ -158,39 +183,39 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
     fun tr(hi:String,en:String)=if(hindi) hi else en
     var bellSource by remember {mutableStateOf("altar")}
     fun ringBell(source:String="altar") {
-        if(entered && foreground && !aging.needsCleaning && !bellRunning) {
+        if(foreground && !aging.needsCleaning && !bellRunning) {
             bellSource=source
             bellRunning=true
         }
     }
     fun soundConch(source:String="dock") {
-        if(entered && foreground && !aging.needsCleaning && !conchRunning) {
+        if(foreground && !aging.needsCleaning && !conchRunning) {
             analytics.logRitualConchBlown(source,session.step)
             conchRunning=true
         }
     }
     fun offerFlowerToDeity(deity:Int, index:Int, source:String="dock") {
-        if(!entered || aging.needsCleaning || !foreground) return
+        if(aging.needsCleaning || !foreground) return
         analytics.logRitualFlowerOffered(deity,index,source,session.step)
         val currentCount=session.offeredFlowers.count {it.deity==deity}+flowerFlights.count {it.offering.deity==deity}
         val flightOffering=FlowerOffering(index,deity,IdolPlacement(selection).offering(deity,currentCount))
         flowerFlights.add(FlowerFlight(nextFlowerId++,flightOffering))
     }
     fun offerFlower(index:Int, source:String="dock") {
-        if(!entered || aging.needsCleaning || !foreground) return
+        if(aging.needsCleaning || !foreground) return
         val covered=session.flowers+flowerFlights.map {it.offering.deity}
         val target=((0 until selection.deityCount).toList()-covered).randomOrNull() ?: (0 until selection.deityCount).random()
         offerFlowerToDeity(target, index, source)
     }
     fun light(source:String="dock") {
-        if(entered && !aging.needsCleaning) {
+        if(!aging.needsCleaning) {
             analytics.logRitualDiyaLit(source,session.step)
             session=session.copy(lit=true)
             audio.cue(com.worship.nityamandir.R.raw.flower_offering)
         }
     }
     fun deityAction(deity:Int, source:String="dock") {
-        if(!entered || aging.needsCleaning || bathTarget!=null) return
+        if(aging.needsCleaning || bathTarget!=null) return
         when(session.step) {
             WorshipStep.BATH -> if(deity !in session.bathed) {
                 analytics.logRitualDeityBathed(deity,source,session.step)
@@ -205,7 +230,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
         }
     }
     fun startAarti(source:String="dock") {
-        if(entered && !aging.needsCleaning && !aartiRunning) {
+        if(!aging.needsCleaning && !aartiRunning) {
             analytics.logRitualAartiStarted(source,session.step)
             session=session.copy(aartiLit=true)
             aartiRunning=true
@@ -230,7 +255,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
         }
     }
     fun offerPrasad(source:String="dock") {
-        if(entered && foreground && !aging.needsCleaning && !prasadRunning && !session.prasadOffered) {
+        if(foreground && !aging.needsCleaning && !prasadRunning && !session.prasadOffered) {
             analytics.logRitualPrasadOffered(source,session.step)
             prasadRunning=true
         }
@@ -272,8 +297,8 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
             conchRunning=false
         } finally {audio.stopCue(com.worship.nityamandir.R.raw.conch)}
     }
-    LaunchedEffect(session, busy, entered, foreground, aging.needsCleaning) {
-        if(!entered || !foreground || aging.needsCleaning || busy || session.complete || !session.canContinue) return@LaunchedEffect
+    LaunchedEffect(session, busy, foreground, aging.needsCleaning) {
+        if(!foreground || aging.needsCleaning || busy || session.complete || !session.canContinue) return@LaunchedEffect
         val completedStep=session.step
         delay(650)
         analytics.logRitualStepCompleted(completedStep,selection.deityCount)
@@ -283,9 +308,14 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
             prefs.edit().putLong("last",last).putLong("clean",clean).apply()
         }
     }
+    var showReviewPrompt by remember {
+        mutableStateOf(com.worship.nityamandir.data.PlayStoreReviewHelper.shouldShowPostPujaReviewPrompt(prefs))
+    }
     LaunchedEffect(session.aartiComplete) {
         if(session.aartiComplete) {
             account.recordCompletion()
+            com.worship.nityamandir.data.PlayStoreReviewHelper.recordPujaCompleted(prefs)
+            showReviewPrompt=com.worship.nityamandir.data.PlayStoreReviewHelper.shouldShowPostPujaReviewPrompt(prefs)
             analytics.logPujaCompleted(
                 deityCount=selection.deityCount,
                 shrineId=selection["shrine"],
@@ -296,11 +326,9 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
             try {account.sync()} catch(_:Exception) { /* Retry explicitly from the account screen. */ }
         }
     }
-    LaunchedEffect(entered) {
-        if(entered) {
-            analytics.logTempleEntered(aging.needsCleaning,selection.deityCount,selection["shrine"],selection["idols"])
-            bhajan.preload()
-        }
+    LaunchedEffect(Unit) {
+        analytics.logTempleEntered(aging.needsCleaning,selection.deityCount,selection["shrine"],selection["idols"])
+        bhajan.preload()
     }
     LaunchedEffect(hindi,account.signedIn,selection["idols"]) {
         analytics.syncUserContext(hindi,account.signedIn,selection["idols"])
@@ -308,10 +336,9 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
     val homeScreenPair=when {
         customizer || mindfulnessScreen || musicSheet || devotionSheet -> null
         menu -> "navigation_drawer" to "MandirNavigationDrawer"
-        entered && aging.needsCleaning -> "mandir_cleaning" to "MandirHomeScreen"
-        entered && session.aartiComplete -> "mandir_puja_complete" to "MandirHomeScreen"
-        entered -> "mandir_sanctum" to "MandirHomeScreen"
-        else -> "mandir_entrance" to "MandirHomeScreen"
+        aging.needsCleaning -> "mandir_cleaning" to "MandirHomeScreen"
+        session.aartiComplete -> "mandir_puja_complete" to "MandirHomeScreen"
+        else -> "mandir_sanctum" to "MandirHomeScreen"
     }
     LaunchedEffect(homeScreenPair) {
         homeScreenPair?.let {(screenName,screenClass) ->
@@ -328,31 +355,8 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                 cobwebLevel=aging.cobwebLevel,cleanedAreas=cleanedAreas.toList(),
                 bellRunning=bellRunning || aartiRunning,bellProgress=if(aartiRunning) aartiMotion else bell.value,conchRunning=conchRunning,conchProgress=conch.value,
                 onFlowerClick={offerFlower(it,"altar")},onConchClick={soundConch("altar")},onAartiClick={startAarti("altar")},onPrasadClick={offerPrasad("altar")},selection=selection,
-                showModels=curtain.value>=1f) }
-            if(!customizer && curtain.value<1f) TempleDoors(curtain.value)
-            // A single invisible entrance target covers the entire closed doorway.
-            // Keep consuming touches during motion so taps cannot reach ritual items.
-            if(!entered && !curtainMoving) Box(Modifier.matchParentSize().clickable(
-                interactionSource=remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                indication=null,
-                onClickLabel=tr("मंदिर खोलें","Open temple"),
-                role=androidx.compose.ui.semantics.Role.Button,
-                onClick={entered=true}
-            )) {
-                if(!customizer) {
-                    SacredEntrancePrompt(
-                        hindi = hindi,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
-                            .padding(horizontal = 24.dp, vertical = 28.dp)
-                    )
-                }
-            }
-            else if(curtainMoving) Box(Modifier.matchParentSize().pointerInput(Unit) {
-                awaitPointerEventScope { while(true) { awaitPointerEvent().changes.forEach { it.consume() } } }
-            })
-            if(entered && !curtainMoving && aging.needsCleaning) Box(Modifier.matchParentSize().pointerInput(timeOffset,selection,cleaningSweep) {
+                showModels=true,activeOccasion=activeOccasion) }
+            if(aging.needsCleaning) Box(Modifier.matchParentSize().pointerInput(timeOffset,selection,cleaningSweep) {
                 detectDragGestures {change,_ ->
                     change.consume()
                     if(!cleaningSweep) {
@@ -366,8 +370,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                     }
                 }
             })
-            // Show the ritual dock only after the entrance has fully opened.
-            if(entered && !curtainMoving && !musicSheet && !devotionSheet && !customizer && !mindfulnessScreen) Box(Modifier.align(Alignment.BottomCenter)) { RitualGlassPanel(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)).padding(horizontal=14.dp,vertical=10.dp)
+            if(!menu && !musicSheet && !devotionSheet && !customizer && !mindfulnessScreen) Box(Modifier.align(Alignment.BottomCenter)) { RitualGlassPanel(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)).padding(horizontal=14.dp,vertical=10.dp)
                 .fillMaxWidth().heightIn(max=270.dp).verticalScroll(rememberScrollState()).testTag("ritual-dock"),sceneSize,sceneOrigin,backgroundPath="shrine/backgrounds/${selection["shrine"]}.png") {
                 val buttonColors=ButtonDefaults.buttonColors(containerColor=RitualInk,contentColor=cream,disabledContainerColor=Color(0xCFE2D9CF),disabledContentColor=Color(0xFF81766C))
                 if(aging.needsCleaning) {
@@ -377,10 +380,61 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                     PujaStepGuide(WorshipStep.AARTI,hindi)
                     RitualChoice(tr("आरती चल रही है …","Offering aarti …"),false,{},Modifier.fillMaxWidth(),enabled=false)
                 } else if(session.aartiComplete) {
-                    Text(tr("पूजा पूरी हुई","Puja complete"),fontSize=13.sp)
+                    if(currentSceneOccasion!=null) {
+                        Text("🪔 ${currentSceneOccasion.blessing(hindi)}",fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=RitualInk)
+                    } else {
+                        Text(tr("पूजा पूरी हुई","Puja complete"),fontSize=13.sp)
+                    }
                     RitualChoice(tr("मेरी प्रोफ़ाइल","My profile"),false,
                         {analytics.logAccountAction("post_puja_profile");devotionPage=DevotionPage.PROFILE;devotionSheet=true},Modifier.fillMaxWidth())
+                    if(showReviewPrompt) {
+                        RitualChoice(
+                            tr("⭐ Play Store पर ५-स्टार दें","⭐ Rate 5★ on Play Store"),
+                            false,
+                            {
+                                analytics.logAccountAction("post_puja_rate_play_store")
+                                com.worship.nityamandir.data.PlayStoreReviewHelper.openPlayStoreListing(context,prefs)
+                                showReviewPrompt=false
+                            },
+                            Modifier.fillMaxWidth()
+                        )
+                    }
                 } else {
+                    if(activeOccasion!=null && !activeOccasion.matchesSelection(selection)) {
+                        Surface(
+                            onClick={
+                                val next=activeOccasion.presetSelection
+                                selection=next
+                                session=WorshipSession(deityCount=next.deityCount)
+                                scope.launch { try { account.saveSelection(next) } catch(_:Exception) { } }
+                            },
+                            enabled=!busy,
+                            shape=RoundedCornerShape(14.dp),
+                            color=Color(0xFFF5E6C8),
+                            border=BorderStroke(1.dp,RitualGold),
+                            modifier=Modifier.fillMaxWidth().testTag("home-occasion-banner")
+                        ) {
+                            Row(
+                                Modifier.padding(horizontal=12.dp,vertical=8.dp),
+                                verticalAlignment=Alignment.CenterVertically,
+                                horizontalArrangement=Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text="🪔 ${activeOccasion.title(hindi)}",
+                                    modifier=Modifier.weight(1f),
+                                    fontSize=13.sp,
+                                    fontWeight=FontWeight.SemiBold,
+                                    color=RitualInk
+                                )
+                                Text(
+                                    text=tr("उत्सव लगाएँ","Apply Utsav"),
+                                    fontSize=13.sp,
+                                    fontWeight=FontWeight.Bold,
+                                    color=Color(0xFFA82424)
+                                )
+                            }
+                        }
+                    }
                     AnimatedContent(targetState=session.step,transitionSpec={ (slideInHorizontally {it}+fadeIn()) togetherWith (slideOutHorizontally {-it}+fadeOut()) },label="ritual step") { displayedStep ->
                     Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
                     PujaStepGuide(displayedStep,hindi)
@@ -403,7 +457,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
             } }
         }
         // Global options stay outside the ritual dock, so a single action needs only one row.
-        if(entered && curtain.value >= 1f && !menu && !musicSheet && !devotionSheet && !customizer && !mindfulnessScreen && !curtainMoving) {
+        if(!menu && !musicSheet && !devotionSheet && !customizer && !mindfulnessScreen) {
             val hasMusic=bhajan.current!=null || bhajan.loading
             Box(Modifier.align(if(hasMusic) Alignment.TopCenter else Alignment.TopEnd)) {
                 Row((if(hasMusic) Modifier.fillMaxWidth() else Modifier).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)).padding(horizontal=14.dp,vertical=8.dp),
@@ -446,7 +500,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
         if(customizer) ShrineControlsTheme { ShrineCustomizer(account,customizerDraft ?: selection,hindi,
             onDismiss={customizer=false;customizerDraft=null},onAccount={customizerDraft=it;customizer=false;devotionPage=if(account.signedIn) DevotionPage.PACKAGE else DevotionPage.LOGIN;devotionSheet=true},
             onApplied={selection=it;customizerDraft=null;session=WorshipSession(deityCount=it.deityCount);customizer=false},
-            player=bhajan,onMusic={customizerDraft=it;customizer=false;musicSheet=true}) }
+            player=bhajan,onMusic={customizerDraft=it;customizer=false;musicSheet=true},activeOccasion=activeOccasion) }
         if(devotionSheet) ShrineControlsTheme { DevotionSheet(account,hindi,{devotionSheet=false},onCustomize={devotionSheet=false;customizerDraft=null;customizer=true},canCustomize=!busy,page=devotionPage,
             player=bhajan,onMusic={devotionSheet=false;musicSheet=true},
             onSignedIn={if(customizerDraft!=null) {devotionSheet=false;customizer=true}}) }
@@ -491,6 +545,25 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                     onClick={analytics.logDrawerItemSelected("mandir_sajaye");menu=false;customizerDraft=null;customizer=true}
                 )
 
+                if(activeOccasion!=null) {
+                    val isOccasionActive=activeOccasion.matchesSelection(selection)
+                    SacredDrawerCard(
+                        title="🪔 ${activeOccasion.title(hindi)}",
+                        subtitle=if(isOccasionActive) tr("उत्सव मंदिर सक्रिय है · ${activeOccasion.subtitleHi}","Festival setting active · ${activeOccasion.subtitleEn}")
+                            else activeOccasion.subtitle(hindi),
+                        leadingIcon={Icon(Icons.Outlined.AutoAwesome,null,tint=Color(0xFFA82424),modifier=Modifier.size(22.dp))},
+                        featured=!isOccasionActive,
+                        enabled=!busy,
+                        onClick={
+                            menu=false
+                            val next=activeOccasion.presetSelection
+                            selection=next
+                            session=WorshipSession(deityCount=next.deityCount)
+                            scope.launch { try { account.saveSelection(next) } catch(_:Exception) { } }
+                        }
+                    )
+                }
+
                 // Mindfulness & Meditation Screen: Dhyan Sadhana
                 SacredDrawerCard(
                     title=tr("ध्यान","Mindfulness"),
@@ -532,6 +605,19 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                     subtitle=tr("परिवार और मित्रों को आमंत्रित करें","Invite family & friends"),
                     leadingIcon={WhatsAppIcon()},
                     onClick={analytics.logDrawerItemSelected("whatsapp_share");menu=false;devotionPage=DevotionPage.SHARE;devotionSheet=true}
+                )
+
+                // Play Store 5-Star Rating Card
+                SacredDrawerCard(
+                    title=tr("Play Store पर ५-स्टार दें","Rate 5★ on Play Store"),
+                    subtitle=tr("पवित्र मंदिर के प्रसार में सहयोग करें","Support Pavitra Mandir with a review"),
+                    leadingIcon={Icon(Icons.Outlined.StarOutline,null,tint=RitualGold,modifier=Modifier.size(22.dp))},
+                    onClick={
+                        analytics.logDrawerItemSelected("rate_play_store")
+                        menu=false
+                        com.worship.nityamandir.data.PlayStoreReviewHelper.openPlayStoreListing(context,prefs)
+                        showReviewPrompt=false
+                    }
                 )
 
                 // Direct Language Toggle Pill Row
@@ -580,13 +666,31 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                             wipe=0f;cleanedAreas.clear();menu=false
                         }
                     )
+                    SacredDrawerCard(
+                        title=tr("उत्सव बदलें (परीक्षण)","Switch occasion (test)"),
+                        subtitle=activeOccasion?.let { "${it.badge(hindi)} · ${it.title(hindi)}" } ?: tr("सामान्य दिन (कोई उत्सव नहीं)","Ordinary day (no festival)"),
+                        leadingIcon={Icon(Icons.Outlined.Celebration,null,tint=RitualGold,modifier=Modifier.size(22.dp))},
+                        enabled=!busy,
+                        onClick={
+                            val order=TempleOccasions.all.map {it.id} + TempleOccasions.OVERRIDE_NONE
+                            val currentKey=activeOccasion?.id ?: TempleOccasions.OVERRIDE_NONE
+                            val nextKey=order[(order.indexOf(currentKey)+1)%order.size]
+                            occasionOverride=nextKey
+                            prefs.edit().putString("occasionOverride",nextKey).apply()
+                            val nextOccasion=TempleOccasions.byId(nextKey)
+                            val nextSelection=nextOccasion?.presetSelection ?: com.worship.nityamandir.data.ShrineSelection()
+                            selection=nextSelection
+                            session=WorshipSession(deityCount=nextSelection.deityCount)
+                            menu=false
+                        }
+                    )
                 }
             }
         }
     }
 }
 
-/** Translucent frosted-brass temple medallion button replacing the plain boxy hamburger icon. */
+/** Glass temple medallion with the same pearl reflections as the ritual dock. */
 @Composable
 private fun SacredMenuButton(onClick: () -> Unit, contentDescription: String, modifier: Modifier = Modifier) {
     val shape = CircleShape
@@ -594,28 +698,17 @@ private fun SacredMenuButton(onClick: () -> Unit, contentDescription: String, mo
         onClick = onClick,
         modifier = modifier
             .size(48.dp)
-            .shadow(10.dp, shape, ambientColor = Color(0x661A1108), spotColor = Color(0x661A1108))
+            .templeGlass(shape, TempleGlassControlTint)
             .semantics {
                 this.contentDescription = contentDescription
             },
         shape = shape,
         color = Color.Transparent,
-        contentColor = RitualInk,
-        border = BorderStroke(
-            1.5.dp,
-            Brush.linearGradient(
-                listOf(Color(0xFFF7E2A4), Color(0xFFB3833B), Color(0xFFE5C168), Color(0xFF8F6324))
-            )
-        )
+        contentColor = RitualInk
     ) {
         Box(
             Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.radialGradient(
-                        listOf(Color(0xF5FFFDF9), Color(0xECFAF0DF), Color(0xE0EAD8BE))
-                    )
-                ),
+                .fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
             Canvas(Modifier.fillMaxSize()) {
@@ -835,51 +928,6 @@ private fun MandirNavigationDrawer(open: Boolean, onDismiss: () -> Unit, hindi: 
                     content()
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun SacredEntrancePrompt(hindi: Boolean, modifier: Modifier = Modifier) {
-    val shape = RoundedCornerShape(24.dp)
-    Surface(
-        modifier = modifier
-            .widthIn(max = 360.dp)
-            .fillMaxWidth()
-            .shadow(14.dp, shape, ambientColor = Color(0x661A1108), spotColor = Color(0x661A1108)),
-        shape = shape,
-        color = Color.Transparent,
-        border = BorderStroke(
-            1.5.dp,
-            Brush.linearGradient(
-                listOf(Color(0xFFF7E2A4), Color(0xFFB3833B), Color(0xFFE5C168), Color(0xFF8F6324))
-            )
-        )
-    ) {
-        Column(
-            Modifier
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color(0xF5FFFDF8), Color(0xEEFAF3E6), Color(0xE8F3E7D3))
-                    )
-                )
-                .padding(horizontal = 20.dp, vertical = 14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = if (hindi) "ॐ · शुद्धि संकल्प" else "OM · SACRED ENTRY",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = RitualGold,
-                letterSpacing = 1.sp
-            )
-            Text(
-                text = if (hindi) "आप स्वच्छ हैं · द्वार खोलने के लिए छुएँ" else "You are clean · Click to open door",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = RitualInk
-            )
         }
     }
 }

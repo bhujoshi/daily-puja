@@ -20,7 +20,7 @@ data class ShrineSelection(val values:Map<String,String> = emptyMap()) {
     }
     val original get()=values.values.all {it=="original" || it=="marble"}
     // Measured altar surfaces in the prepared portrait backgrounds, in image-width units.
-    val altarOffset get()=when(this["shrine"]) {"marble","ivory","carved","swarna" -> -.040f; else -> -.040f}
+    val altarOffset get()=when(this["shrine"]) {"marble","ivory","carved","swarna","diwali" -> -.040f; else -> -.040f}
     val deityCount get()=if(this["idols"] in listOf("original","ganesh_hanuman","radha_krishna")) 2 else 1
     fun deityNames(hindi:Boolean):List<String> = when(this["idols"]) {
         "ganesh_hanuman" -> if(hindi) listOf("गणेश जी","हनुमान जी") else listOf("Ganesha","Hanuman")
@@ -47,6 +47,18 @@ class ShrineCatalog(context:Context) {
         val c=categories.first {it.id==category}
         return c.options.firstOrNull {it.id==selection[category]} ?: c.options.first()
     }
+    fun visibleOptions(
+        category: ShrineCategory,
+        activeOccasion: com.worship.nityamandir.engine.TempleOccasion? = null,
+        currentSelection: ShrineSelection = ShrineSelection()
+    ): List<ShrineOption> =
+        if (category.id == "shrine") {
+            category.options.filter {
+                com.worship.nityamandir.engine.TempleOccasions.isShrineVisible(it.id, activeOccasion, currentSelection)
+            }
+        } else {
+            category.options
+        }
     fun flowerPaths(selection:ShrineSelection):List<String> {
         val options=categories.first {it.id=="flowers"}.options
         return selection.flowerIds.flatMap {id ->

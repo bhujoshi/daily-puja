@@ -37,6 +37,14 @@
           "thumbnail": "shrine/backgrounds/marble.png"
         },
         {
+          "id": "diwali",
+          "label_en": "Diwali Utsav Mandir",
+          "label_hi": "दीपावली उत्सव मंदिर",
+          "path": "shrine/backgrounds/diwali.png",
+          "kind": "image",
+          "thumbnail": "shrine/backgrounds/diwali.png"
+        },
+        {
           "id": "divya_darshan",
           "label_en": "Divya Darshan (Big Idol)",
           "label_hi": "दिव्य दर्शन (बड़ी मूर्ति)",

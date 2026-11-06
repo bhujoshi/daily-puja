@@ -97,14 +97,19 @@ public class GeneratePlayStoreGraphics {
             }
 
             for (int i = 0; i < screenshotNames.length; i++) {
-                BufferedImage shot = renderScreenshot(i + 1, w, h);
+                BufferedImage shotEn = renderScreenshot(i + 1, w, h, false);
                 File primaryFile = new File(playOutDir, screenshotNames[i]);
-                savePng(shot, primaryFile);
-                for (String locale : new String[]{"en-US", "en-IN", "hi-IN"}) {
+                savePng(shotEn, primaryFile);
+                for (String locale : new String[]{"en-US", "en-IN"}) {
                     File flDir = new File(FASTLANE_META_DIR, locale + "/images/" + fastlaneSubdirs[d]);
                     Files.copy(primaryFile.toPath(), new File(flDir, screenshotNames[i]).toPath(), StandardCopyOption.REPLACE_EXISTING);
                 }
-                System.out.printf("  [OK] %s (%dx%d)%n", screenshotNames[i], w, h);
+
+                BufferedImage shotHi = renderScreenshot(i + 1, w, h, true);
+                File hiDir = new File(FASTLANE_META_DIR, "hi-IN/images/" + fastlaneSubdirs[d]);
+                savePng(shotHi, new File(hiDir, screenshotNames[i]));
+
+                System.out.printf("  [OK] %s (%dx%d en + hi)%n", screenshotNames[i], w, h);
             }
         }
 
@@ -203,14 +208,64 @@ public class GeneratePlayStoreGraphics {
     }
 
     // =========================================================================
-    // 1. 512x512 32-bit PNG App Icon
+    // 1. 512x512 32-bit PNG App Icon (Full-bleed, no white padding or tiny text)
     // =========================================================================
     private static void generateIcon512() throws IOException {
         BufferedImage src = ImageIO.read(LAUNCHER_ART);
         BufferedImage icon = new BufferedImage(512, 512, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = icon.createGraphics();
         configureQuality(g);
-        g.drawImage(src, 0, 0, 512, 512, null);
+
+        // Full-bleed rich saffron-vermilion background matching the inner sanctum emblem
+        GradientPaint bgGrad = new GradientPaint(
+            0f, 0f, new Color(0xED, 0x7A, 0x0E),
+            0f, 512f, new Color(0xC9, 0x2F, 0x0A)
+        );
+        g.setPaint(bgGrad);
+        g.fillRect(0, 0, 512, 512);
+
+        // Warm golden radial aura behind temple shikhar & kalash
+        RadialGradientPaint centerGlow = new RadialGradientPaint(
+            new Point2D.Float(256f, 250f), 245f,
+            new float[]{0f, 0.58f, 1f},
+            new Color[]{
+                new Color(255, 210, 88, 120),
+                new Color(242, 132, 18, 55),
+                new Color(201, 47, 10, 0)
+            }
+        );
+        g.setPaint(centerGlow);
+        g.fillRect(0, 0, 512, 512);
+
+        // Crop the central temple + kalash + diya + agarbatti emblem from launcher_artwork.png
+        // (x=196..828, y=148..732 — excluding the outer white margin and bottom small text)
+        // and blend its edges smoothly with an elliptical radial mask into the full-bleed 512x512 canvas.
+        int cropX = 196, cropY = 148, cropW = 632, cropH = 584;
+        BufferedImage emblem = new BufferedImage(cropW, cropH, BufferedImage.TYPE_INT_ARGB);
+        for (int y = 0; y < cropH; y++) {
+            for (int x = 0; x < cropW; x++) {
+                int argb = src.getRGB(cropX + x, cropY + y);
+                float nx = (x - cropW / 2f) / (cropW / 2f);
+                float ny = (y - cropH / 2f) / (cropH / 2f);
+                float radialDist = (float) Math.hypot(nx * 0.92f, ny * 0.92f);
+                float boxDist = Math.max(Math.abs(nx), Math.abs(ny));
+                float dist = Math.max(radialDist, boxDist);
+                float alpha = 1f;
+                if (dist > 0.78f) {
+                    alpha = Math.max(0f, (0.98f - dist) / 0.20f);
+                }
+                int a = Math.round(((argb >>> 24) & 0xFF) * alpha);
+                emblem.setRGB(x, y, (a << 24) | (argb & 0x00FFFFFF));
+            }
+        }
+
+        // Draw enlarged emblem centered on the 512x512 canvas
+        int dstW = 492;
+        int dstH = Math.round(dstW * ((float) cropH / cropW));
+        int dstX = (512 - dstW) / 2;
+        int dstY = (512 - dstH) / 2 + 8;
+        g.drawImage(emblem, dstX, dstY, dstW, dstH, null);
+
         g.dispose();
 
         File playIcon = new File(PLAY_STORE_DIR, "icon_512x512.png");
@@ -220,7 +275,7 @@ public class GeneratePlayStoreGraphics {
             flIcon.getParentFile().mkdirs();
             Files.copy(playIcon.toPath(), flIcon.toPath(), StandardCopyOption.REPLACE_EXISTING);
         }
-        System.out.println("  [OK] icon_512x512.png (512x512 32-bit PNG)");
+        System.out.println("  [OK] icon_512x512.png (512x512 32-bit Full-Bleed PNG)");
     }
 
     // =========================================================================
@@ -282,7 +337,7 @@ public class GeneratePlayStoreGraphics {
         g.draw(new RoundRectangle2D.Float(cardX + 5, cardY + 5, cardW - 10, cardH - 10, 26f, 26f));
 
         // Left side: App Icon Badge + Title + Hindi/English Tagline + Feature Pills
-        BufferedImage appIcon = ImageIO.read(LAUNCHER_ART);
+        BufferedImage appIcon = ImageIO.read(new File(PLAY_STORE_DIR, "icon_512x512.png"));
         int iconSize = 88;
         int iconX = 44, iconY = 38;
         Shape iconShape = new RoundRectangle2D.Float(iconX, iconY, iconSize, iconSize, 22f, 22f);
@@ -493,16 +548,33 @@ public class GeneratePlayStoreGraphics {
         int idolPxH = Math.round(idolH * imageWidth);
         g.drawImage(idol, idolPxX, idolPxY, idolPxW, idolPxH, null);
 
-        // Ceremonial Tilak on foreheads
+        // Ceremonial Chandan, Kumkum & Akshat Tilak on foreheads
         for (float[] fh : foreheads) {
             float tx = leftOffset + (idolLeft + fh[0] * idolW) * imageWidth;
             float ty = (idolTop + fh[1] * idolH) * imageWidth;
-            float tw = imageWidth * 0.008f;
-            float th = imageWidth * 0.020f;
-            g.setColor(new Color(0xD8, 0x24, 0x24, 225));
-            g.fill(new RoundRectangle2D.Float(tx - tw / 2f, ty - th * 0.7f, tw, th, tw, tw));
-            g.setColor(new Color(0xFF, 0xF5, 0xD6, 235));
-            g.fill(new Ellipse2D.Float(tx - tw * 0.38f, ty + th * 0.1f, tw * 0.76f, tw * 0.76f));
+            float mark = imageWidth * 0.0082f;
+            float span = mark * 1.48f;
+            float arcY = ty + mark * 0.22f;
+            float wingLift = mark * 0.36f;
+
+            // Kesar-Chandan sandalwood arc base
+            Path2D.Float chandanArc = new Path2D.Float();
+            chandanArc.moveTo(tx - span, arcY - wingLift);
+            chandanArc.quadTo(tx, arcY + mark * 0.44f, tx + span, arcY - wingLift);
+            chandanArc.quadTo(tx, arcY - mark * 0.16f, tx - span, arcY - wingLift);
+            chandanArc.closePath();
+            g.setColor(new Color(0xF0, 0xBE, 0x4F, 235));
+            g.fill(chandanArc);
+
+            // Ceremonial Kumkum Urdhva Tilak
+            float tw = mark * 0.95f;
+            float th = mark * 2.35f;
+            g.setColor(new Color(0xC8, 0x20, 0x1C, 235));
+            g.fill(new RoundRectangle2D.Float(tx - tw / 2f, ty - th * 0.65f, tw, th, tw, tw));
+
+            // Sacred Akshat rice grains at bindu base
+            g.setColor(new Color(0xFF, 0xFD, 0xF6, 245));
+            g.fill(new Ellipse2D.Float(tx - tw * 0.36f, ty + mark * 0.35f, tw * 0.72f, tw * 0.72f));
         }
 
         // 4. Incense & Standing Lamp on altar step
@@ -720,75 +792,92 @@ public class GeneratePlayStoreGraphics {
     }
 
     // =========================================================================
-    // 4. Individual 1.0.17 Screenshot Composers (01..08)
+    // 4. Individual 1.0.19 Screenshot Composers (01..08)
     // =========================================================================
-    private static BufferedImage renderScreenshot(int index, int w, int h) throws IOException {
+    private static BufferedImage renderScreenshot(int index, int w, int h, boolean hindiLocale) throws IOException {
         BufferedImage canvas = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = canvas.createGraphics();
         configureQuality(g);
         float s = w / 1080f; // Scale factor relative to 1080p phone width
 
         switch (index) {
-            case 1 -> renderShot01SacredGateway(g, w, h, s);
-            case 2 -> renderShot02SwarnaSanctumPuja(g, w, h, s);
-            case 3 -> renderShot03RadhaKrishnaMarble(g, w, h, s);
-            case 4 -> renderShot04AartiShankhNaad(g, w, h, s);
-            case 5 -> renderShot05MandirSajayeCustomizer(g, w, h, s);
-            case 6 -> renderShot06BhajanAartiPlayer(g, w, h, s);
-            case 7 -> renderShot07PunyaCoinPassbook(g, w, h, s);
-            case 8 -> renderShot08MorningShodhan(g, w, h, s);
+            case 1 -> renderShot01SacredGateway(g, w, h, s, hindiLocale);
+            case 2 -> renderShot02SwarnaSanctumPuja(g, w, h, s, hindiLocale);
+            case 3 -> renderShot03RadhaKrishnaMarble(g, w, h, s, hindiLocale);
+            case 4 -> renderShot04AartiShankhNaad(g, w, h, s, hindiLocale);
+            case 5 -> renderShot05MandirSajayeCustomizer(g, w, h, s, hindiLocale);
+            case 6 -> renderShot06BhajanAartiPlayer(g, w, h, s, hindiLocale);
+            case 7 -> renderShot07PunyaCoinPassbook(g, w, h, s, hindiLocale);
+            case 8 -> renderShot08MorningShodhan(g, w, h, s, hindiLocale);
         }
 
         g.dispose();
         return canvas;
     }
 
-    /** Top editorial showcase header & authentic status/top bar chrome. */
-    private static void drawTopEditorialBanner(Graphics2D g, int w, float s, String badgeText, String hindiTitle, String englishSubtitle) {
-        int bannerH = Math.round(238 * s);
+    /** Top editorial showcase header with large, thumbnail-legible headlines. */
+    private static void drawTopEditorialBanner(Graphics2D g, int w, float s, String badgeText, String mainTitle, String subtitle) {
+        int bannerH = Math.round(256 * s);
         GradientPaint topGrad = new GradientPaint(
-            0, 0, new Color(13, 11, 10, 242),
-            0, bannerH, new Color(18, 12, 9, 185)
+            0, 0, new Color(11, 8, 6, 250),
+            0, bannerH, new Color(22, 13, 9, 215)
         );
         g.setPaint(topGrad);
         g.fillRect(0, 0, w, bannerH);
 
-        // Gold bottom hairline on editorial header
+        // Bold gold bottom divider on editorial header
         GradientPaint lineGrad = new GradientPaint(
-            w * 0.08f, bannerH, new Color(216, 175, 82, 0),
-            w * 0.5f, bannerH, new Color(216, 175, 82, 185),
+            w * 0.05f, bannerH, new Color(216, 175, 82, 0),
+            w * 0.5f, bannerH, new Color(255, 208, 96, 235),
             true
         );
         g.setPaint(lineGrad);
-        g.fillRect(Math.round(w * 0.06f), bannerH - 2, Math.round(w * 0.88f), 2);
+        g.fillRect(Math.round(w * 0.04f), bannerH - Math.round(3 * s), Math.round(w * 0.92f), Math.round(3 * s));
 
-        // Pill badge
-        Font pillFont = new Font("SansSerif", Font.BOLD, Math.round(20 * s));
+        // High-contrast golden pill badge
+        Font pillFont = new Font("SansSerif", Font.BOLD, Math.round(23 * s));
         g.setFont(pillFont);
         FontMetrics pm = g.getFontMetrics();
-        int pillW = pm.stringWidth(badgeText) + Math.round(48 * s);
-        int pillH = Math.round(40 * s);
+        int pillW = pm.stringWidth(badgeText) + Math.round(54 * s);
+        int pillH = Math.round(46 * s);
         int pillX = (w - pillW) / 2;
-        int pillY = Math.round(26 * s);
+        int pillY = Math.round(22 * s);
 
         RoundRectangle2D.Float pill = new RoundRectangle2D.Float(pillX, pillY, pillW, pillH, pillH, pillH);
-        g.setColor(new Color(216, 175, 82, 42));
+        g.setColor(new Color(216, 152, 42, 68));
         g.fill(pill);
-        g.setStroke(new BasicStroke(Math.max(1.2f, 1.5f * s)));
-        g.setColor(SACRED_GOLD);
+        g.setStroke(new BasicStroke(Math.max(1.6f, 2.0f * s)));
+        g.setColor(new Color(0xFF, 0xCA, 0x58));
         g.draw(pill);
-        g.setColor(new Color(0xFF, 0xE5, 0xA3));
-        g.drawString(badgeText, pillX + Math.round(24 * s), pillY + Math.round(27 * s));
+        g.setColor(new Color(0xFF, 0xF0, 0xB8));
+        g.drawString(badgeText, pillX + Math.round(27 * s), pillY + Math.round(31 * s));
 
-        // Main Hindi headline
-        g.setFont(new Font("Serif", Font.BOLD, Math.round(42 * s)));
+        // Extra-large, thumbnail-readable main headline (auto-fitted to width)
+        int titleFontSize = Math.round(56 * s);
+        Font titleFont = new Font("Serif", Font.BOLD, titleFontSize);
+        g.setFont(titleFont);
+        while (g.getFontMetrics().stringWidth(mainTitle) > w - Math.round(64 * s) && titleFontSize > Math.round(38 * s)) {
+            titleFontSize -= 2;
+            titleFont = new Font("Serif", Font.BOLD, titleFontSize);
+            g.setFont(titleFont);
+        }
+        // Subtle dark drop shadow behind main headline for maximum pop
+        g.setColor(new Color(0, 0, 0, 180));
+        drawCenteredString(g, mainTitle, w / 2, Math.round(140 * s) + Math.round(3 * s));
         g.setColor(KARPURA_IVORY);
-        drawCenteredString(g, hindiTitle, w / 2, Math.round(126 * s));
+        drawCenteredString(g, mainTitle, w / 2, Math.round(140 * s));
 
-        // English subtitle
-        g.setFont(new Font("SansSerif", Font.PLAIN, Math.round(25 * s)));
-        g.setColor(SANDALWOOD_DUST);
-        drawCenteredString(g, englishSubtitle, w / 2, Math.round(176 * s));
+        // High-contrast warm golden-ivory subtitle
+        int subFontSize = Math.round(29 * s);
+        Font subFont = new Font("SansSerif", Font.BOLD, subFontSize);
+        g.setFont(subFont);
+        while (g.getFontMetrics().stringWidth(subtitle) > w - Math.round(64 * s) && subFontSize > Math.round(21 * s)) {
+            subFontSize -= 1;
+            subFont = new Font("SansSerif", Font.BOLD, subFontSize);
+            g.setFont(subFont);
+        }
+        g.setColor(new Color(0xFF, 0xDF, 0x9E));
+        drawCenteredString(g, subtitle, w / 2, Math.round(198 * s));
 
         // App top-right hamburger options button & mini music bar below banner
         int topUiY = bannerH + Math.round(18 * s);
@@ -917,74 +1006,44 @@ public class GeneratePlayStoreGraphics {
     }
 
     // -------------------------------------------------------------------------
-    // Screenshot 01: Carved Teak Temple Doors (मंदिर के पट)
+    // Screenshot 01: Direct Home Screen Sanctum Darshan & Live Aarti (No Doors)
     // -------------------------------------------------------------------------
-    private static void renderShot01SacredGateway(Graphics2D g, int w, int h, float s) throws IOException {
-        // Render warm sanctum glow behind partially parted carved teak doors
-        renderAltarCore(g, w, h, "swarna", "original", "marigold", "brass", "kamal_dhoop", "karpura", "swarna", "laddu_bowl", true, false, false, 0f);
-
-        BufferedImage door = loadAsset("entrance/teak_door.png");
-        int doorLeafW = Math.round(w * 0.44f);
-        int doorH = h;
-        // Left & right carved teak door leaves slightly parted at center revealing golden sanctum glow
-        g.drawImage(door, 0, 0, doorLeafW, doorH, 0, 0, door.getWidth() / 2, door.getHeight(), null);
-        g.drawImage(door, w - doorLeafW, 0, w, doorH, door.getWidth() / 2, 0, door.getWidth(), door.getHeight(), null);
-
-        // Golden seam glow along the parted doorway
-        GradientPaint leftGlow = new GradientPaint(doorLeafW - 30 * s, 0, new Color(255, 190, 75, 0), doorLeafW, 0, new Color(255, 215, 110, 175));
-        g.setPaint(leftGlow);
-        g.fillRect(Math.round(doorLeafW - 30 * s), 0, Math.round(30 * s), h);
-
-        // Central sacred lotus & Om welcome medallion over the doorway
-        int medalR = Math.round(115 * s);
-        int cx = w / 2;
-        int cy = Math.round(h * 0.48f);
-        RadialGradientPaint medalBg = new RadialGradientPaint(
-            new Point2D.Float(cx, cy), medalR * 1.4f,
-            new float[]{0f, 0.7f, 1f},
-            new Color[]{new Color(34, 20, 15, 240), new Color(20, 13, 10, 215), new Color(13, 11, 10, 0)}
-        );
-        g.setPaint(medalBg);
-        g.fill(new Ellipse2D.Float(cx - medalR * 1.4f, cy - medalR * 1.4f, medalR * 2.8f, medalR * 2.8f));
-
-        g.setStroke(new BasicStroke(3f * s));
-        g.setColor(SACRED_GOLD);
-        g.draw(new Ellipse2D.Float(cx - medalR, cy - medalR, medalR * 2, medalR * 2));
-        g.setStroke(new BasicStroke(1.2f * s));
-        g.setColor(new Color(255, 235, 175, 150));
-        g.draw(new Ellipse2D.Float(cx - medalR * 0.88f, cy - medalR * 0.88f, medalR * 1.76f, medalR * 1.76f));
-
-        g.setFont(new Font("Serif", Font.BOLD, Math.round(82 * s)));
-        g.setColor(SACRED_GOLD);
-        drawCenteredString(g, "ॐ", cx, cy + Math.round(28 * s));
+    private static void renderShot01SacredGateway(Graphics2D g, int w, int h, float s, boolean hi) throws IOException {
+        // Direct entry into the radiant Golden Sanctum Home Screen with active Aarti, Diya & 432 Hz Shankh (door screen removed)
+        renderAltarCore(g, w, h, "swarna", "original", "marigold", "brass", "kamal_dhoop", "karpura", "swarna", "laddu_bowl", true, false, true, 0f);
 
         drawTopEditorialBanner(
             g, w, s,
-            "१. पावन प्रवेश द्वार  •  SACRED TEMPLE GATEWAY",
-            "नक्काशीदार सागौन द्वार एवं घंटी",
-            "Part the carved teakwood doors & enter your peaceful Garbhagriha"
+            hi ? "✨ १००% विज्ञापन-मुक्त  •  सीधा गर्भगृह दर्शन" : "✨ 100% AD-FREE  •  INSTANT HOME DARSHAN",
+            hi ? "घर बैठे करें दिव्य दर्शन व आरती" : "Daily Live Puja & Darshan",
+            hi ? "बिना किसी विज्ञापन के शांत और पवित्र हिंदू मंदिर" : "100% Ad-Free Hindu Temple with 8 Revered Deities"
         );
 
         drawBottomRitualDock(
             g, w, h, s,
-            "चरण १ / ८  •  प्रवेश एवं दर्शन (STEP 1 OF 8)",
-            "मंदिर की घंटी बजाएँ और पावन द्वार खोलें",
-            "🚪  मंदिर खोलें  •  Open Temple Doors",
-            null, 0
+            hi ? "नित्य पूजा एवं दर्शन  •  १००% विज्ञापन-मुक्त" : "STEP-BY-STEP DAILY PUJA  •  100% AD-FREE",
+            hi ? "मंदिर की घंटी बजाएँ, दीप जलाएँ और दिव्य आरती करें" : "Ring temple bells, light ghee diya & perform live Aarti",
+            hi ? "🪔  दैनिक पूजा आरंभ करें  •  Start Daily Puja" : "🪔  Start Daily Puja & Aarti  •  पूजा करें",
+            new String[]{
+                hi ? "✓ १००% विज्ञापन-मुक्त" : "✓ 100% Ad-Free",
+                hi ? "✓ ८ देवी-देवता" : "✓ 8 Deities",
+                hi ? "✓ भजन व आरती" : "✓ Bhajans & Aarti"
+            },
+            0
         );
     }
 
     // -------------------------------------------------------------------------
     // Screenshot 02: Golden Sanctum (Swarna) & Diya/Dhoop Puja
     // -------------------------------------------------------------------------
-    private static void renderShot02SwarnaSanctumPuja(Graphics2D g, int w, int h, float s) throws IOException {
+    private static void renderShot02SwarnaSanctumPuja(Graphics2D g, int w, int h, float s, boolean hi) throws IOException {
         renderAltarCore(g, w, h, "swarna", "original", "marigold", "brass", "kamal_dhoop", "karpura", "swarna", "laddu_bowl", true, false, false, 0f);
 
         drawTopEditorialBanner(
             g, w, s,
-            "२. स्वर्ण गर्भगृह एवं दीप-धूप  •  GOLDEN SANCTUM",
-            "श्री गणेश-लक्ष्मी दर्शन व पंचमुखी दीप",
-            "Light Panchmukhi Ghee Diya, Mayur Deepstambh & Royal Kamal Dhoop"
+            hi ? "🪔 नित्य दीप एवं धूप  •  स्वर्ण गर्भगृह दर्शन" : "🪔 GOLDEN SANCTUM  •  DIYA & DHOOP",
+            hi ? "अखंड घी दीपक और सुगंधित धूप" : "Light Sacred Diya & Dhoop",
+            hi ? "पंचमुखी दीप, मयूर दीपस्तंभ और शाही कमल धूप जलाएँ" : "Panchmukhi Ghee Lamp, Mayur Deep & Royal Kamal Dhoop"
         );
 
         drawBottomRitualDock(
@@ -1000,14 +1059,14 @@ public class GeneratePlayStoreGraphics {
     // -------------------------------------------------------------------------
     // Screenshot 03: Makrana Marble Shrine, Radha-Krishna & Dev Snan / Pushparpan
     // -------------------------------------------------------------------------
-    private static void renderShot03RadhaKrishnaMarble(Graphics2D g, int w, int h, float s) throws IOException {
+    private static void renderShot03RadhaKrishnaMarble(Graphics2D g, int w, int h, float s, boolean hi) throws IOException {
         renderAltarCore(g, w, h, "marble", "radha_krishna", "rose_jasmine", "peacock", "mayur_dhoop", "golden", "ivory", "modak", true, true, false, 0f);
 
         drawTopEditorialBanner(
             g, w, s,
-            "३. संगमरमर मंदिर एवं अभिषेक  •  MARBLE SHRINE",
-            "राधा-कृष्ण देव स्नान, तिलक व पुष्पांजलि",
-            "Perform sacred Kalash Abhishek, Chandan Tilak & fresh flower offerings"
+            hi ? "🌸 ८-चरणीय पूजा विधि  •  संगमरमर मंदिर" : "🌸 8-STEP VEDIC PUJA  •  MARBLE SHRINE",
+            hi ? "जल अभिषेक, तिलक व पुष्पांजलि" : "Abhishek, Tilak & Flowers",
+            hi ? "तांबे के कलश से स्नान, चंदन तिलक और ताज़े फूल चढ़ाएँ" : "Bathe Deities with Copper Kalash & Offer Fresh Garlands"
         );
 
         drawBottomRitualDock(
@@ -1023,14 +1082,14 @@ public class GeneratePlayStoreGraphics {
     // -------------------------------------------------------------------------
     // Screenshot 04: Carved Sanctuary, Ram Darbar, Nagkanya Aarti & 432 Hz Shankh
     // -------------------------------------------------------------------------
-    private static void renderShot04AartiShankhNaad(Graphics2D g, int w, int h, float s) throws IOException {
+    private static void renderShot04AartiShankhNaad(Graphics2D g, int w, int h, float s, boolean hi) throws IOException {
         renderAltarCore(g, w, h, "carved", "ram_darbar", "lotus_pearl", "brass", "kamal_dhoop", "karpura", "swarna", "laddu_bowl", true, false, true, 0f);
 
         drawTopEditorialBanner(
             g, w, s,
-            "४. महा-आरती एवं शंखनाद  •  AARTI & 432 HZ SHANKH",
-            "श्री राम दरबार आरती एवं पावन शंखनाद",
-            "Perform circular Nagkanya Panch-Aarti with temple bells & 432 Hz Shankh"
+            hi ? "🐚 महा-आरती एवं शंखनाद  •  श्री राम दरबार" : "🐚 LIVE AARTI & 432 HZ SHANKH NAAD",
+            hi ? "दिव्य आरती, घंटी और शंखनाद" : "Live Aarti, Bell & Shankh",
+            hi ? "मंदिर की घंटी और ४३२ Hz शंख ध्वनि के साथ आरती उतारें" : "Perform Circular Aarti with Temple Bells & 432 Hz Conch"
         );
 
         drawBottomRitualDock(
@@ -1046,15 +1105,15 @@ public class GeneratePlayStoreGraphics {
     // -------------------------------------------------------------------------
     // Screenshot 05: Mandir Sajaye Customizer (4 Shrines & 8 Deities)
     // -------------------------------------------------------------------------
-    private static void renderShot05MandirSajayeCustomizer(Graphics2D g, int w, int h, float s) throws IOException {
+    private static void renderShot05MandirSajayeCustomizer(Graphics2D g, int w, int h, float s, boolean hi) throws IOException {
         // Upper live shrine preview: Ivory Alcove with Lord Shiva
         renderAltarCore(g, w, h, "ivory", "shiva", "mogra", "peacock", "mayur_dhoop", "golden", "swarna", "modak", true, false, false, 0f);
 
         drawTopEditorialBanner(
             g, w, s,
-            "५. मंदिर सजाएँ  •  SHRINE & DEITY CUSTOMIZER",
-            "४ भव्य मंदिर स्वरूप और ८ पूज्य देवी-देवता",
-            "Customize shrines, murtis, garlands, diyas, dhoop & prasad anytime"
+            hi ? "🛕 मंदिर सजाएँ  •  ८ पूज्य देवी-देवता" : "🛕 MANDIR SAJAYE  •  8 REVERED DEITIES",
+            hi ? "अपने ईष्ट देव का मंदिर सजाएँ" : "8 Deities & Custom Shrines",
+            hi ? "गणेश-लक्ष्मी, शिव, राम दरबार, कृष्ण, हनुमान व माँ दुर्गा" : "Ganesha, Shiva, Ram Darbar, Krishna, Hanuman & Durga"
         );
 
         // Bottom half: Authentic Sandalwood Ivory Mandir Sajaye Sheet
@@ -1198,14 +1257,14 @@ public class GeneratePlayStoreGraphics {
     // -------------------------------------------------------------------------
     // Screenshot 06: Devotional Bhajan & Aarti Music Player
     // -------------------------------------------------------------------------
-    private static void renderShot06BhajanAartiPlayer(Graphics2D g, int w, int h, float s) throws IOException {
+    private static void renderShot06BhajanAartiPlayer(Graphics2D g, int w, int h, float s, boolean hi) throws IOException {
         renderAltarCore(g, w, h, "swarna", "durga", "marigold", "brass", "kamal_dhoop", "karpura", "swarna", "laddu_bowl", true, false, false, 0f);
 
         drawTopEditorialBanner(
             g, w, s,
-            "६. भजन एवं आरती संगीत  •  BHAJAN & AARTI PLAYER",
-            "मधुर भजन, आरती एवं चालीसा संग्रह",
-            "Deity-matched playlists, bilingual search, queue & offline playback"
+            hi ? "🎵 भजन, आरती एवं चालीसा  •  ऑफ़लाइन प्लेयर" : "🎵 BHAJANS, AARTIS & HANUMAN CHALISA",
+            hi ? "मधुर भजन, आरती और चालीसा" : "Bhajans, Aartis & Chalisa",
+            hi ? "हनुमान चालीसा, सुबह-शाम की आरती और ऑफ़लाइन भजन संग्रह" : "Listen to Hanuman Chalisa, Daily Aartis & Offline Bhajans"
         );
 
         int sheetY = Math.round(h * 0.40f);
@@ -1324,14 +1383,14 @@ public class GeneratePlayStoreGraphics {
     // -------------------------------------------------------------------------
     // Screenshot 07: Devotion Streak & Punya Coin Passbook
     // -------------------------------------------------------------------------
-    private static void renderShot07PunyaCoinPassbook(Graphics2D g, int w, int h, float s) throws IOException {
+    private static void renderShot07PunyaCoinPassbook(Graphics2D g, int w, int h, float s, boolean hi) throws IOException {
         renderAltarCore(g, w, h, "swarna", "original", "marigold", "brass", "kamal_dhoop", "karpura", "swarna", "laddu_bowl", true, false, false, 0f);
 
         drawTopEditorialBanner(
             g, w, s,
-            "७. साधना स्ट्रीक एवं पासबुक  •  STREAK & COIN PASSBOOK",
-            "नित्य उपासना स्ट्रीक व पुण्य मुद्रा पासबुक",
-            "Track daily puja consistency, earn Punya Coins & invite family on WhatsApp"
+            hi ? "🔥 नित्य साधना नियम  •  पुण्य मुद्रा पासबुक" : "🔥 DAILY PUJA STREAK  •  PUNYA PASSBOOK",
+            hi ? "दैनिक पूजा नियम और पुण्य मुद्रा" : "Build Your Daily Puja Habit",
+            hi ? "रोज़ पूजा कर पुण्य मुद्रा कमाएँ और नए मंदिर अलंकरण खोलें" : "Track Devotion Streaks & Unlock Free Temple Ornaments"
         );
 
         int sheetY = Math.round(h * 0.38f);
@@ -1445,7 +1504,7 @@ public class GeneratePlayStoreGraphics {
     // -------------------------------------------------------------------------
     // Screenshot 08: Morning Temple Shodhan (मंदिर शुद्धि एवं सफाई)
     // -------------------------------------------------------------------------
-    private static void renderShot08MorningShodhan(Graphics2D g, int w, int h, float s) throws IOException {
+    private static void renderShot08MorningShodhan(Graphics2D g, int w, int h, float s, boolean hi) throws IOException {
         renderAltarCore(g, w, h, "carved", "ganesh_hanuman", "marigold", "brass", "agarbatti", "traditional", "classic", "laddu", false, false, false, 0.85f);
 
         // Subtle morning dust & cobweb shimmer on upper corners before cleaning
@@ -1459,9 +1518,9 @@ public class GeneratePlayStoreGraphics {
 
         drawTopEditorialBanner(
             g, w, s,
-            "८. प्रातः मंदिर शुद्धि  •  MORNING TEMPLE SHODHAN",
-            "निर्माल्य विसर्जन एवं मंदिर की सफाई",
-            "Clear yesterday's withered petals & wipe the altar before morning puja"
+            hi ? "🧹 प्रातः मंदिर शुद्धि  •  निर्माल्य विसर्जन" : "🧹 MORNING TEMPLE CARE  •  ALTAR SHODHAN",
+            hi ? "प्रातः मंदिर सफाई व निर्माल्य" : "Real Morning Temple Care",
+            hi ? "घर के मंदिर की तरह सुबह पुराने फूल हटाएँ और वेदी साफ़ करें" : "Clear Yesterday's Flowers & Purify the Altar Every Morning"
         );
 
         drawBottomRitualDock(
