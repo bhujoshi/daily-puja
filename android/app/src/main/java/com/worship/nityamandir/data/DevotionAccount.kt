@@ -65,8 +65,23 @@ class DevotionAccount(context: Context) {
     )
     fun owns(category: String, item: String) = cost(category, item) == 0 ||
         profile?.optBoolean("unlocked") == true || profile?.optJSONObject("owned")?.optBoolean("$category:$item") == true
-    fun owns(selection: ShrineSelection) = selection.values.all { (category, value) ->
-        value.split(',').all { owns(category, it) }
+    fun owns(selection: ShrineSelection) = ShrineSelectionSync.ownsSelection(
+        selection = selection,
+        unlockedPackage = profile?.optBoolean("unlocked") == true,
+        ownedKeys = ownedKeysFrom(profile),
+        coinCosts = coinCostsFrom(profile)
+    )
+    private fun jsonToStringMap(obj: JSONObject?): Map<String, String>? =
+        obj?.let { json -> json.keys().asSequence().associateWith { json.getString(it) } }
+    private fun ownedKeysFrom(profileObj: JSONObject?): Set<String> {
+        val ownedObj = profileObj?.optJSONObject("owned") ?: return emptySet()
+        return ownedObj.keys().asSequence().filter { ownedObj.optBoolean(it) }.toSet()
+    }
+    private fun coinCostsFrom(profileObj: JSONObject?): Map<String, Int> {
+        val costsObj = profileObj?.optJSONObject("coin_costs") ?: return emptyMap()
+        return costsObj.keys().asSequence().mapNotNull { key ->
+            costsObj.optInt(key, -1).takeIf { it >= 0 }?.let { key to it }
+        }.toMap()
     }
     private var unlockRevision by mutableStateOf(0)
     private fun seenUnlocksKey() = ShrineUnlocks.seenPreferenceKey(
@@ -101,7 +116,30 @@ class DevotionAccount(context: Context) {
     private fun today() = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata")).toString()
     val pending get() = prefs.getString("pending_day", "") == today() &&
         (prefs.getString("pending_owner", "") == "" || prefs.getString("pending_owner", "") == profile?.optString("id"))
-    private fun cache(value: JSONObject) { profile=value; prefs.edit().putString("profile",value.toString()).apply() }
+    private fun cache(value: JSONObject) {
+        val merged = JSONObject(value.toString())
+        val accountId = merged.optString("id")
+        val unsyncedKey = ShrineSelectionSync.unsyncedPreferenceKey(accountId)
+        val selectionKey = ShrineSelectionSync.selectionPreferenceKey(accountId)
+        if (unsyncedKey != null && selectionKey != null && prefs.getBoolean(unsyncedKey, false)) {
+            val localMap = runCatching { JSONObject(prefs.getString(selectionKey, null).orEmpty()) }
+                .getOrNull()?.let(::jsonToStringMap)
+            if (!localMap.isNullOrEmpty()) {
+                val candidate = ShrineSelection(localMap)
+                if (ShrineSelectionSync.ownsSelection(
+                        candidate,
+                        unlockedPackage = merged.optBoolean("unlocked"),
+                        ownedKeys = ownedKeysFrom(merged),
+                        coinCosts = coinCostsFrom(merged)
+                    )
+                ) {
+                    merged.put("selections", JSONObject(localMap))
+                }
+            }
+        }
+        profile = merged
+        prefs.edit().putString("profile", merged.toString()).apply()
+    }
     private suspend fun <T> mutateCurrentProfile(requireSignedIn: Boolean = false, action: suspend () -> T): T {
         val expectedToken = token
         return profileMutation.withLock {
@@ -276,6 +314,30 @@ class DevotionAccount(context: Context) {
                 cache(request("activity/puja", "POST", JSONObject().put("steps",org.json.JSONArray(listOf("LIGHT","BATH","TILAK","FLOWERS","BELL","CONCH","PRASAD","AARTI")))))
                 prefs.edit().remove("pending_day").apply()
             } else cache(request("me"))
+            val accountId = profile?.optString("id")
+            val selectionKey = ShrineSelectionSync.selectionPreferenceKey(accountId)
+            val unsyncedKey = ShrineSelectionSync.unsyncedPreferenceKey(accountId)
+            val retryKey = ShrineSelectionSync.retryPreferenceKey(accountId)
+            if (selectionKey != null && unsyncedKey != null && retryKey != null &&
+                prefs.getBoolean(unsyncedKey, false) && prefs.getBoolean(retryKey, false)
+            ) {
+                val pendingSelections = prefs.getString(selectionKey, null)?.let {
+                    runCatching { JSONObject(it) }.getOrNull()
+                }
+                if (pendingSelections != null) {
+                    try {
+                        val synced = request("shrine", "PUT", JSONObject().put("selections", pendingSelections))
+                        prefs.edit().putBoolean(unsyncedKey, false).putBoolean(retryKey, false).apply()
+                        cache(synced)
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        if (e !is IOException) {
+                            prefs.edit().putBoolean(retryKey, false).apply()
+                        }
+                    }
+                }
+            }
             if (googleAccount) referral.pending()?.let { claim ->
                 val result = request("referrals/install", "POST", claim)
                 if (result.optBoolean("processed")) { referral.processed(); referredInstall=false }
@@ -286,16 +348,83 @@ class DevotionAccount(context: Context) {
         }
     }
     fun selection(): ShrineSelection {
-        val items=profile?.optJSONObject("selections") ?: runCatching {
-            JSONObject(prefs.getString("guest_selection", "{}").orEmpty())
-        }.getOrDefault(JSONObject())
-        return ShrineSelection(items.keys().asSequence().associateWith {items.getString(it)})
+        val accountId = profile?.optString("id")
+        val selectionKey = ShrineSelectionSync.selectionPreferenceKey(accountId)
+        val unsyncedKey = ShrineSelectionSync.unsyncedPreferenceKey(accountId)
+        val localMap = if (signedIn && selectionKey != null) {
+            prefs.getString(selectionKey, null)?.let { raw ->
+                runCatching { JSONObject(raw) }.getOrNull()?.let(::jsonToStringMap)
+            }
+        } else null
+        val isUnsynced = signedIn && unsyncedKey != null && prefs.getBoolean(unsyncedKey, false)
+        val guestMap = runCatching { JSONObject(prefs.getString("guest_selection", "{}").orEmpty()) }
+            .getOrNull()?.let(::jsonToStringMap)
+        return ShrineSelectionSync.resolveSelection(
+            signedIn = signedIn,
+            unsyncedLocalSelection = localMap,
+            isUnsynced = isUnsynced,
+            profileSelection = jsonToStringMap(profile?.optJSONObject("selections")),
+            guestSelection = guestMap,
+            unlockedPackage = profile?.optBoolean("unlocked") == true,
+            ownedKeys = ownedKeysFrom(profile),
+            coinCosts = coinCostsFrom(profile)
+        )
     }
     suspend fun saveSelection(selection: ShrineSelection) = mutateCurrentProfile {
-        if (signedIn) cache(request("shrine","PUT",JSONObject().put("selections",JSONObject(selection.values))))
-        else {
-            check(owns(selection)) { "Sign in to unlock this design with coins." }
-            prefs.edit().putString("guest_selection", JSONObject(selection.values).toString()).apply()
+        check(owns(selection)) {
+            if (signedIn) "Unlock the selected items with coins first."
+            else "Sign in to unlock this design with coins."
+        }
+        val selectionsJson = JSONObject(selection.values)
+        if (!signedIn) {
+            prefs.edit().putString("guest_selection", selectionsJson.toString()).apply()
+            return@mutateCurrentProfile
+        }
+        val accountId = profile?.optString("id")
+        val selectionKey = ShrineSelectionSync.selectionPreferenceKey(accountId)
+        val unsyncedKey = ShrineSelectionSync.unsyncedPreferenceKey(accountId)
+        val retryKey = ShrineSelectionSync.retryPreferenceKey(accountId)
+        if (selectionKey != null && unsyncedKey != null && retryKey != null) {
+            prefs.edit()
+                .putString(selectionKey, selectionsJson.toString())
+                .putBoolean(unsyncedKey, true)
+                .putBoolean(retryKey, false)
+                .apply()
+        } else {
+            prefs.edit().putString("guest_selection", selectionsJson.toString()).apply()
+        }
+        profile?.let { current ->
+            cache(JSONObject(current.toString()).put("selections", selectionsJson))
+        }
+        try {
+            val updated = request("shrine", "PUT", JSONObject().put("selections", selectionsJson))
+            if (selectionKey != null && unsyncedKey != null && retryKey != null) {
+                prefs.edit()
+                    .putString(selectionKey, selectionsJson.toString())
+                    .putBoolean(unsyncedKey, false)
+                    .putBoolean(retryKey, false)
+                    .apply()
+            }
+            cache(updated)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            when (ShrineSelectionSync.onRemoteSaveFailure(
+                stillSignedIn = signedIn,
+                isConnectionFailure = e is IOException,
+                selection = selection
+            )) {
+                ShrineSelectionSync.RemoteSaveOutcome.SAVED_FOR_ACCOUNT_RETRY_LATER -> {
+                    if (retryKey != null) prefs.edit().putBoolean(retryKey, true).apply()
+                }
+                ShrineSelectionSync.RemoteSaveOutcome.SAVED_FOR_ACCOUNT_CATALOG_AHEAD -> {
+                    if (retryKey != null) prefs.edit().putBoolean(retryKey, false).apply()
+                }
+                ShrineSelectionSync.RemoteSaveOutcome.SAVED_AS_GUEST_AFTER_SIGN_OUT -> {
+                    prefs.edit().putString("guest_selection", selectionsJson.toString()).apply()
+                }
+                ShrineSelectionSync.RemoteSaveOutcome.RETHROW_SIGN_IN_REQUIRED -> throw e
+            }
         }
     }
     suspend fun unlock(category: String, item: String) = mutateCurrentProfile(requireSignedIn = true) {
@@ -323,7 +452,17 @@ class DevotionAccount(context: Context) {
     }
     private fun clearLocal() { token="";profile=null;prefs.edit().remove("session").remove("profile").remove("pending_day").remove("pending_owner").apply() }
     suspend fun signOut() = mutateCurrentProfile(requireSignedIn = true) { request("logout","POST",JSONObject()); clearLocal(); clearGoogleState() }
-    suspend fun delete() = mutateCurrentProfile(requireSignedIn = true) { request("me","DELETE");clearLocal();clearGoogleState() }
+    suspend fun delete() = mutateCurrentProfile(requireSignedIn = true) {
+        val accountId = profile?.optString("id")
+        request("me","DELETE")
+        val editor = prefs.edit()
+        ShrineSelectionSync.selectionPreferenceKey(accountId)?.let(editor::remove)
+        ShrineSelectionSync.unsyncedPreferenceKey(accountId)?.let(editor::remove)
+        ShrineSelectionSync.retryPreferenceKey(accountId)?.let(editor::remove)
+        editor.apply()
+        clearLocal()
+        clearGoogleState()
+    }
 }
 
 

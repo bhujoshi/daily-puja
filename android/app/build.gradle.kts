@@ -88,7 +88,7 @@ android {
         val isReleaseBuild = taskNames.any { it.contains("Release", ignoreCase = true) } &&
             taskNames.none { it.contains("AndroidTest", ignoreCase = true) }
         if (isReleaseBuild) {
-            ignoreAssetsPatterns += listOf("*.glb", "wood.png")
+            ignoreAssetsPatterns += listOf("wood.png")
         }
     }
     packaging {

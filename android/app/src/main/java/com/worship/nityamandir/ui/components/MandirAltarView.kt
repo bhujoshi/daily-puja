@@ -1,5 +1,8 @@
 package com.worship.nityamandir.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateOffsetAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -10,11 +13,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size as CanvasSize
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -32,6 +38,8 @@ import com.worship.nityamandir.data.ShrineSelection
 import com.worship.nityamandir.engine.*
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.min
 import kotlin.math.sin
 
@@ -46,9 +54,10 @@ private fun rememberAssetImage(path: String): ImageBitmap = rememberCachedAssetI
 private fun GarlandLayer(
     bitmap: ImageBitmap,
     space: ShrineSpace,
-    viewport: TempleViewport
+    viewport: TempleViewport,
+    modifier: Modifier = Modifier
 ) {
-    Canvas(Modifier.fillMaxSize()) {
+    Canvas(modifier.fillMaxSize()) {
         val spec = space.garlandSpec
         val fLeft = spec[0]; val fTop = spec[1]; val fRight = spec[2]
         val fBottom = spec[3]; val pillarW = spec[4]; val topH = spec[5]
@@ -107,9 +116,12 @@ private fun SpriteLayer(
     modifier: Modifier = Modifier,
     bottomAligned: Boolean = false,
     fitLongestSide: Boolean = false,
+    rotationX: Float = 0f,
+    rotationY: Float = 0f,
     rotationZ: Float = 0f,
     scale: Float = 1f,
     alpha: Float = 1f,
+    cameraDistanceFactor: Float = 14f,
     pivot: TransformOrigin = TransformOrigin.Center,
     colorFilter: ColorFilter? = null
 ) {
@@ -135,7 +147,10 @@ private fun SpriteLayer(
                 .graphicsLayer {
                     this.scaleX = scale
                     this.scaleY = scale
+                    this.rotationX = rotationX
+                    this.rotationY = rotationY
                     this.rotationZ = rotationZ
+                    this.cameraDistance = cameraDistanceFactor * density.density
                     this.alpha = alpha
                     this.transformOrigin = pivot
                 }
@@ -182,7 +197,10 @@ fun MandirAltarView(
     val incenseBitmap = rememberAssetImage(catalog.option("incense", selection).thumbnail)
     val lampBitmap = rememberAssetImage(catalog.option("lamp", selection).thumbnail)
     val shankhBitmap = rememberAssetImage(catalog.option("shankh", selection).thumbnail)
-    val aartiBitmap = rememberAssetImage(catalog.option("aarti", selection).thumbnail)
+    // Preserve Paramparik's five-bowl design; its GLB is a different silhouette.
+    val traditionalAartiBitmap = if (selection["aarti"] == "traditional") {
+        rememberAssetImage(catalog.option("aarti", selection).thumbnail)
+    } else null
     val prasadBitmap = rememberAssetImage(catalog.option("prasad", selection).thumbnail)
     val peonyBitmap = rememberAssetImage("shrine/flowers/peony.png")
     val flowerSpritePaths = remember(selection) {
@@ -279,28 +297,153 @@ fun MandirAltarView(
         }
     }
 
+    // Interactive 3D Hand-Held Aarti state (devotee can touch & drag to wave the 3D Aarti lamp around the deities)
+    var interactiveAartiPoint by remember { mutableStateOf<TemplePoint?>(null) }
+    var interactiveAartiVelX by remember { mutableFloatStateOf(0f) }
+    val aartiTrailHistory = remember { mutableStateListOf<TemplePoint>() }
+
+    LaunchedEffect(aartiRunning) {
+        if (!aartiRunning) {
+            interactiveAartiPoint = null
+            interactiveAartiVelX = 0f
+            aartiTrailHistory.clear()
+        }
+    }
+
+    val idolCenterX = idolPlacement.left + idolPlacement.width * 0.5f
+    val idolCenterY = idolPlacement.top + idolPlacement.height * 0.48f
+    val autoAartiPoint = if (aartiRunning) idolPlacement.aartiPosition(aartiProgress) else TempleSceneLayout.aartiRest
+    val targetAartiPoint = if (aartiRunning) (interactiveAartiPoint ?: autoAartiPoint) else TempleSceneLayout.aartiRest
+    // Damped follow-through keeps the lamp, flames and shadow together on handoff.
+    // Compose animations also respect the system animator duration scale.
+    val heldPosition by animateOffsetAsState(
+        targetValue = Offset(targetAartiPoint.x, targetAartiPoint.y),
+        animationSpec = spring(dampingRatio = 1f, stiffness = 500f),
+        label = "Aarti hand position"
+    )
+    val activeAartiPoint = TemplePoint(heldPosition.x, heldPosition.y)
+    val aartiPresence by animateFloatAsState(
+        targetValue = if (aartiRunning) 1f else 0f,
+        animationSpec = spring(dampingRatio = 1f, stiffness = 180f),
+        label = "Aarti sanctum depth"
+    )
+
+    LaunchedEffect(activeAartiPoint, aartiRunning) {
+        if (aartiRunning) {
+            if (aartiTrailHistory.isEmpty() || hypot(
+                    activeAartiPoint.x - aartiTrailHistory.first().x,
+                    activeAartiPoint.y - aartiTrailHistory.first().y
+                ) > 0.004f
+            ) {
+                aartiTrailHistory.add(0, activeAartiPoint)
+                if (aartiTrailHistory.size > 14) {
+                    aartiTrailHistory.removeAt(aartiTrailHistory.lastIndex)
+                }
+            }
+        }
+    }
+
+    val aartiMesh = remember(selection["aarti"]) {
+        GlbAartiModelCache.getOrLoad(context, selection["aarti"])
+    }
+
+    val aartiOrbitPhase = ((aartiProgress - .22f) / .56f).coerceIn(0f, 1f) * 6f * PI.toFloat()
+    val targetAartiDepth = when {
+        !aartiRunning -> 0f
+        interactiveAartiPoint != null -> ((activeAartiPoint.y - idolCenterY) / 0.24f).coerceIn(-0.85f, 1.0f)
+        aartiProgress in 0.22f..0.78f -> sin(aartiOrbitPhase)
+        aartiProgress < 0.22f -> 0.55f * sin((aartiProgress / 0.22f) * PI.toFloat())
+        else -> 0.55f * sin(((1f - aartiProgress) / 0.22f) * PI.toFloat())
+    }
+    val aartiZDepth by animateFloatAsState(
+        targetValue = targetAartiDepth,
+        animationSpec = spring(dampingRatio = 1f, stiffness = 300f),
+        label = "Aarti orbit depth"
+    )
+    val aartiScale3D = 1f + 0.10f * aartiPresence + 0.18f * aartiZDepth
+    val aartiRelX = activeAartiPoint.x - idolCenterX
+    // Keep the flame side facing the idols during the orbit, with a gentle
+    // inward turn and wrist bank rather than a pronounced sideways angle.
+    val targetAartiYaw = if (aartiRunning) {
+        (aartiRelX * 18f + interactiveAartiVelX * 3f).coerceIn(-10f, 10f)
+    } else {
+        // Canonical -Z is the flame side: zero yaw faces it into the shrine,
+        // with the handle toward the devotee instead of angled sideways.
+        0f
+    }
+    val targetAartiPitch = if (aartiRunning) {
+        (21f + 7.5f * aartiZDepth).coerceIn(13f, 30f)
+    } else {
+        20f
+    }
+    val targetAartiRoll = when {
+        !aartiRunning -> 0f
+        interactiveAartiPoint != null -> (-interactiveAartiVelX * 2.5f).coerceIn(-3f, 3f)
+        aartiProgress in 0.22f..0.78f -> -cos(aartiOrbitPhase) * 2f
+        else -> 0f
+    }
+    val aartiModelYaw by animateFloatAsState(targetAartiYaw,
+        spring(dampingRatio = 1f, stiffness = 280f), label = "Aarti wrist yaw")
+    val aartiModelPitch by animateFloatAsState(targetAartiPitch,
+        spring(dampingRatio = 1f, stiffness = 280f), label = "Aarti wrist pitch")
+    val aartiModelRoll by animateFloatAsState(targetAartiRoll,
+        spring(dampingRatio = 1f, stiffness = 280f), label = "Aarti wrist roll")
+    val aartiFlameBendX = when {
+        !aartiRunning -> 0f
+        interactiveAartiPoint != null -> (-interactiveAartiVelX * 0.016f).coerceIn(-0.015f, 0.015f)
+        aartiProgress in 0.22f..0.78f -> -cos(aartiOrbitPhase) * 0.010f
+        else -> 0f
+    }
+    val aartiBaseWidth = if (selection["aarti"] == "traditional") {
+        TempleSceneLayout.AARTI_WIDTH * 0.64f
+    } else {
+        TempleSceneLayout.AARTI_WIDTH * 0.84f
+    }
+    val aartiModelWidth = aartiBaseWidth * aartiScale3D
+
+    // 3D Sanctum Multi-Plane Perspective & Parallax driven by active 3D Aarti position
+    val sanctumRelX = (activeAartiPoint.x - idolCenterX).coerceIn(-0.45f, 0.45f) * aartiPresence
+    val sanctumRelY = (activeAartiPoint.y - idolCenterY).coerceIn(-0.45f, 0.45f) * aartiPresence
+    val sanctumYawY = -sanctumRelX * 6.5f
+    val sanctumPitchX = sanctumRelY * 4.0f + aartiZDepth * 1.6f
+
     BoxWithConstraints(modifier.fillMaxSize()) {
         val density = LocalDensity.current
         val viewport = remember(maxWidth, maxHeight, density) { with(density) { TempleViewport(maxWidth.toPx(), maxHeight.toPx()) } }
+        val parallaxPx = viewport.imageWidth * 0.020f
         val background = remember(selection["shrine"]) {
             AssetImageCache.image(context, catalog.option("shrine", selection).path)
         }
+        // Plane 1 (Deep Sanctum Arch, z = -1.0): 3D perspective tilt & counter-parallax
         Image(
             background, null,
             Modifier.fillMaxSize().graphicsLayer {
-                scaleX = TempleViewport.ZOOM
-                scaleY = TempleViewport.ZOOM
-                transformOrigin = TransformOrigin(.5f, 0f)
+                val extraZoom = 1f + 0.018f * aartiPresence
+                scaleX = TempleViewport.ZOOM * extraZoom
+                scaleY = TempleViewport.ZOOM * extraZoom
+                rotationX = sanctumPitchX * 0.55f
+                rotationY = sanctumYawY * 0.55f
+                translationX = -sanctumRelX * parallaxPx * 0.85f
+                translationY = -sanctumRelY * parallaxPx * 0.55f
+                cameraDistance = 22f * density.density
+                transformOrigin = TransformOrigin(.5f, 0.25f)
             },
             alignment = Alignment.TopCenter,
             contentScale = ContentScale.Crop
         )
 
-        // Sanctum arch Garland (Toran / Mala) framing the upper arch frieze and side pillars of the temple
+        // Plane 2 (Sanctum Arch Garland / Toran, z = -0.55): Mid-back 3D parallax
         GarlandLayer(
             bitmap = garlandBitmap,
             space = idolPlacement.space,
-            viewport = viewport
+            viewport = viewport,
+            modifier = Modifier.graphicsLayer {
+                rotationX = sanctumPitchX * 0.68f
+                rotationY = sanctumYawY * 0.68f
+                translationX = -sanctumRelX * parallaxPx * 0.45f
+                translationY = -sanctumRelY * parallaxPx * 0.30f
+                cameraDistance = 20f * density.density
+            }
         )
 
         if (selection["shrine"] == "diwali") {
@@ -320,19 +463,144 @@ fun MandirAltarView(
             DeityHalosOverlay(heads = idolPlacement.heads)
         }
 
+        // 3D Volumetric Garbhagriha Aura & Sacred Light Rays behind Deity Idols during Aarti / Lit Sanctum
+        if (showModels && (aartiRunning || session.lit || session.aartiLit)) {
+            Canvas(Modifier.fillMaxSize()) {
+                val u = viewport.imageWidth
+                val depthBoost = if (aartiRunning) (0.75f + 0.35f * (1f - aartiZDepth * 0.5f)) else 0.42f
+                idolPlacement.heads.forEachIndexed { idx, head ->
+                    val hp = viewport.pixel(TemplePoint(head.x, head.y + 0.04f))
+                    val auraRadius = u * (if (single) 0.32f else 0.24f) * (if (aartiRunning) 1.12f else 0.92f)
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            listOf(
+                                Color(0x44FF9E2C).copy(alpha = 0.26f * depthBoost),
+                                Color(0x28D8AF52).copy(alpha = 0.14f * depthBoost),
+                                Color.Transparent
+                            ),
+                            center = Offset(hp.x, hp.y),
+                            radius = auraRadius
+                        ),
+                        radius = auraRadius,
+                        center = Offset(hp.x, hp.y),
+                        blendMode = BlendMode.Screen
+                    )
+                    // Subtle volumetric sanctum light rays fanning behind the deity crown during 3D Aarti
+                    if (aartiRunning) {
+                        repeat(7) { rayIdx ->
+                            val angle = (-0.75f + rayIdx * 0.25f) + sin(aartiProgress * 18f + idx + rayIdx) * 0.04f
+                            val rayLen = auraRadius * (1.15f + 0.15f * sin(aartiProgress * 12f + rayIdx))
+                            val endX = hp.x + sin(angle) * rayLen
+                            val endY = hp.y - cos(angle) * rayLen * 0.82f
+                            drawLine(
+                                brush = Brush.linearGradient(
+                                    listOf(
+                                        Color(0x36FFD54F).copy(alpha = 0.18f * depthBoost),
+                                        Color.Transparent
+                                    ),
+                                    start = Offset(hp.x, hp.y),
+                                    end = Offset(endX, endY)
+                                ),
+                                start = Offset(hp.x, hp.y),
+                                end = Offset(endX, endY),
+                                strokeWidth = u * 0.024f,
+                                cap = StrokeCap.Round,
+                                blendMode = BlendMode.Screen
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         val idol = remember(selection["idols"]) {
             AssetImageCache.trimmedIdol(context, catalog.option("idols", selection).path)
         }
         val idolPoint = viewport.pixel(TemplePoint(idolPlacement.left, idolPlacement.top))
+        // Plane 3 (Sacred Deity Idols, z = 0.0): 3D perspective & subtle depth parallax
         Image(
             idol, selection.deityNames(false).joinToString(),
             with(density) {
                 Modifier.offset(idolPoint.x.toDp(), idolPoint.y.toDp())
                     .size((viewport.imageWidth * idolPlacement.width).toDp(), (viewport.imageWidth * idolPlacement.height).toDp())
+                    .graphicsLayer {
+                        rotationX = sanctumPitchX * 0.78f
+                        rotationY = sanctumYawY * 0.85f
+                        translationX = -sanctumRelX * parallaxPx * 0.16f
+                        translationY = -sanctumRelY * parallaxPx * 0.10f
+                        cameraDistance = 20f * density.density
+                        transformOrigin = TransformOrigin(0.5f, 0.75f)
+                    }
             },
             contentScale = ContentScale.Fit,
             alignment = Alignment.BottomCenter
         )
+
+        // Real-Time 3D Point-Light Illumination on Deity Idols & Sanctum Pillars as the 3D Aarti Lamp Orbits
+        if (showModels && aartiRunning) {
+            Canvas(Modifier.fillMaxSize()) {
+                val u = viewport.imageWidth
+                val lampPx = viewport.pixel(activeAartiPoint)
+                val flameOrigin = Offset(lampPx.x, lampPx.y - u * 0.048f * aartiScale3D)
+
+                // 1. Dynamic 3D Point-Light Specular & Warm Kesariya Illumination across each Deity Idol
+                idolPlacement.heads.forEach { head ->
+                    val targetCenter = TemplePoint(head.x, head.y + idolPlacement.height * 0.28f)
+                    val targetPx = viewport.pixel(targetCenter)
+                    val dist2D = hypot(activeAartiPoint.x - targetCenter.x, activeAartiPoint.y - targetCenter.y)
+                    val proximity = (1f - (dist2D / 0.52f)).coerceIn(0.15f, 1f)
+                    // Shifts slightly toward the 3D lamp position to simulate directional specular highlight on the idol
+                    val highlightCenter = Offset(
+                        targetPx.x + (flameOrigin.x - targetPx.x) * 0.28f,
+                        targetPx.y + (flameOrigin.y - targetPx.y) * 0.28f
+                    )
+                    val illumRadius = u * 0.28f * (0.85f + 0.30f * proximity)
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            listOf(
+                                Color(0xFFFFFDF8).copy(alpha = 0.22f * proximity),
+                                Color(0xFFFFC107).copy(alpha = 0.18f * proximity),
+                                Color(0xFFFF9E2C).copy(alpha = 0.09f * proximity),
+                                Color.Transparent
+                            ),
+                            center = highlightCenter,
+                            radius = illumRadius
+                        ),
+                        radius = illumRadius,
+                        center = highlightCenter,
+                        blendMode = BlendMode.Screen
+                    )
+                }
+
+                // 2. Dynamic 3D Rim Light on Left & Right Temple Pillars when Aarti swings near them
+                val spec = idolPlacement.space.garlandSpec
+                val leftPillarX = spec[0] + spec[4] * 0.5f
+                val rightPillarX = spec[2] - spec[4] * 0.5f
+                val pillarMidY = (spec[1] + spec[3]) * 0.5f
+                listOf(leftPillarX, rightPillarX).forEach { pxNorm ->
+                    val pDist = abs(activeAartiPoint.x - pxNorm)
+                    val pillarProx = (1f - (pDist / 0.42f)).coerceIn(0f, 1f)
+                    if (pillarProx > 0.05f) {
+                        val pillarPx = viewport.pixel(TemplePoint(pxNorm, activeAartiPoint.y.coerceIn(spec[1], spec[3])))
+                        val rimR = u * 0.18f * (0.7f + 0.3f * pillarProx)
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                listOf(
+                                    Color(0xFFFF9E2C).copy(alpha = 0.20f * pillarProx),
+                                    Color(0xFFD8AF52).copy(alpha = 0.08f * pillarProx),
+                                    Color.Transparent
+                                ),
+                                center = Offset(pillarPx.x, pillarPx.y.coerceIn(pillarMidY * u * 0.4f, size.height)),
+                                radius = rimR
+                            ),
+                            radius = rimR,
+                            center = Offset(pillarPx.x, pillarPx.y),
+                            blendMode = BlendMode.Screen
+                        )
+                    }
+                }
+            }
+        }
 
         val prasadLift = if (prasadRunning) TempleSceneLayout.pickup(prasadProgress) else if (session.prasadOffered) 1f else 0f
         val aartiLift = if (aartiRunning) TempleSceneLayout.pickup(aartiProgress) else 0f
@@ -342,7 +610,7 @@ fun MandirAltarView(
             min(t / .15f, (1f - t) / .15f).coerceIn(0f, 1f)
         } else 0f
 
-        // Floor contact shadows beneath the Puja Thali, standing oil lamp, bell, aarti diya, and offered prasad.
+        // Floor contact shadows beneath the Puja Thali, standing oil lamp, bell, aarti diya (static + 3D moving cast shadow), and offered prasad.
         Canvas(Modifier.fillMaxSize()) {
             fun shadow(point: TemplePoint, width: Float, height: Float, intensity: Float = 1f) {
                 if (intensity <= 0.01f) return
@@ -363,6 +631,23 @@ fun MandirAltarView(
             shadow(TempleSceneLayout.plate.copy(y = TempleSceneLayout.plate.y + .028f), .52f, .33f, 1.35f)
             shadow(TempleSceneLayout.bell.copy(y = TempleSceneLayout.bell.y + .108f), .115f, .038f, 1.10f * (1f - .6f * bellLift))
             shadow(TempleSceneLayout.aartiRest.copy(y = TempleSceneLayout.aartiRest.y + .035f), .155f, .052f, 1.10f * (1f - aartiLift))
+            // Dynamic 3D Floor Shadow cast by the orbiting 3D Aarti Lamp on the altar marble
+            if (aartiRunning) {
+                val floorY = (TempleSceneLayout.aartiRest.y + 0.025f + 0.035f * aartiZDepth).coerceIn(0.72f, 0.94f)
+                val heightAboveFloor = (floorY - activeAartiPoint.y).coerceAtLeast(0.02f)
+                val shadowSpread = (1f + heightAboveFloor * 0.85f).coerceIn(0.85f, 1.55f)
+                val shadowIntensity = (0.72f - heightAboveFloor * 0.75f + 0.18f * aartiZDepth).coerceIn(0.18f, 0.85f)
+                val dynamicShadowPt = TemplePoint(
+                    x = activeAartiPoint.x + (activeAartiPoint.x - idolCenterX) * 0.12f,
+                    y = floorY
+                )
+                shadow(
+                    dynamicShadowPt,
+                    .155f * shadowSpread,
+                    .048f * shadowSpread,
+                    shadowIntensity
+                )
+            }
             if (prasadRunning || session.prasadOffered) {
                 val prasadShadowPoint = if (prasadRunning) idolPlacement.prasadPosition(prasadProgress) else idolPlacement.prasadFloor
                 val prasadShadowProgress = if (prasadRunning) prasadProgress else 1f
@@ -526,15 +811,26 @@ fun MandirAltarView(
                 )
             }
 
-            // 9. 2D Brass Aarti Diya at rest outside the right of the Puja Thali, facing towards the idols
-            val aartiSpriteWidth = if (selection["aarti"] == "original") TempleSceneLayout.AARTI_WIDTH * .68f else TempleSceneLayout.AARTI_WIDTH * .64f
+            // 9. 3D GLB Brass Aarti Lamp at rest outside the right of the Puja Thali, angled towards the idols
             if (!aartiRunning) {
-                SpriteLayer(
-                    bitmap = aartiBitmap,
-                    center = TempleSceneLayout.aartiRest,
-                    widthFraction = aartiSpriteWidth,
+                if (traditionalAartiBitmap != null) {
+                    SpriteLayer(
+                        bitmap = traditionalAartiBitmap,
+                        center = activeAartiPoint,
+                        widthFraction = aartiModelWidth,
+                        viewport = viewport,
+                        density = density
+                    )
+                } else GlbAarti3DModelLayer(
+                    mesh = aartiMesh,
+                    center = activeAartiPoint,
+                    widthFraction = aartiModelWidth,
                     viewport = viewport,
-                    density = density
+                    yawDeg = aartiModelYaw,
+                    pitchDeg = aartiModelPitch,
+                    rollDeg = aartiModelRoll,
+                    lit = session.lit || session.aartiLit,
+                    aartiRunning = false
                 )
             }
         }
@@ -542,7 +838,7 @@ fun MandirAltarView(
         // Sacred Chandan, Kumkum & Akshat Tilak overlay and offering flight from the Puja Thali katoris
         TilakOverlay(session.tilak, idolPlacement, step = session.step)
 
-        // 10. Active Foreground 2D Ritual Animations
+        // 10. Active Foreground 2D & 3D Ritual Animations
         if (showModels) {
             Box(Modifier.fillMaxSize().zIndex(9f)) {
                 // Active Sacred Shankh & sonic aura waves when sounding
@@ -575,18 +871,36 @@ fun MandirAltarView(
                     )
                 }
 
-                // Active swinging Bell when rung
+                // Active swinging Bell when rung (with 3D Kashi-style sonic golden ripples)
                 val bellActive = bellRunning || aartiRunning
                 if (bellActive) {
                     val bellTime = if (aartiRunning) aartiProgress else bellProgress
                     val bellSwing = sin(bellTime * 3.5f * 18f * 1.5f) * 14f * bellLift
                     val bellCenter = TempleSceneLayout.bell.copy(y = TempleSceneLayout.bell.y - .040f * bellLift)
+                    Canvas(Modifier.fillMaxSize()) {
+                        val p = viewport.pixel(bellCenter)
+                        val u = viewport.imageWidth
+                        repeat(3) { ring ->
+                            val phase = ((bellTime * (if (aartiRunning) 8.5f else 4.5f)) + ring / 3f) % 1f
+                            val rx = u * (.048f + .115f * phase) * bellLift
+                            val ry = rx * 0.68f
+                            drawOval(
+                                color = Color(0xFFD8AF52).copy(alpha = (1f - phase) * 0.38f * bellLift),
+                                topLeft = Offset(p.x - rx, p.y - ry + u * 0.02f),
+                                size = CanvasSize(rx * 2f, ry * 2f),
+                                style = Stroke(width = u * 0.0026f),
+                                blendMode = BlendMode.Screen
+                            )
+                        }
+                    }
                     SpriteLayer(
                         bitmap = bellBitmap,
                         center = bellCenter,
                         widthFraction = TempleSceneLayout.BELL_DISPLAY_WIDTH,
                         viewport = viewport,
                         density = density,
+                        rotationX = 6f * bellLift,
+                        rotationY = -bellSwing * 0.35f,
                         rotationZ = bellSwing,
                         scale = 1f + .08f * bellLift,
                         pivot = TransformOrigin(.5f, .15f)
@@ -648,17 +962,124 @@ fun MandirAltarView(
                     )
                 }
 
-                // Active 2D Brass Aarti Diya orbiting deities, oriented towards the idols
+                // Active 3D GLB Panch-Aarti Model orbiting deities (or guided interactively in 3D space)
                 if (aartiRunning) {
-                    val point = idolPlacement.aartiPosition(aartiProgress)
-                    val aartiSpriteWidth = if (selection["aarti"] == "original") TempleSceneLayout.AARTI_WIDTH * .68f else TempleSceneLayout.AARTI_WIDTH * .64f
-                    SpriteLayer(
-                        bitmap = aartiBitmap,
+                    val point = activeAartiPoint
+
+                    // Dynamic 3D Point-Light Radiance, Brass Thali Specular Sheen & 3D Golden Ribbon Trail
+                    Canvas(Modifier.fillMaxSize()) {
+                        val p = viewport.pixel(point)
+                        val u = viewport.imageWidth
+                        val lightCenter = Offset(p.x, p.y - u * 0.048f * aartiScale3D)
+                        val lightR = u * (0.38f + 0.08f * aartiZDepth)
+
+                        // 1. 4-Stop Sacred Diya Volumetric Light Sphere around the 3D Aarti Lamp
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                listOf(
+                                    Color(0x58FFFDF8),
+                                    Color(0x4CFFC107),
+                                    Color(0x28FF9E2C),
+                                    Color.Transparent
+                                ),
+                                center = lightCenter,
+                                radius = lightR
+                            ),
+                            radius = lightR,
+                            center = lightCenter,
+                            blendMode = BlendMode.Screen
+                        )
+
+                        // 2. 3D Perspective Brass Plinth Halo directly beneath the floating Aarti Diya
+                        val plinthRx = u * 0.082f * aartiScale3D
+                        val plinthRy = plinthRx * (0.36f + 0.08f * aartiZDepth.coerceIn(-0.6f, 0.8f))
+                        drawOval(
+                            brush = Brush.radialGradient(
+                                listOf(
+                                    Color(0x66D8AF52),
+                                    Color(0x28FF9E2C),
+                                    Color.Transparent
+                                ),
+                                center = Offset(p.x, p.y + u * 0.014f * aartiScale3D),
+                                radius = plinthRx
+                            ),
+                            topLeft = Offset(p.x - plinthRx, p.y + u * 0.014f * aartiScale3D - plinthRy),
+                            size = CanvasSize(plinthRx * 2f, plinthRy * 2f),
+                            blendMode = BlendMode.Screen
+                        )
+
+                        // 3. Moving Golden Specular Reflection on the Foreground Brass Puja Thali
+                        val platePx = viewport.pixel(TempleSceneLayout.plate)
+                        val plateSpecCenter = Offset(
+                            platePx.x + (p.x - platePx.x) * 0.24f,
+                            platePx.y + (p.y - platePx.y) * 0.14f
+                        )
+                        val plateSpecR = u * 0.18f
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                listOf(
+                                    Color(0x28FFD54F),
+                                    Color(0x12D8AF52),
+                                    Color.Transparent
+                                ),
+                                center = plateSpecCenter,
+                                radius = plateSpecR
+                            ),
+                            radius = plateSpecR,
+                            center = plateSpecCenter,
+                            blendMode = BlendMode.Screen
+                        )
+
+                        // 4. 3D Tapered Golden Light Ribbon & Rising Spark Embers along the 3D Circumambulation Wake
+                        val trailPoints = if (interactiveAartiPoint != null && aartiTrailHistory.size >= 2) {
+                            aartiTrailHistory.toList()
+                        } else {
+                            List(11) { idx ->
+                                val lagProgress = (aartiProgress - (idx + 1) * 0.0075f).coerceIn(0f, 1f)
+                                idolPlacement.aartiPosition(lagProgress)
+                            }
+                        }
+                        var prevOffset = lightCenter
+                        trailPoints.forEachIndexed { idx, trailPt ->
+                            val tp = viewport.pixel(trailPt)
+                            val trailFade = (1f - (idx + 1).toFloat() / (trailPoints.size + 1).toFloat()).coerceIn(0f, 1f)
+                            val curOffset = Offset(tp.x, tp.y - u * 0.042f * (0.94f + 0.06f * trailFade))
+                            drawLine(
+                                color = Color(0xFFFFC107).copy(alpha = 0.28f * trailFade),
+                                start = prevOffset,
+                                end = curOffset,
+                                strokeWidth = u * 0.018f * trailFade * aartiScale3D,
+                                cap = StrokeCap.Round,
+                                blendMode = BlendMode.Screen
+                            )
+                            drawCircle(
+                                color = Color(0xFFFFFDF8).copy(alpha = 0.42f * trailFade),
+                                radius = u * 0.011f * trailFade * aartiScale3D,
+                                center = curOffset,
+                                blendMode = BlendMode.Screen
+                            )
+                            prevOffset = curOffset
+                        }
+                    }
+
+                    if (traditionalAartiBitmap != null) {
+                        SpriteLayer(
+                            bitmap = traditionalAartiBitmap,
+                            center = point,
+                            widthFraction = aartiModelWidth,
+                            viewport = viewport,
+                            density = density
+                        )
+                    } else GlbAarti3DModelLayer(
+                        mesh = aartiMesh,
                         center = point,
-                        widthFraction = aartiSpriteWidth,
+                        widthFraction = aartiModelWidth,
                         viewport = viewport,
-                        density = density,
-                        scale = 1.05f
+                        yawDeg = aartiModelYaw,
+                        pitchDeg = aartiModelPitch,
+                        rollDeg = aartiModelRoll,
+                        lit = true,
+                        aartiRunning = true
                     )
                 }
             }
@@ -670,41 +1091,43 @@ fun MandirAltarView(
             offered = session.prasadOffered && !prasadRunning,
             visible = showModels
         )
-        val aartiPoint = if (aartiRunning) idolPlacement.aartiPosition(aartiProgress) else TempleSceneLayout.aartiRest
-        val aartiRenderScale = if (aartiRunning) 1.05f else 1f
-        val aartiW = (if (selection["aarti"] == "original") TempleSceneLayout.AARTI_WIDTH * .68f else TempleSceneLayout.AARTI_WIDTH * .64f) * aartiRenderScale
-        val aartiH = aartiW * (aartiBitmap.height.toFloat() / aartiBitmap.width.toFloat().coerceAtLeast(1f))
-        val aartiWicks = when (selection["aarti"]) {
-            "traditional" -> listOf(
-                TemplePoint(aartiPoint.x - aartiW * .45f, aartiPoint.y - aartiH * .06f),
-                TemplePoint(aartiPoint.x - aartiW * .36f, aartiPoint.y - aartiH * .34f),
-                TemplePoint(aartiPoint.x, aartiPoint.y - aartiH * .47f),
-                TemplePoint(aartiPoint.x + aartiW * .36f, aartiPoint.y - aartiH * .34f),
-                TemplePoint(aartiPoint.x + aartiW * .45f, aartiPoint.y - aartiH * .06f)
+        val aartiPoint = activeAartiPoint
+        val aartiRenderScale = aartiScale3D
+        val aartiWicks = if (traditionalAartiBitmap != null) {
+            // Wick anchors belong to the original five-bowl artwork, not the GLB.
+            val height = aartiModelWidth * traditionalAartiBitmap.height.toFloat() /
+                traditionalAartiBitmap.width.toFloat().coerceAtLeast(1f)
+            listOf(
+                TemplePoint(aartiPoint.x - aartiModelWidth * .45f, aartiPoint.y - height * .06f),
+                TemplePoint(aartiPoint.x - aartiModelWidth * .36f, aartiPoint.y - height * .34f),
+                TemplePoint(aartiPoint.x, aartiPoint.y - height * .47f),
+                TemplePoint(aartiPoint.x + aartiModelWidth * .36f, aartiPoint.y - height * .34f),
+                TemplePoint(aartiPoint.x + aartiModelWidth * .45f, aartiPoint.y - height * .06f)
             )
-            "karpura" -> listOf(
-                TemplePoint(aartiPoint.x - aartiW * .45f, aartiPoint.y - aartiH * .02f),
-                TemplePoint(aartiPoint.x - aartiW * .36f, aartiPoint.y - aartiH * .28f),
-                TemplePoint(aartiPoint.x, aartiPoint.y - aartiH * .22f),
-                TemplePoint(aartiPoint.x + aartiW * .36f, aartiPoint.y - aartiH * .28f),
-                TemplePoint(aartiPoint.x + aartiW * .45f, aartiPoint.y - aartiH * .02f)
-            )
-            else -> listOf(
-                TemplePoint(aartiPoint.x, aartiPoint.y - aartiH * .46f)
-            )
-        }
+        } else projectAarti3DWicks(
+            mesh = aartiMesh,
+            center = aartiPoint,
+            widthFraction = aartiModelWidth,
+            yawDeg = aartiModelYaw,
+            pitchDeg = aartiModelPitch,
+            rollDeg = aartiModelRoll
+        )
         if (showModels) Box(Modifier.fillMaxSize().zIndex(10f)) {
             RitualFlamesOverlay(
-                session.lit,
-                session.aartiLit,
-                aartiPoint,
+                oilLit = session.lit,
+                aartiLit = session.aartiLit,
+                lamp = aartiPoint,
                 oilPoint = oilPoint,
-                traditional = selection["aarti"] != "original",
+                traditional = true,
                 brass = selection["lamp"] != "original",
                 oilWick = oilWicks.firstOrNull(),
                 oilWicks = oilWicks,
                 aartiWicks = aartiWicks,
-                incenseEmbers = incenseEmbers
+                incenseEmbers = incenseEmbers,
+                aartiRunning = aartiRunning,
+                aartiDepthScale = aartiRenderScale,
+                aartiBendX = aartiFlameBendX,
+                karpuraMode = selection["aarti"] == "karpura"
             )
         }
         WaterFlowOverlay(bathTarget, bathProgress, placement = idolPlacement, modifier = Modifier.zIndex(10.5f))
@@ -808,6 +1231,7 @@ fun MandirAltarView(
                 }
                 .clickable(onClickLabel = "प्रसाद अर्पित करें · Offer prasad", onClick = onPrasadClick)
         )
+        val triggerAarti by rememberUpdatedState(onAartiClick)
         Box(
             target(
                 TemplePoint(
@@ -818,7 +1242,68 @@ fun MandirAltarView(
                 TempleSceneLayout.AARTI_HEIGHT
             )
                 .zIndex(12f)
+                .pointerInput(viewport) {
+                    detectDragGestures(
+                        onDragStart = {
+                            triggerAarti()
+                        },
+                        onDragEnd = {
+                            interactiveAartiPoint = null
+                            interactiveAartiVelX = 0f
+                        },
+                        onDragCancel = {
+                            interactiveAartiPoint = null
+                            interactiveAartiVelX = 0f
+                        },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            val cur = interactiveAartiPoint ?: TempleSceneLayout.aartiRest
+                            val dx = dragAmount.x / viewport.imageWidth.coerceAtLeast(1f)
+                            val dy = dragAmount.y / viewport.imageWidth.coerceAtLeast(1f)
+                            interactiveAartiVelX = (interactiveAartiVelX * 0.6f + dx * 16f).coerceIn(-1.5f, 1.5f)
+                            interactiveAartiPoint = TemplePoint(
+                                (cur.x + dx).coerceIn(0.14f, 0.86f),
+                                (cur.y + dy).coerceIn(0.22f, 0.88f)
+                            )
+                        }
+                    )
+                }
                 .clickable(onClickLabel = "दीप आरती · Diya aarti", onClick = onAartiClick)
         )
+
+        // Interactive 3D Hand-Held Aarti Canvas: during Aarti, devotee can touch & circle the 3D Aarti Thali anywhere around the deities
+        if (aartiRunning) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .zIndex(13f)
+                    .pointerInput(viewport) {
+                        detectDragGestures(
+                            onDragStart = { touchOffset ->
+                                val tx = ((touchOffset.x - viewport.left) / viewport.imageWidth).coerceIn(0.14f, 0.86f)
+                                val ty = (touchOffset.y / viewport.imageWidth).coerceIn(0.22f, 0.88f)
+                                interactiveAartiPoint = TemplePoint(tx, ty)
+                                interactiveAartiVelX = 0f
+                            },
+                            onDragEnd = {
+                                interactiveAartiPoint = null
+                                interactiveAartiVelX = 0f
+                            },
+                            onDragCancel = {
+                                interactiveAartiPoint = null
+                                interactiveAartiVelX = 0f
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                val tx = ((change.position.x - viewport.left) / viewport.imageWidth).coerceIn(0.14f, 0.86f)
+                                val ty = (change.position.y / viewport.imageWidth).coerceIn(0.22f, 0.88f)
+                                val dx = dragAmount.x / viewport.imageWidth.coerceAtLeast(1f)
+                                interactiveAartiVelX = (interactiveAartiVelX * 0.6f + dx * 16f).coerceIn(-1.5f, 1.5f)
+                                interactiveAartiPoint = TemplePoint(tx, ty)
+                            }
+                        )
+                    }
+            )
+        }
     }
 }

@@ -222,6 +222,12 @@ class MandirAnalyticsTest {
         analytics.logMindfulnessCancelled(practice = "mantra_japa", elapsedSeconds = 90, japaCount = 54)
         analytics.logMindfulnessRestarted(practice = "mantra_japa")
 
+        // 7. Daily 8am morning puja reminder interactions
+        analytics.logReminderToggled(enabled = true, source = "drawer")
+        analytics.logReminderPermissionResult(granted = true)
+        analytics.logMorningReminderShown(occasionId = "diwali")
+        analytics.logMorningReminderOpened()
+
         val byName = sink.events.associate { it.first to it.second }
 
         assertEquals("foreground", byName["app_lifecycle"]?.get("state"))
@@ -252,5 +258,10 @@ class MandirAnalyticsTest {
         assertEquals("true", byName["mindfulness_japa_tap"]?.get("mala_completed"))
         assertEquals(90L, byName["mindfulness_cancelled"]?.get("elapsed_seconds"))
         assertEquals("mantra_japa", byName["mindfulness_restarted"]?.get("practice"))
+        assertEquals("on", sink.properties["puja_reminder_8am"])
+        assertEquals("true", byName["puja_reminder_toggled"]?.get("enabled"))
+        assertEquals("true", byName["puja_reminder_permission"]?.get("granted"))
+        assertEquals("diwali", byName["morning_reminder_shown"]?.get("occasion_id"))
+        assertEquals(8L, byName["morning_reminder_opened"]?.get("hour"))
     }
 }

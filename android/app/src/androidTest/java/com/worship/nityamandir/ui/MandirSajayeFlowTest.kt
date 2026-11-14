@@ -498,6 +498,24 @@ class MandirSajayeFlowTest {
         assertEquals(0, origin.unlockRequests.get())
     }
 
+    @Test fun signedInFreeTempleAppliesEvenWhenRemoteCatalogLagsBehindApp() {
+        fixture(coins = 13)
+        origin.rejectShrineSavesWithCatalogMismatch()
+        showCustomizer()
+        compose.onNodeWithText("Divya Darshan (Big Idol)").performScrollTo().performClick()
+        compose.onNodeWithText("Divya Darshan (Big Idol)").assertIsSelected()
+        compose.onNode(hasTestTag("mandir-selection-action") and hasText("Apply")).performClick()
+        compose.waitUntil(5_000) { applied.get() != null }
+        assertEquals("divya_darshan", applied.get()!!["shrine"])
+        compose.onNodeWithText("Could not complete this action.", substring = true).assertDoesNotExist()
+        compose.runOnIdle { assertEquals("divya_darshan", account.selection()["shrine"]) }
+        assertEquals(1, origin.saveRequests.get())
+        kotlinx.coroutines.runBlocking { account.sync() }
+        compose.runOnIdle { assertEquals("divya_darshan", account.selection()["shrine"]) }
+        assertEquals(1, origin.refreshRequests.get())
+        assertEquals(1, origin.saveRequests.get())
+    }
+
     /** Routes all preferences to unique names; no account, progress or music fixtures leak. */
     private class FixtureContext(base: Context) : ContextWrapper(base) {
         private val prefix = "mandir-sajaye-test-${UUID.randomUUID()}-"
@@ -518,12 +536,14 @@ class MandirSajayeFlowTest {
         val saveRequests = AtomicInteger()
         private var profile = JSONObject()
         private var failOnceItem: String? = null
+        private var rejectShrineCatalogMismatch = false
         private val itemRequests = mutableMapOf<String, Int>()
         private val failures = AtomicReference<Throwable?>()
         private val socket = ServerSocket(8189, 8, InetAddress.getByName("127.0.0.1"))
         @Synchronized fun setProfile(value: JSONObject) { profile = JSONObject(value.toString()) }
         @Synchronized fun coins() = profile.getInt("coins")
         @Synchronized fun failNextUnlock(id: String) { failOnceItem = id }
+        @Synchronized fun rejectShrineSavesWithCatalogMismatch() { rejectShrineCatalogMismatch = true }
         @Synchronized fun unlockCount(id: String) = itemRequests[id] ?: 0
 
         @Synchronized private fun respond(path: String, body: JSONObject): Pair<Int, JSONObject> {
@@ -555,6 +575,9 @@ class MandirSajayeFlowTest {
                 }
                 "/api/v2/shrine" -> {
                     saveRequests.incrementAndGet()
+                    if (rejectShrineCatalogMismatch) {
+                        return 400 to JSONObject().put("error", "Choose an available item in every category")
+                    }
                     profile.put("selections", body.getJSONObject("selections"))
                 }
                 else -> return 404 to JSONObject().put("error", "Unexpected fixture request: $path")

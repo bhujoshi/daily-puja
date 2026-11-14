@@ -11,9 +11,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import com.worship.nityamandir.engine.*
 import kotlinx.coroutines.isActive
+import kotlin.math.cos
 import kotlin.math.sin
 
-/** Screen-space flames stay attached to the moving wick, with independent, smooth flicker. */
+/** Screen-space & 3D depth-scaled flames stay attached to the moving wick, with 4-stop sacred diya gradients, camphor smoke plumes, and rising golden embers. */
 @Composable
 fun RitualFlamesOverlay(
     oilLit: Boolean,
@@ -25,7 +26,11 @@ fun RitualFlamesOverlay(
     oilWick: TemplePoint? = null,
     oilWicks: List<TemplePoint> = emptyList(),
     aartiWicks: List<TemplePoint> = emptyList(),
-    incenseEmbers: List<TemplePoint> = emptyList()
+    incenseEmbers: List<TemplePoint> = emptyList(),
+    aartiRunning: Boolean = false,
+    aartiDepthScale: Float = 1f,
+    aartiBendX: Float = 0f,
+    karpuraMode: Boolean = false
 ) {
     if(!oilLit && !aartiLit) return
     var seconds by remember { mutableFloatStateOf(0f) }
@@ -43,25 +48,119 @@ fun RitualFlamesOverlay(
     Canvas(Modifier.fillMaxSize()) {
         val viewport=TempleViewport(size.width,size.height)
         val unit=viewport.imageWidth
-        fun flame(point: TemplePoint, phase: Float, scale: Float = 1f, flicker: Float = 1f) {
+        fun flame(
+            point: TemplePoint,
+            phase: Float,
+            scale: Float = 1f,
+            flicker: Float = 1f,
+            motionBendFactor: Float = 0f,
+            emitKarpuraSmoke: Boolean = false
+        ) {
             val pixel=viewport.pixel(point)
             val base=Offset(pixel.x,pixel.y)
             val t=seconds+phase
-            val height=unit*.047f*scale*(1f+flicker*(.06f*sin(t*11f)+.025f*sin(t*23f)))
-            val width=unit*.008f*scale
-            val bend=width*flicker*(.32f*sin(t*7f)+.15f*sin(t*17f))
-            val glowCenter=base-Offset(0f,height*.35f)
-            drawCircle(Brush.radialGradient(listOf(Color(0x50FFB23E),Color(0x18FF7C18),Color.Transparent),glowCenter,height*1.25f),height*1.25f,glowCenter)
+            val height=unit*.048f*scale*(1f+flicker*(.065f*sin(t*11f)+.028f*sin(t*23f)))
+            val width=unit*.0084f*scale
+            val bend=width*flicker*(.32f*sin(t*7f)+.15f*sin(t*17f)) + unit * motionBendFactor * scale
+            val glowCenter=base-Offset(bend*.25f,height*.38f)
+
+            // 4-Stop Sacred Diya Ambient Halo: rgba(255, 158, 44, 0.27) -> Transparent
+            drawCircle(
+                Brush.radialGradient(
+                    listOf(
+                        Color(0x45FF9E2C),
+                        Color(0x1DFF6D00),
+                        Color.Transparent
+                    ),
+                    glowCenter,
+                    height*1.38f
+                ),
+                height*1.38f,
+                glowCenter,
+                blendMode = BlendMode.Screen
+            )
+
+            // Subtle camphor (Karpura) wisp & rising golden spark above active 3D Aarti flames
+            if (emitKarpuraSmoke) {
+                val smokeH = height * (if (karpuraMode) 1.65f else 1.25f)
+                val tipX = base.x + bend
+                val tipY = base.y - height
+                val wispSway1 = width * 1.6f * sin(t * 2.4f) + bend * 0.45f
+                val wispSway2 = width * 2.3f * cos(t * 1.9f + phase) + bend * 0.85f
+                val smokePath = Path().apply {
+                    moveTo(tipX, tipY)
+                    cubicTo(
+                        tipX + wispSway1, tipY - smokeH * 0.36f,
+                        tipX - wispSway2, tipY - smokeH * 0.72f,
+                        tipX + wispSway1 * 0.7f, tipY - smokeH
+                    )
+                }
+                drawPath(
+                    path = smokePath,
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            Color.Transparent,
+                            Color(0x24FFFDF8),
+                            Color(0x38E8DFD5),
+                            Color(0x14FF9E2C)
+                        ),
+                        startY = tipY - smokeH,
+                        endY = tipY
+                    ),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(
+                        width = width * (if (karpuraMode) 0.85f else 0.58f),
+                        cap = StrokeCap.Round
+                    )
+                )
+                // Rising micro-ember from camphor flame tip
+                val sparkCycle = (t * 1.35f + phase * 0.7f) % 1f
+                val sparkPos = Offset(
+                    tipX + sin(t * 5f + phase) * width * 0.9f + bend * sparkCycle * 0.5f,
+                    tipY - smokeH * 0.75f * sparkCycle
+                )
+                drawCircle(
+                    color = Color(0xFFFFC107).copy(alpha = (1f - sparkCycle) * 0.65f),
+                    radius = width * 0.24f * (1f - sparkCycle * 0.5f),
+                    center = sparkPos,
+                    blendMode = BlendMode.Screen
+                )
+            }
+
             fun tongue(w: Float,h: Float,b: Float): Path = Path().apply {
                 moveTo(base.x,base.y)
-                cubicTo(base.x-w*1.3f,base.y-h*.12f,base.x-w,base.y-h*.49f,base.x+b,base.y-h)
-                cubicTo(base.x+b+w*.10f,base.y-h*.66f,base.x+w*1.7f,base.y-h*.20f,base.x,base.y)
+                cubicTo(base.x-w*1.32f,base.y-h*.12f,base.x-w,base.y-h*.49f,base.x+b,base.y-h)
+                cubicTo(base.x+b+w*.10f,base.y-h*.66f,base.x+w*1.72f,base.y-h*.20f,base.x,base.y)
                 close()
             }
-            drawPath(tongue(width,height,bend),Brush.verticalGradient(listOf(Color(0x00FF7B16),Color(0xDDFFB32A),Color(0xFFFFDB62),Color(0xB8FF8A12)),base.y-height,base.y))
-            drawPath(tongue(width*.58f,height*.79f,bend*.65f),Brush.verticalGradient(listOf(Color(0x66FFF6C1),Color(0xFFFFF4CC),Color(0xFFFFFCEB)),base.y-height*.79f,base.y))
+            // Outer Mantle (#FF6D00 Deep Saffron) -> Inner Body (#FFC107 Pure Marigold)
+            drawPath(
+                tongue(width,height,bend),
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0x00FF6D00),
+                        Color(0xE6FF6D00),
+                        Color(0xFFFFC107),
+                        Color(0xC8FF9E2C)
+                    ),
+                    base.y-height,
+                    base.y
+                )
+            )
+            // Flame Core (#FFFDF8 Karpura Ivory -> #FFF4CC Warm Ivory)
+            drawPath(
+                tongue(width*.58f,height*.79f,bend*.65f),
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0x66FFF4CC),
+                        Color(0xFFFFF8E1),
+                        Color(0xFFFFFDF8)
+                    ),
+                    base.y-height*.79f,
+                    base.y
+                )
+            )
             drawOval(Color(0xAA689AF0),base-Offset(width*.35f,height*.10f),androidx.compose.ui.geometry.Size(width*.7f,height*.12f))
-            drawLine(Color(0xFF482819),base+Offset(0f,unit*.004f),base-Offset(0f,unit*.004f),unit*.0025f,StrokeCap.Round)
+            drawLine(Color(0xFF482819),base+Offset(0f,unit*.004f),base-Offset(0f,unit*.004f),unit*.0025f*scale.coerceIn(0.8f, 1.3f),StrokeCap.Round)
         }
         fun incenseSmoke(point: TemplePoint, index: Int, isCone: Boolean) {
             val pixel = viewport.pixel(point)
@@ -124,11 +223,25 @@ fun RitualFlamesOverlay(
             }
         }
         if(aartiLit || oilLit) {
-            val aartiScale = if(aartiLit) TempleSceneLayout.AARTI_SCALE else TempleSceneLayout.AARTI_SCALE * .85f
+            val baseAartiScale = (if(aartiLit) TempleSceneLayout.AARTI_SCALE else TempleSceneLayout.AARTI_SCALE * .85f) * aartiDepthScale
             if(aartiWicks.isNotEmpty()) {
                 aartiWicks.forEachIndexed { index, wickPoint ->
-                    val wickScale = if (aartiWicks.size == 1) aartiScale else .58f * aartiScale
-                    flame(wickPoint, 1.71f + index * .7f, scale = wickScale, flicker = .25f)
+                    // In 3D Panch-Aarti perspective, front/outer wicks appear slightly closer than the upper-center wick
+                    val perspectiveWickFactor = when {
+                        aartiWicks.size == 1 -> 1f
+                        index == 0 || index == 4 -> 0.66f
+                        index == 2 -> 0.56f
+                        else -> 0.60f
+                    }
+                    val wickScale = perspectiveWickFactor * baseAartiScale
+                    flame(
+                        point = wickPoint,
+                        phase = 1.71f + index * .7f,
+                        scale = wickScale,
+                        flicker = if (aartiRunning) .42f else .25f,
+                        motionBendFactor = aartiBendX,
+                        emitKarpuraSmoke = aartiRunning || karpuraMode
+                    )
                 }
             } else if(traditional) {
                 listOf(
@@ -144,11 +257,22 @@ fun RitualFlamesOverlay(
                             lamp.y+offset.y*TempleSceneLayout.AARTI_SCALE
                         ),
                         1.71f+index*.7f,
-                        scale=.58f*aartiScale,
-                        flicker=.25f
+                        scale=.58f*baseAartiScale,
+                        flicker=if (aartiRunning) .42f else .25f,
+                        motionBendFactor = aartiBendX,
+                        emitKarpuraSmoke = aartiRunning || karpuraMode
                     )
                 }
-            } else flame(TempleSceneLayout.aartiWick(lamp),1.71f,scale=aartiScale,flicker=.25f)
+            } else {
+                flame(
+                    TempleSceneLayout.aartiWick(lamp),
+                    1.71f,
+                    scale = baseAartiScale,
+                    flicker = if (aartiRunning) .42f else .25f,
+                    motionBendFactor = aartiBendX,
+                    emitKarpuraSmoke = aartiRunning || karpuraMode
+                )
+            }
         }
     }
 }

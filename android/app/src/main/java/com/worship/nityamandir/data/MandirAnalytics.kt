@@ -513,6 +513,35 @@ class MandirAnalytics(private val sink: Sink) {
         logEvent("mindfulness_restarted", mapOf("practice" to practice))
     }
 
+    fun logReminderToggled(enabled: Boolean, source: String = "drawer") {
+        setUserProperty("puja_reminder_8am", if (enabled) "on" else "off")
+        logEvent(
+            "puja_reminder_toggled",
+            mapOf(
+                "enabled" to enabled,
+                "source" to source
+            )
+        )
+    }
+
+    fun logReminderPermissionResult(granted: Boolean) {
+        logEvent("puja_reminder_permission", mapOf("granted" to granted))
+    }
+
+    fun logMorningReminderShown(occasionId: String? = null) {
+        val params = buildMap<String, Any> {
+            put("hour", DailyPujaReminder.REMINDER_HOUR)
+            if (!occasionId.isNullOrBlank()) {
+                put("occasion_id", occasionId)
+            }
+        }
+        logEvent("morning_reminder_shown", params)
+    }
+
+    fun logMorningReminderOpened() {
+        logEvent("morning_reminder_opened", mapOf("hour" to DailyPujaReminder.REMINDER_HOUR))
+    }
+
     companion object {
         private const val MAX_EVENT_NAME_LENGTH = 40
         private const val MAX_PARAM_KEY_LENGTH = 40
