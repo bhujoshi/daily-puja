@@ -68,6 +68,42 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
     val account=remember {com.worship.nityamandir.data.DevotionAccount(context.applicationContext)}
     val mindfulnessTracker=remember {com.worship.nityamandir.data.MindfulnessTracker(context.applicationContext)}
     val scope=rememberCoroutineScope()
+    var reminderEnabled by remember {mutableStateOf(com.worship.nityamandir.data.DailyPujaReminder.isEnabled(prefs))}
+    var notificationPermitted by remember {mutableStateOf(com.worship.nityamandir.data.DailyPujaReminder.hasNotificationPermission(context))}
+    val notificationPermissionLauncher=androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        notificationPermitted=com.worship.nityamandir.data.DailyPujaReminder.hasNotificationPermission(context)
+        analytics.logReminderPermissionResult(granted)
+        if(granted && reminderEnabled) {
+            com.worship.nityamandir.data.DailyPujaReminder.syncSchedule(context)
+        } else if(!granted) {
+            com.worship.nityamandir.data.DailyPujaReminder.openAppNotificationSettings(context)
+        }
+    }
+    val initialNotificationPermissionLauncher=androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        notificationPermitted=com.worship.nityamandir.data.DailyPujaReminder.hasNotificationPermission(context)
+        analytics.logReminderPermissionResult(granted)
+        if(granted && reminderEnabled) {
+            com.worship.nityamandir.data.DailyPujaReminder.syncSchedule(context)
+        }
+    }
+    LaunchedEffect(hindi,reminderEnabled) {
+        com.worship.nityamandir.data.DailyPujaReminder.syncSchedule(context)
+    }
+    LaunchedEffect(Unit) {
+        if(!context.packageName.endsWith(".verification") &&
+            reminderEnabled &&
+            com.worship.nityamandir.data.DailyPujaReminder.needsRuntimePermissionRequest(context) &&
+            !com.worship.nityamandir.data.DailyPujaReminder.wasPermissionPrompted(prefs)
+        ) {
+            delay(1200)
+            com.worship.nityamandir.data.DailyPujaReminder.markPermissionPrompted(prefs)
+            initialNotificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
     var mindfulnessScreen by remember {mutableStateOf(false)}
     var devotionSheet by remember {mutableStateOf(false)}
     var devotionPage by remember {mutableStateOf(DevotionPage.PROFILE)}
@@ -99,6 +135,8 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
             }
             if(event==androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 (context as? android.app.Activity)?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                notificationPermitted=com.worship.nityamandir.data.DailyPujaReminder.hasNotificationPermission(context)
+                if(reminderEnabled) com.worship.nityamandir.data.DailyPujaReminder.syncSchedule(context)
             }
         }
         lifecycle.addObserver(observer)
@@ -314,6 +352,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
     LaunchedEffect(session.aartiComplete) {
         if(session.aartiComplete) {
             account.recordCompletion()
+            com.worship.nityamandir.data.DailyPujaReminder.recordPujaCompletedToday(context)
             com.worship.nityamandir.data.PlayStoreReviewHelper.recordPujaCompleted(prefs)
             showReviewPrompt=com.worship.nityamandir.data.PlayStoreReviewHelper.shouldShowPostPujaReviewPrompt(prefs)
             analytics.logPujaCompleted(
@@ -482,6 +521,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                 onSessionCompleted={practice,mins,completedEarly,japaCount ->
                     val updated=mindfulnessTracker.recordSession(mins,practice)
                     account.recordCompletion()
+                    com.worship.nityamandir.data.DailyPujaReminder.recordPujaCompletedToday(context)
                     analytics.logMindfulnessCompleted(
                         practice=practice.id,
                         durationMinutes=mins,
@@ -620,6 +660,73 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                     }
                 )
 
+                // Morning 8:00 AM Daily Puja Reminder Toggle Card
+                val reminderActive=reminderEnabled && notificationPermitted
+                SacredDrawerCard(
+                    title=tr("प्रातः ८:०० पूजा स्मरण","8:00 AM Puja Reminder"),
+                    subtitle=when {
+                        !reminderEnabled -> tr("प्रतिदिन सुबह पूजा याद दिलाने हेतु चालू करें","Turn on daily morning puja notification")
+                        !notificationPermitted -> tr("सूचना अनुमति दें · प्रतिदिन सुबह ८:०० बजे","Allow notifications · Daily at 8:00 AM")
+                        else -> tr("प्रतिदिन सुबह ८:०० बजे सक्रिय","Active daily at 8:00 AM")
+                    },
+                    leadingIcon={
+                        Icon(
+                            if(reminderActive) Icons.Outlined.NotificationsActive else Icons.Outlined.NotificationsNone,
+                            null,
+                            tint=RitualGold,
+                            modifier=Modifier.size(22.dp)
+                        )
+                    },
+                    trailingContent={
+                        Surface(
+                            shape=RoundedCornerShape(50),
+                            color=when {
+                                reminderActive -> RitualInk
+                                reminderEnabled -> Color(0xFFFCECD2)
+                                else -> Color(0xFFEDE0CE)
+                            },
+                            border=BorderStroke(1.dp,if(reminderActive) RitualInk else Color(0x66B3833B))
+                        ) {
+                            Text(
+                                text=when {
+                                    reminderActive -> tr("चालू","ON")
+                                    reminderEnabled -> tr("अनुमति","Allow")
+                                    else -> tr("बंद","OFF")
+                                },
+                                modifier=Modifier.padding(horizontal=10.dp,vertical=4.dp),
+                                fontSize=12.sp,
+                                fontWeight=FontWeight.SemiBold,
+                                color=if(reminderActive) cream else RitualInk
+                            )
+                        }
+                    },
+                    modifier=Modifier.testTag("drawer-morning-reminder"),
+                    onClick={
+                        analytics.logDrawerItemSelected("morning_reminder")
+                        if(reminderEnabled && !notificationPermitted) {
+                            if(com.worship.nityamandir.data.DailyPujaReminder.needsRuntimePermissionRequest(context)) {
+                                com.worship.nityamandir.data.DailyPujaReminder.markPermissionPrompted(prefs)
+                                notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                com.worship.nityamandir.data.DailyPujaReminder.openAppNotificationSettings(context)
+                            }
+                        } else {
+                            val next=!reminderEnabled
+                            reminderEnabled=next
+                            com.worship.nityamandir.data.DailyPujaReminder.setEnabled(context,next)
+                            analytics.logReminderToggled(next,"drawer")
+                            if(next && !notificationPermitted) {
+                                if(com.worship.nityamandir.data.DailyPujaReminder.needsRuntimePermissionRequest(context)) {
+                                    com.worship.nityamandir.data.DailyPujaReminder.markPermissionPrompted(prefs)
+                                    notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                } else {
+                                    com.worship.nityamandir.data.DailyPujaReminder.openAppNotificationSettings(context)
+                                }
+                            }
+                        }
+                    }
+                )
+
                 // Direct Language Toggle Pill Row
                 SacredDrawerCard(
                     title=if(hindi) "English" else "हिंदी",
@@ -682,6 +789,22 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                             selection=nextSelection
                             session=WorshipSession(deityCount=nextSelection.deityCount)
                             menu=false
+                        }
+                    )
+                    SacredDrawerCard(
+                        title=tr("प्रातः पूजा सूचना भेजें (परीक्षण)","Send 8:00 AM notification (test)"),
+                        subtitle=tr("अभी पूजा स्मरण सूचना की जाँच करें","Preview morning puja notification now"),
+                        leadingIcon={Icon(Icons.Outlined.NotificationsActive,null,tint=RitualGold,modifier=Modifier.size(22.dp))},
+                        onClick={
+                            analytics.logDrawerItemSelected("debug_test_morning_reminder")
+                            menu=false
+                            if(!com.worship.nityamandir.data.DailyPujaReminder.deliverReminderIfDue(context,forceForTest=true)) {
+                                if(com.worship.nityamandir.data.DailyPujaReminder.needsRuntimePermissionRequest(context)) {
+                                    notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                } else {
+                                    com.worship.nityamandir.data.DailyPujaReminder.openAppNotificationSettings(context)
+                                }
+                            }
                         }
                     )
                 }
