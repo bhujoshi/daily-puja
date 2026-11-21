@@ -255,4 +255,4 @@ All Fastlane metadata is located under [`android/fastlane/`](file:///Users/bhuwa
    - *Does your app collect or share any of the required user data types?* → **Yes** (only when a user optionally signs in with Google or uses the account sync service):
      - **Personal info → Name & Email address**: Collected, Optional (for Account Management / Google Sign-In backup), Not shared with third parties, Encrypted in transit (HTTPS/TLS), Users can request deletion.
      - **App activity → Other actions (Devotion streak, Punya Coin ledger, unlocked shrine options)**: Collected, Optional (for App Functionality & Account sync), Not shared, Encrypted in transit, Users can request deletion.
-   - **Account Deletion URL**: `https://pavitramandir.app/privacy-policy.html` (see section 4 & 5 of [`web/privacy-policy.html`](file:///Users/bhuwanjoshi/work/worship/web/privacy-policy.html)).
+   - **Account Deletion URL**: `https://pavitramandir.app/delete-account.html` (source in [`web/delete-account.html`](file:///Users/bhuwanjoshi/work/worship/web/delete-account.html), backed by `POST /api/v2/account-deletion-request`).

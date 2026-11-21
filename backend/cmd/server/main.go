@@ -63,6 +63,7 @@ func main() {
 	}
 	router.Handle("/api/v2/music", musicHandler)
 	router.Handle("/api/v2/", accounts)
+	router.Handle("/delete-account", community.DeletionPageHandler())
 	// Legacy prototype routes are opt-in: they trust arbitrary user headers.
 	if os.Getenv("ENABLE_LEGACY_DEMO") == "true" {
 		router.Handle("/api/v1/", legacy)

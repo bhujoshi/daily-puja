@@ -1,7 +1,30 @@
 # Android release builds
 
 Application ID: `com.pavitramandir.app`  
-Version: `1.0.20` (version code `21`)
+Version: `1.0.22` (version code `23`)
+
+## Version 1.0.22
+
+Includes weekday-specific Daily Temples (`DailyTemples`, `DailyTempleSync`) with
+Saturday Lord Shani Dev (`shanidev.webp`) and weekday-aware morning puja
+reminders, free access to all shrines, 9 deities, garlands, lamps, shankh,
+aarti thalis, and prasad, distraction-free direct altar interaction (removing
+the bottom ritual dock), physically grounded Abhishek water flow
+(`AbhishekWaterPhysics`, `WaterFlowOverlay`, `ScreenWaterDroplets`), WebP/OGG
+asset and GLB optimization with `en`/`hi` locale filtering (~12 MB AAB / ~8 MB
+APK), and a dedicated web account deletion flow (`web/delete-account.html`,
+`POST /api/v2/account-deletion-request`). Signed APK and AAB outputs are stored
+in `android/app/build/outputs/releases/1.0.22/`.
+
+## Version 1.0.21
+
+Includes the daily 8:00 AM local morning puja notification (`DailyPujaReminder`,
+`DailyPujaReminderReceiver`) with bilingual Hindi/English and festival greetings,
+Temple Options drawer reminder toggle, hardware-accelerated 3D glTF/GLB brass
+aarti thali rendering (`GlbAarti3DRenderer`) with refined multi-wick flame
+overlays (`RitualFlamesOverlay`), and durable offline shrine selection sync
+(`ShrineSelectionSync`). Signed APK and AAB outputs are stored in
+`android/app/build/outputs/releases/1.0.21/`.
 
 ## Version 1.0.20
 

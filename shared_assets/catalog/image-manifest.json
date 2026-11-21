@@ -1,74 +1,70 @@
 [
   {
-    "runtime": "android/app/src/main/assets/shrine/backgrounds/carved.png",
+    "runtime": "android/app/src/main/assets/shrine/backgrounds/carved.webp",
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {
-    "runtime": "android/app/src/main/assets/shrine/backgrounds/diwali.png",
+    "runtime": "android/app/src/main/assets/shrine/backgrounds/diwali.webp",
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {
-    "runtime": "android/app/src/main/assets/shrine/backgrounds/divya_darshan.png",
+    "runtime": "android/app/src/main/assets/shrine/backgrounds/divya_darshan.webp",
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {
-    "runtime": "android/app/src/main/assets/shrine/backgrounds/ivory.png",
+    "runtime": "android/app/src/main/assets/shrine/backgrounds/ivory.webp",
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {
-    "runtime": "android/app/src/main/assets/shrine/backgrounds/kamal_peeth.png",
+    "runtime": "android/app/src/main/assets/shrine/backgrounds/kamal_peeth.webp",
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {
-    "runtime": "android/app/src/main/assets/shrine/backgrounds/marble.png",
+    "runtime": "android/app/src/main/assets/shrine/backgrounds/marble.webp",
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {
-    "runtime": "android/app/src/main/assets/shrine/backgrounds/swarna_peeth.png",
+    "runtime": "android/app/src/main/assets/shrine/backgrounds/swarna_peeth.webp",
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {
-    "runtime": "android/app/src/main/assets/shrine/backgrounds/wood.png",
+    "runtime": "android/app/src/main/assets/shrine/idols/durga.webp",
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {
-    "runtime": "android/app/src/main/assets/shrine/idols/durga.png",
+    "runtime": "android/app/src/main/assets/shrine/idols/ganesh_hanuman.webp",
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {
-    "runtime": "android/app/src/main/assets/shrine/idols/ganesh_hanuman.png",
+    "runtime": "android/app/src/main/assets/shrine/idols/hanuman.webp",
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {
-    "runtime": "android/app/src/main/assets/shrine/idols/hanuman.png",
+    "runtime": "android/app/src/main/assets/shrine/idols/lakshmi.webp",
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {
-    "runtime": "android/app/src/main/assets/shrine/idols/lakshmi.png",
+    "runtime": "android/app/src/main/assets/shrine/idols/original.webp",
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {
-    "runtime": "android/app/src/main/assets/shrine/idols/original.png",
+    "runtime": "android/app/src/main/assets/shrine/idols/radha_krishna.webp",
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {
-    "runtime": "android/app/src/main/assets/shrine/idols/radha_krishna.png",
+    "runtime": "android/app/src/main/assets/shrine/idols/ram_darbar.webp",
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {
-    "runtime": "android/app/src/main/assets/shrine/idols/ram_darbar.png",
+    "runtime": "android/app/src/main/assets/shrine/idols/shiva.webp",
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {
-    "runtime": "android/app/src/main/assets/shrine/idols/shiva.png",
+    "runtime": "android/app/src/main/assets/shrine/prasad/halwa.webp",
     "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
   },
   {
-    "runtime": "android/app/src/main/assets/shrine/prasad/halwa.png",
-    "preparation": "built-in imagegen; prompt set in docs/ASSET_PIPELINE.md"
-  },
-  {
-    "runtime": "android/app/src/main/assets/shrine/prasad/laddu_bowl.png",
+    "runtime": "android/app/src/main/assets/shrine/prasad/laddu_bowl.webp",
     "preparation": "existing cutout"
   }
 ]

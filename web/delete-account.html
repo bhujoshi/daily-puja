@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Request deletion of your Pavitra Mandir account and associated data.">
+  <meta name="robots" content="index, follow">
+  <title>Delete Account &amp; Data · Pavitra Mandir</title>
+  <style>
+    :root { color-scheme: light; --ink: #30281f; --muted: #65594c; --accent: #864014; --accent-dark: #6b310d; --line: #e5d8c5; --card: #f0e9dc; --surface: #fffdf8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #faf7f0; color: var(--ink); font: 17px/1.75 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    main { max-width: 850px; margin: auto; padding: 56px 24px 72px; }
+    header { border-bottom: 1px solid var(--line); padding-bottom: 28px; }
+    .brand { color: var(--accent); font-weight: 700; letter-spacing: .12em; font-size: .8rem; text-transform: uppercase; }
+    h1 { margin: 10px 0; font: 600 clamp(2.1rem, 7vw, 3.2rem)/1.15 Georgia, serif; }
+    h2 { margin: 0 0 12px; font: 600 1.45rem/1.35 Georgia, serif; }
+    p { margin: 0 0 16px; }
+    .meta, footer { color: var(--muted); font-size: .9rem; }
+    .summary { background: var(--card); padding: 24px; border-radius: 12px; margin: 28px 0; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 24px; margin: 24px 0; }
+    section { margin-top: 34px; }
+    ul { padding-left: 24px; }
+    li { margin-bottom: 10px; }
+    a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+    a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    code { overflow-wrap: anywhere; font-size: .9em; }
+    label { display: block; font-weight: 600; margin: 16px 0 6px; }
+    input[type="email"], textarea {
+      width: 100%; padding: 12px 14px; border: 1px solid #cbb9a1; border-radius: 8px;
+      background: #ffffff; color: var(--ink); font: inherit;
+    }
+    textarea { min-height: 96px; resize: vertical; }
+    .checkbox-row { display: flex; gap: 10px; align-items: flex-start; margin: 18px 0; font-weight: 400; cursor: pointer; }
+    .checkbox-row input { margin-top: 6px; flex: 0 0 auto; width: 18px; height: 18px; accent-color: var(--accent); }
+    .btn {
+      display: inline-block; border: 0; border-radius: 8px; padding: 12px 22px;
+      background: var(--accent); color: #ffffff; font: 600 1rem/1.2 inherit; cursor: pointer; text-decoration: none;
+    }
+    .btn:hover { background: var(--accent-dark); }
+    .btn[disabled] { opacity: .65; cursor: wait; }
+    .btn-secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); margin-top: 10px; }
+    .btn-secondary:hover { background: #f6ede0; }
+    .status { display: none; margin-top: 18px; padding: 16px 18px; border-radius: 10px; border: 1px solid var(--line); }
+    .status.ok { display: block; background: #edf7ed; border-color: #6aa16d; color: #1e4620; }
+    .status.err { display: block; background: #fff1d8; border-color: #b97a30; color: #5c3309; }
+    footer { border-top: 1px solid var(--line); margin-top: 40px; padding-top: 20px; }
+    @media (max-width: 480px) { main { padding: 32px 20px 48px; } .card { padding: 18px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="brand">Pavitra Mandir · Account &amp; Data Deletion</div>
+      <h1>Delete Account and Data</h1>
+      <p class="meta">App: <strong>Pavitra Mandir</strong> (<code>com.pavitramandir.app</code>)<br>Developer: <strong>Bhuwan Chandra Joshi</strong></p>
+    </header>
+
+    <div class="summary">
+      <strong>Two ways to delete your account:</strong>
+      <p>You can delete your account immediately inside the Pavitra Mandir Android app, or submit a web deletion request below if you no longer have the app installed.</p>
+    </div>
+
+    <section aria-labelledby="in-app">
+      <h2 id="in-app">1. Immediate deletion inside the app</h2>
+      <p>If you still have Pavitra Mandir installed on your device:</p>
+      <ul>
+        <li>Open <strong>Pavitra Mandir</strong> and open the profile/menu drawer.</li>
+        <li>Tap <strong>My profile</strong> → <strong>Delete account and activity</strong> and confirm.</li>
+        <li>Your server account, profile, worship history, coins, unlocked items, and sessions are removed immediately.</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="web-request">
+      <h2 id="web-request">2. Request account deletion on the web</h2>
+      <p>Use this form to request deletion of your Pavitra Mandir account and associated cloud data without reinstalling the app.</p>
+      <div class="card">
+        <form id="deletionForm">
+          <label for="email">Google account email used in Pavitra Mandir</label>
+          <input id="email" name="email" type="email" required maxlength="254" autocomplete="email" placeholder="you@example.com">
+
+          <label for="reason">Optional notes or reason</label>
+          <textarea id="reason" name="reason" maxlength="500" placeholder="Optional details for your request"></textarea>
+
+          <label class="checkbox-row">
+            <input id="confirm" type="checkbox" required>
+            <span>I confirm that I want to permanently delete my Pavitra Mandir account and associated synced data (coins, unlocked shrine items, devotion streak, and referral history).</span>
+          </label>
+
+          <button id="submitBtn" class="btn" type="submit">Submit deletion request</button>
+          <div id="statusBox" class="status" role="status" aria-live="polite"></div>
+        </form>
+      </div>
+      <p class="meta">You can also email <a href="mailto:bhuwanchandra.it@gmail.com?subject=Pavitra%20Mandir%20Account%20Deletion%20Request">bhuwanchandra.it@gmail.com</a> from your registered Google email address.</p>
+    </section>
+
+    <section aria-labelledby="data-scope">
+      <h2 id="data-scope">3. What data is deleted and what is retained</h2>
+      <ul>
+        <li><strong>Permanently deleted:</strong> your account record, verified email address, saved shrine selections, unlocked items, Punya Coin balance and passbook history, completed puja dates, outbound WhatsApp share links, and active login sessions.</li>
+        <li><strong>Retained for abuse prevention only:</strong> minimal one-way cryptographic digests of previously registered app-scoped device identities and previously rewarded Google account subjects are retained solely to prevent repeated referral coin rewards after account deletion or reinstallation. These digests cannot be used to restore your profile.</li>
+        <li><strong>Processing timeline:</strong> verified web deletion requests are processed within <strong>7 days</strong>. In-app deletion takes effect immediately.</li>
+        <li><strong>Local device data:</strong> to remove preferences stored locally on your phone, use Android <strong>Settings → Apps → Pavitra Mandir → Storage → Clear storage</strong> or uninstall the app.</li>
+      </ul>
+    </section>
+
+    <footer>
+      Pavitra Mandir · <a href="privacy-policy.html">Privacy Policy</a> · <a href="/">Home</a>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      var endpoint = "https://mcp-daily-puja-backend-staging-b3mqb.sprites.app/api/v2/account-deletion-request";
+      var form = document.getElementById("deletionForm");
+      var emailInput = document.getElementById("email");
+      var reasonInput = document.getElementById("reason");
+      var submitBtn = document.getElementById("submitBtn");
+      var statusBox = document.getElementById("statusBox");
+
+      function showStatus(ok, html) {
+        statusBox.className = "status " + (ok ? "ok" : "err");
+        statusBox.innerHTML = html;
+      }
+
+      function escapeHtml(text) {
+        return text.replace(/[&<>"']/g, function (c) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c];
+        });
+      }
+
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        var email = emailInput.value.trim();
+        var reason = reasonInput.value.trim();
+        if (!email) return;
+
+        submitBtn.disabled = true;
+        statusBox.className = "status";
+        statusBox.textContent = "";
+
+        fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email, reason: reason })
+        })
+          .then(function (res) {
+            return res.text().then(function (text) {
+              var data = {};
+              try { data = text ? JSON.parse(text) : {}; } catch (_) {}
+              return { ok: res.ok, status: res.status, data: data };
+            });
+          })
+          .then(function (result) {
+            if (result.ok && result.data.requested) {
+              var ref = escapeHtml(result.data.reference_id || "");
+              var msg = escapeHtml(result.data.message || "Your account deletion request has been recorded.");
+              showStatus(true, "<strong>Request received.</strong><br>" + msg + (ref ? "<br>Reference ID: <code>" + ref + "</code>" : ""));
+              form.reset();
+              return;
+            }
+            var errMsg = escapeHtml((result.data && result.data.error) || "Could not submit request right now.");
+            var mailto = "mailto:bhuwanchandra.it@gmail.com?subject=" +
+              encodeURIComponent("Pavitra Mandir Account Deletion Request") +
+              "&body=" + encodeURIComponent("Please delete my Pavitra Mandir account and associated data.\n\nGoogle account email: " + email + (reason ? "\nReason: " + reason : ""));
+            showStatus(false, errMsg + '<br><a class="btn btn-secondary" href="' + mailto + '">Send request via email instead</a>');
+          })
+          .catch(function () {
+            var mailto = "mailto:bhuwanchandra.it@gmail.com?subject=" +
+              encodeURIComponent("Pavitra Mandir Account Deletion Request") +
+              "&body=" + encodeURIComponent("Please delete my Pavitra Mandir account and associated data.\n\nGoogle account email: " + email + (reason ? "\nReason: " + reason : ""));
+            showStatus(false, 'Unable to reach the account service right now. You can send your deletion request directly by email:<br><a class="btn btn-secondary" href="' + mailto + '">Email deletion request</a>');
+          })
+          .finally(function () {
+            submitBtn.disabled = false;
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -123,15 +123,40 @@ class DailyPujaReminderTest {
     }
 
     @Test
-    fun `builds reverent Hindi and English copy for ordinary and festival mornings`() {
-        val ordinaryDay = LocalDate.of(2026, 11, 14)
-        val hindiOrdinary = DailyPujaReminder.buildCopy(hindi = true, today = ordinaryDay)
-        val englishOrdinary = DailyPujaReminder.buildCopy(hindi = false, today = ordinaryDay)
+    fun `builds reverent Hindi and English copy with weekday deities and festival greetings`() {
+        val saturday = LocalDate.of(2026, 11, 21)
+        val hindiSat = DailyPujaReminder.buildCopy(hindi = true, today = saturday)
+        val englishSat = DailyPujaReminder.buildCopy(hindi = false, today = saturday)
 
-        assertNull(hindiOrdinary.occasionId)
-        assertTrue(hindiOrdinary.title.contains("प्रातः पूजा"))
-        assertTrue(hindiOrdinary.body.contains("पवित्र मंदिर"))
-        assertEquals("Time for Morning Puja", englishOrdinary.title.removePrefix("🪔 "))
+        assertNull(hindiSat.occasionId)
+        assertTrue(hindiSat.title.contains("शनिवार"))
+        assertTrue(hindiSat.title.contains("शनिदेव"))
+        assertTrue(hindiSat.body.contains("पवित्र मंदिर"))
+        assertTrue(englishSat.title.contains("Saturday"))
+        assertTrue(englishSat.title.contains("Shani Dev"))
+        assertTrue(englishSat.body.contains("Shani Dev"))
+
+        val sunday = LocalDate.of(2026, 11, 22)
+        val hindiSun = DailyPujaReminder.buildCopy(hindi = true, today = sunday)
+        val englishSun = DailyPujaReminder.buildCopy(hindi = false, today = sunday)
+
+        assertNull(hindiSun.occasionId)
+        assertTrue(hindiSun.title.contains("रविवार"))
+        assertTrue(hindiSun.title.contains("महालक्ष्मी"))
+        assertTrue(englishSun.title.contains("Sunday"))
+        assertTrue(englishSun.title.contains("Maa Lakshmi"))
+
+        // Verify all non-festival days mention their weekday and deity in both languages
+        val monday = LocalDate.of(2026, 11, 16)
+        val expectedEnDeities = listOf("Shiva", "Hanuman", "Ganesha", "Radha & Krishna", "Durga", "Shani Dev", "Lakshmi")
+        val expectedHiDeities = listOf("शिव", "हनुमान", "गणेश", "राधा-कृष्ण", "दुर्गा", "शनिदेव", "महालक्ष्मी")
+        for (offset in 0L..6L) {
+            val date = monday.plusDays(offset)
+            val hiCopy = DailyPujaReminder.buildCopy(hindi = true, today = date)
+            val enCopy = DailyPujaReminder.buildCopy(hindi = false, today = date)
+            assertTrue("Expected Hindi deity on $date: ${hiCopy.title}", hiCopy.title.contains(expectedHiDeities[offset.toInt()]))
+            assertTrue("Expected English deity on $date: ${enCopy.title}", enCopy.title.contains(expectedEnDeities[offset.toInt()]))
+        }
 
         val diwaliDay = LocalDate.of(2026, 11, 5)
         val hindiDiwali = DailyPujaReminder.buildCopy(hindi = true, today = diwaliDay)

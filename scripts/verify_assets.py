@@ -17,6 +17,7 @@ assets=root/'android/app/src/main/assets'
 for category in catalog['categories']:
  ids=[o['id'] for o in category['options']]
  assert len(ids)==len(set(ids)) and 'original' in ids
+for category in android_catalog['categories']:
  for option in category['options']:
   for key in ['path','thumbnail']:
    p=assets/option[key];assert p.is_file(),p

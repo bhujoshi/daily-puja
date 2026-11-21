@@ -18,6 +18,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.worship.nityamandir.MainActivity
 import com.worship.nityamandir.R
+import com.worship.nityamandir.engine.DailyTemples
 import com.worship.nityamandir.engine.TempleOccasions
 import java.time.LocalDate
 import java.time.LocalTime
@@ -110,6 +111,7 @@ object DailyPujaReminder {
             "Gentle daily 8:00 AM reminder for morning puja and aarti"
         }
 
+        val dailyTemple = DailyTemples.forDate(today)
         val occasion = TempleOccasions.activeOccasion(today)
         if (occasion != null) {
             return if (hindi) {
@@ -135,15 +137,15 @@ object DailyPujaReminder {
             Copy(
                 channelName = channelName,
                 channelDescription = channelDescription,
-                title = "🪔 प्रातः पूजा का पावन समय",
-                body = "प्रभात मंगलमय हो! अपने पवित्र मंदिर में दीप प्रज्वलित करें और नित्य पूजा एवं आरती से दिन का शुभारंभ करें।"
+                title = "🪔 ${dailyTemple.dayNameHi} · ${dailyTemple.deityNameHi} प्रातः पूजा",
+                body = "${dailyTemple.dayNameHi} मंगलमय हो! अपने पवित्र मंदिर में ${dailyTemple.deityNameHi} के दर्शन करें, दीप प्रज्वलित करें और नित्य पूजा एवं आरती से दिन का शुभारंभ करें।"
             )
         } else {
             Copy(
                 channelName = channelName,
                 channelDescription = channelDescription,
-                title = "🪔 Time for Morning Puja",
-                body = "Blessed morning! Light the sacred diya in Pavitra Mandir and begin your day with daily puja and aarti."
+                title = "🪔 ${dailyTemple.dayNameEn} · ${dailyTemple.deityNameEn} Morning Puja",
+                body = "Blessed ${dailyTemple.dayNameEn}! Visit ${dailyTemple.deityNameEn} in Pavitra Mandir, light the sacred diya, and begin your day with daily puja and aarti."
             )
         }
     }

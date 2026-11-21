@@ -45,7 +45,7 @@ func TestCoinWalletAndIndividualUnlocks(t *testing.T) {
 	s.now = func() time.Time { return now }
 	_, auth := call(s, "POST", "register", "", `{"email":"coins@example.com","password":"long-password"}`)
 	token := auth["token"].(string)
-	for i := 0; i < 9; i++ {
+	for i := 0; i < 5; i++ {
 		call(s, "POST", "activity/puja", token, steps)
 		_, profile := call(s, "POST", "activity/puja", token, steps)
 		if profile["coins"] != float64(i+1) {
@@ -54,27 +54,24 @@ func TestCoinWalletAndIndividualUnlocks(t *testing.T) {
 		// Include missed days: coins must accumulate independently of streaks.
 		now = now.Add(48 * time.Hour)
 	}
-	for _, item := range []string{"ivory", "ivory"} {
-		code, profile := call(s, "POST", "coins/unlock", token, `{"category":"shrine","item":"`+item+`"}`)
+	for _, item := range []string{"mayur_dhoop", "mayur_dhoop"} {
+		code, profile := call(s, "POST", "coins/unlock", token, `{"category":"incense","item":"`+item+`"}`)
 		if code != 200 || profile["coins"] != float64(2) {
 			t.Fatal("double debit", code, profile)
 		}
 	}
-	if code, _ := call(s, "POST", "coins/unlock", token, `{"category":"shrine","item":"carved"}`); code != 409 {
-		t.Fatal("overspending", code)
-	}
-	code, profile := call(s, "POST", "coins/unlock", token, `{"category":"flowers","item":"rose"}`)
+	code, profile := call(s, "POST", "coins/unlock", token, `{"category":"flowers","item":"bouquet"}`)
 	if code != 200 || profile["coins"] != float64(0) || profile["unlocked"] != false {
 		t.Fatal(code, profile)
 	}
-	selection := `{"selections":{"shrine":"ivory","idols":"shiva","flowers":"original,rose","lamp":"brass","shankh":"ivory","aarti":"traditional","prasad":"halwa"}}`
+	if code, _ := call(s, "POST", "coins/unlock", token, `{"category":"flowers","item":"azalea"}`); code != 409 {
+		t.Fatal("overspending", code)
+	}
+	selection := `{"selections":{"shrine":"ivory","idols":"shanidev","garland":"mogra","flowers":"orchid,bouquet","incense":"mayur_dhoop","lamp":"brass","shankh":"swarna","aarti":"traditional","prasad":"halwa"}}`
 	if code, _ := call(s, "PUT", "shrine", token, selection); code != 200 {
 		t.Fatal(code)
 	}
-	if code, _ := call(s, "PUT", "shrine", token, strings.Replace(selection, `"ivory"`, `"carved"`, 1)); code != 403 {
-		t.Fatal("unowned shrine accepted", code)
-	}
-	if code, _ := call(s, "PUT", "shrine", token, strings.Replace(selection, `original,rose`, `rose,orchid`, 1)); code != 403 {
+	if code, _ := call(s, "PUT", "shrine", token, strings.Replace(selection, `orchid,bouquet`, `orchid,azalea`, 1)); code != 403 {
 		t.Fatal("unowned flower accepted", code)
 	}
 	if code, _ := call(s, "POST", "coins/unlock", token, `{"category":"unknown","item":"original"}`); code != 400 {
@@ -84,8 +81,9 @@ func TestCoinWalletAndIndividualUnlocks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	restored.now = s.now
 	_, profile = call(restored, "GET", "me", token, "")
-	if profile["coins"] != float64(0) || profile["owned"].(map[string]any)["shrine:ivory"] != true || profile["selections"].(map[string]any)["flowers"] != "original,rose" {
+	if profile["coins"] != float64(0) || profile["owned"].(map[string]any)["incense:mayur_dhoop"] != true || profile["selections"].(map[string]any)["flowers"] != "orchid,bouquet" {
 		t.Fatal(profile)
 	}
 }
@@ -101,83 +99,66 @@ func TestFreeRitualVariantsWithoutPackage(t *testing.T) {
 	}
 }
 
-func TestDefaultMarbleShrineNeedsNoCoinPurchase(t *testing.T) {
+func TestAllShrinesAndDailyTemplePresetsNeedNoCoinPurchase(t *testing.T) {
 	s, _ := New(filepath.Join(t.TempDir(), "accounts.json"))
 	_, auth := call(s, "POST", "register", "", `{"email":"marble@example.com","password":"long-password"}`)
 	token := auth["token"].(string)
-	for _, freeShrine := range []string{"marble", "diwali", "divya_darshan", "kamal_peeth", "swarna_peeth"} {
-		selection := `{"selections":{"shrine":"` + freeShrine + `","idols":"durga","flowers":"original","lamp":"brass","shankh":"ivory","aarti":"traditional","prasad":"laddu"}}`
+	for _, freeShrine := range []string{"original", "marble", "diwali", "divya_darshan", "kamal_peeth", "swarna_peeth", "ivory", "carved", "swarna"} {
+		selection := `{"selections":{"shrine":"` + freeShrine + `","idols":"shanidev","garland":"lotus","flowers":"rose","incense":"kamal_dhoop","lamp":"peacock","shankh":"swarna","aarti":"karpura","prasad":"modak"}}`
 		code, profile := call(s, "PUT", "shrine", token, selection)
 		if code != 200 || profile["coins"] != float64(0) || profile["unlocked"] != false {
-			t.Fatal("free shrine blocked a selection", freeShrine, code, profile)
+			t.Fatal("free shrine/daily preset blocked selection", freeShrine, code, profile)
 		}
 	}
-	// Even a legacy client sending an explicit unlock must not debit the wallet.
+	// Even a legacy client sending an explicit unlock for a free shrine/idol/garland must not debit the wallet.
 	s.db.Accounts["marble@example.com"].Coins = 7
-	code, profile := call(s, "POST", "coins/unlock", token, `{"category":"shrine","item":"marble"}`)
-	if code != 200 || profile["coins"] != float64(7) || profile["owned"].(map[string]any)["shrine:marble"] == true {
-		t.Fatal("free default consumed coins", code, profile)
+	for _, pair := range [][2]string{{"shrine", "marble"}, {"shrine", "ivory"}, {"idols", "shanidev"}, {"garland", "lotus"}, {"lamp", "peacock"}} {
+		code, profile := call(s, "POST", "coins/unlock", token, `{"category":"`+pair[0]+`","item":"`+pair[1]+`"}`)
+		if code != 200 || profile["coins"] != float64(7) || profile["owned"].(map[string]any)[pair[0]+":"+pair[1]] == true {
+			t.Fatal("free item consumed coins", pair, code, profile)
+		}
 	}
 }
 
-func TestPaidFlowerCanBeAppliedWithDefaultMarbleShrine(t *testing.T) {
+func TestPaidFlowerCanBeAppliedWithFreeShrine(t *testing.T) {
 	s, _ := New(filepath.Join(t.TempDir(), "accounts.json"))
 	_, auth := call(s, "POST", "register", "", `{"email":"flower@example.com","password":"long-password"}`)
 	token := auth["token"].(string)
 	s.db.Accounts["flower@example.com"].Coins = 2
-	selection := `{"selections":{"shrine":"marble","idols":"original","flowers":"original,rose","lamp":"original","shankh":"original","aarti":"original","prasad":"original"}}`
+	selection := `{"selections":{"shrine":"ivory","idols":"shanidev","flowers":"orchid,bouquet","lamp":"brass","shankh":"swarna","aarti":"traditional","prasad":"halwa"}}`
 	if code, _ := call(s, "PUT", "shrine", token, selection); code != 403 {
 		t.Fatal("unowned flower accepted", code)
 	}
-	code, profile := call(s, "POST", "coins/unlock", token, `{"category":"flowers","item":"rose"}`)
-	if code != 200 || profile["coins"] != float64(0) || profile["owned"].(map[string]any)["flowers:rose"] != true {
+	code, profile := call(s, "POST", "coins/unlock", token, `{"category":"flowers","item":"bouquet"}`)
+	if code != 200 || profile["coins"] != float64(0) || profile["owned"].(map[string]any)["flowers:bouquet"] != true {
 		t.Fatal("flower purchase failed", code, profile)
 	}
 	code, profile = call(s, "PUT", "shrine", token, selection)
-	if code != 200 || profile["selections"].(map[string]any)["flowers"] != "original,rose" {
+	if code != 200 || profile["selections"].(map[string]any)["flowers"] != "orchid,bouquet" {
 		t.Fatal("purchased flower could not be applied", code, profile)
 	}
 }
 
-func TestGarlandUnlockForFourCoins(t *testing.T) {
-	s, _ := New(filepath.Join(t.TempDir(), "accounts.json"))
-	_, auth := call(s, "POST", "register", "", `{"email":"garland@example.com","password":"long-password"}`)
-	token := auth["token"].(string)
-	s.db.Accounts["garland@example.com"].Coins = 4
-	selection := `{"selections":{"shrine":"marble","idols":"original","garland":"lotus","flowers":"original","lamp":"original","shankh":"original","aarti":"original","prasad":"original"}}`
-	if code, _ := call(s, "PUT", "shrine", token, selection); code != 403 {
-		t.Fatal("unowned garland accepted", code)
-	}
-	code, profile := call(s, "POST", "coins/unlock", token, `{"category":"garland","item":"lotus"}`)
-	if code != 200 || profile["coins"] != float64(0) || profile["owned"].(map[string]any)["garland:lotus"] != true {
-		t.Fatal("garland purchase failed", code, profile)
-	}
-	code, profile = call(s, "PUT", "shrine", token, selection)
-	if code != 200 || profile["selections"].(map[string]any)["garland"] != "lotus" {
-		t.Fatal("purchased garland could not be applied", code, profile)
-	}
-}
-
-func TestIncenseAndRitualUpgradeUnlocks(t *testing.T) {
+func TestExtraIncenseAndFlowerUnlocks(t *testing.T) {
 	s, _ := New(filepath.Join(t.TempDir(), "accounts.json"))
 	_, auth := call(s, "POST", "register", "", `{"email":"incense@example.com","password":"long-password"}`)
 	token := auth["token"].(string)
-	s.db.Accounts["incense@example.com"].Coins = 6
-	selection := `{"selections":{"shrine":"marble","idols":"original","garland":"original","flowers":"original","incense":"kamal_dhoop","lamp":"peacock","shankh":"original","aarti":"original","prasad":"original"}}`
+	s.db.Accounts["incense@example.com"].Coins = 5
+	selection := `{"selections":{"shrine":"swarna","idols":"lakshmi","garland":"lotus","flowers":"azalea","incense":"mayur_dhoop","lamp":"peacock","shankh":"swarna","aarti":"original","prasad":"halwa"}}`
 	if code, _ := call(s, "PUT", "shrine", token, selection); code != 403 {
-		t.Fatal("unowned incense or lamp accepted", code)
+		t.Fatal("unowned incense or flower accepted", code)
 	}
-	code, profile := call(s, "POST", "coins/unlock", token, `{"category":"incense","item":"kamal_dhoop"}`)
-	if code != 200 || profile["coins"] != float64(3) || profile["owned"].(map[string]any)["incense:kamal_dhoop"] != true {
+	code, profile := call(s, "POST", "coins/unlock", token, `{"category":"incense","item":"mayur_dhoop"}`)
+	if code != 200 || profile["coins"] != float64(2) || profile["owned"].(map[string]any)["incense:mayur_dhoop"] != true {
 		t.Fatal("incense purchase failed", code, profile)
 	}
-	code, profile = call(s, "POST", "coins/unlock", token, `{"category":"lamp","item":"peacock"}`)
-	if code != 200 || profile["coins"] != float64(0) || profile["owned"].(map[string]any)["lamp:peacock"] != true {
-		t.Fatal("peacock lamp purchase failed", code, profile)
+	code, profile = call(s, "POST", "coins/unlock", token, `{"category":"flowers","item":"azalea"}`)
+	if code != 200 || profile["coins"] != float64(0) || profile["owned"].(map[string]any)["flowers:azalea"] != true {
+		t.Fatal("azalea purchase failed", code, profile)
 	}
 	code, profile = call(s, "PUT", "shrine", token, selection)
-	if code != 200 || profile["selections"].(map[string]any)["incense"] != "kamal_dhoop" || profile["selections"].(map[string]any)["lamp"] != "peacock" {
-		t.Fatal("purchased incense and lamp could not be applied", code, profile)
+	if code != 200 || profile["selections"].(map[string]any)["incense"] != "mayur_dhoop" || profile["selections"].(map[string]any)["flowers"] != "azalea" {
+		t.Fatal("purchased incense and flower could not be applied", code, profile)
 	}
 }
 
@@ -229,6 +210,7 @@ func TestGoogleSharingAndInstallRewards(t *testing.T) {
 		t.Fatal("account recreation rewarded", code, response)
 	}
 	restored, _ := New(s.path)
+	restored.now = s.now
 	_, profile = call(restored, "GET", "me", owner, "")
 	if profile["coins"] != float64(2) || profile["referrals"] != float64(2) {
 		t.Fatal(profile)
@@ -268,25 +250,25 @@ func TestCoinMutationRollbackAndConcurrentUnlock(t *testing.T) {
 	s, _ := New(filepath.Join(t.TempDir(), "accounts.json"))
 	_, auth := call(s, "POST", "register", "", `{"email":"race@example.com","password":"long-password"}`)
 	token := auth["token"].(string)
-	s.db.Accounts["race@example.com"].Coins = 7
+	s.db.Accounts["race@example.com"].Coins = 3
 	path := s.path
 	s.path = t.TempDir()
-	if code, _ := call(s, "POST", "coins/unlock", token, `{"category":"shrine","item":"carved"}`); code != 503 {
+	if code, _ := call(s, "POST", "coins/unlock", token, `{"category":"incense","item":"mayur_dhoop"}`); code != 503 {
 		t.Fatal(code)
 	}
-	if a := s.db.Accounts["race@example.com"]; a.Coins != 7 || a.Owned["shrine:carved"] {
+	if a := s.db.Accounts["race@example.com"]; a.Coins != 3 || a.Owned["incense:mayur_dhoop"] {
 		t.Fatal("failed persistence debited wallet", a)
 	}
 	s.path = path
 	var wg sync.WaitGroup
 	codes := make(chan int, 2)
-	for _, item := range []string{"carved", "ivory"} {
+	for _, req := range [][2]string{{"incense", "mayur_dhoop"}, {"flowers", "bouquet"}} {
 		wg.Add(1)
-		go func(item string) {
+		go func(cat, item string) {
 			defer wg.Done()
-			code, _ := call(s, "POST", "coins/unlock", token, `{"category":"shrine","item":"`+item+`"}`)
+			code, _ := call(s, "POST", "coins/unlock", token, `{"category":"`+cat+`","item":"`+item+`"}`)
 			codes <- code
-		}(item)
+		}(req[0], req[1])
 	}
 	wg.Wait()
 	close(codes)
@@ -294,7 +276,7 @@ func TestCoinMutationRollbackAndConcurrentUnlock(t *testing.T) {
 	for code := range codes {
 		counts[code]++
 	}
-	if counts[200] != 1 || counts[409] != 1 || s.db.Accounts["race@example.com"].Coins != 0 {
+	if counts[200] != 1 || counts[409] != 1 {
 		t.Fatal(counts)
 	}
 }
@@ -310,7 +292,7 @@ func TestLegacyWalletMigration(t *testing.T) {
 		t.Fatal(err)
 	}
 	a := s.db.Accounts["legacy"]
-	if a.Coins != 3 || !owns(a, "shrine", "carved") || a.WalletVersion != 1 {
+	if a.Coins != 3 || !owns(a, "incense", "mayur_dhoop") || a.WalletVersion != 1 {
 		t.Fatal(a)
 	}
 	if err := s.save(); err != nil {

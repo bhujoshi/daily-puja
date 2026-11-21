@@ -30,7 +30,8 @@ fun RitualFlamesOverlay(
     aartiRunning: Boolean = false,
     aartiDepthScale: Float = 1f,
     aartiBendX: Float = 0f,
-    karpuraMode: Boolean = false
+    karpuraMode: Boolean = false,
+    showIdleAartiFlame: Boolean = true
 ) {
     if(!oilLit && !aartiLit) return
     var seconds by remember { mutableFloatStateOf(0f) }
@@ -222,7 +223,7 @@ fun RitualFlamesOverlay(
                 incenseSmoke(emberPoint, index, isCone = isCone)
             }
         }
-        if(aartiLit || oilLit) {
+        if(aartiLit || (oilLit && showIdleAartiFlame)) {
             val baseAartiScale = (if(aartiLit) TempleSceneLayout.AARTI_SCALE else TempleSceneLayout.AARTI_SCALE * .85f) * aartiDepthScale
             if(aartiWicks.isNotEmpty()) {
                 aartiWicks.forEachIndexed { index, wickPoint ->

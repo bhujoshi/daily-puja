@@ -30,7 +30,7 @@ class BhajanPlayer(context: Context) {
         val order: Int = 0,
         val collection: String = "",
         val deity: String = "",
-        val thumbnail: String = "shrine/idols/original.png",
+        val thumbnail: String = "shrine/idols/original.webp",
         val artist: String = "",
         val bitrateKbps: Int = 0,
         val durationSeconds: Long = 0,
@@ -46,12 +46,12 @@ class BhajanPlayer(context: Context) {
             get() = url.startsWith("https://www.youtube.com/") || url.startsWith("https://youtu.be/")
         val fallbackAssetArt: String
             get() = when (deity) {
-                "shiva" -> "shrine/idols/shiva.png"
-                "durga" -> "shrine/idols/durga.png"
-                "rama" -> "shrine/idols/ram_darbar.png"
-                "lakshmi" -> "shrine/idols/lakshmi.png"
-                "ganesh", "hanuman" -> "shrine/idols/ganesh_hanuman.png"
-                else -> "shrine/idols/original.png"
+                "shiva" -> "shrine/idols/shiva.webp"
+                "durga" -> "shrine/idols/durga.webp"
+                "rama" -> "shrine/idols/ram_darbar.webp"
+                "lakshmi" -> "shrine/idols/lakshmi.webp"
+                "ganesh", "hanuman" -> "shrine/idols/ganesh_hanuman.webp"
+                else -> "shrine/idols/original.webp"
             }
         val youtubeSearchQuery: String
             get() = "$title ${artist.substringBefore("•").trim()} bhajan".trim()

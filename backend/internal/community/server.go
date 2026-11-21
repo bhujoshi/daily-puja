@@ -67,17 +67,19 @@ type database struct {
 	ReferralUsers    map[string]bool
 	ReferralInstalls map[string]bool
 	InstallUsers     map[string]string
+	DeletionRequests map[string]*DeletionRequest
 }
 type Server struct {
-	MockMode     bool
-	Google       googleauth.Verifier
-	googleNonces map[string]time.Time
-	googleLimit  *otp.Service
-	OTP          *otp.Service
-	mu           sync.Mutex
-	path         string
-	db           database
-	now          func() time.Time
+	MockMode      bool
+	Google        googleauth.Verifier
+	googleNonces  map[string]time.Time
+	googleLimit   *otp.Service
+	deletionLimit *otp.Service
+	OTP           *otp.Service
+	mu            sync.Mutex
+	path          string
+	db            database
+	now           func() time.Time
 }
 
 var india = time.FixedZone("Asia/Kolkata", 19800)
@@ -157,10 +159,17 @@ func streak(a *Account, now time.Time) int {
 	return n
 }
 func (s *Server) profile(a *Account) any {
-	return map[string]any{"id": a.ID, "phone": a.Phone, "history": a.History, "mock_payments": s.MockMode, "email": a.Email, "invite_code": a.Invite, "days": a.Days, "streak": streak(a, s.now()), "unlocked": a.Unlocked, "referrals": a.Referrals, "selections": a.Selections, "streak_target": 7, "referral_target": 1, "coins": a.Coins, "owned": a.Owned, "share_count": a.ShareCount, "google_account": a.GoogleSubject != "", "coin_costs": map[string]int{"shrine": 7, "garland": 4, "incense": 3, "flowers": 2}}
+	return map[string]any{"id": a.ID, "phone": a.Phone, "history": a.History, "mock_payments": s.MockMode, "email": a.Email, "invite_code": a.Invite, "days": a.Days, "streak": streak(a, s.now()), "unlocked": a.Unlocked, "referrals": a.Referrals, "selections": a.Selections, "streak_target": 7, "referral_target": 1, "coins": a.Coins, "owned": a.Owned, "share_count": a.ShareCount, "google_account": a.GoogleSubject != "", "coin_costs": map[string]int{"shrine": 0, "garland": 0, "incense": 3, "flowers": 2}}
 }
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/api/v2/")
+	if path == "account-deletion-request" {
+		setDeletionCORS(w, r)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+	}
 	var body rewardRequest
 
 	if r.Method == "POST" || r.Method == "PUT" {
@@ -210,6 +219,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if path == "catalog" && r.Method == "GET" {
 		reply(w, 200, json.RawMessage(catalogJSON))
+		return
+	}
+	if path == "account-deletion-request" && r.Method == "POST" {
+		s.handleAccountDeletionRequest(w, r, body, commit)
 		return
 	}
 	if path == "auth/google" && r.Method == "POST" {
@@ -369,6 +382,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		for k, v := range s.db.Sessions {
 			if v.User == session.User {
 				delete(s.db.Sessions, k)
+			}
+		}
+		for id, req := range s.db.DeletionRequests {
+			if (req.AccountID != "" && req.AccountID == a.ID) || (a.Email != "" && strings.EqualFold(req.Email, a.Email)) {
+				delete(s.db.DeletionRequests, id)
 			}
 		}
 		if commit() {

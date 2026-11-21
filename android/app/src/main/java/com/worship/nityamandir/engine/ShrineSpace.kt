@@ -13,7 +13,8 @@ data class ShrineSpace(
     val singleIdolWidth: Float = .37f,
     val bellCeilingY: Float = .285f,
     val incense: TemplePoint = TempleSceneLayout.incense,
-    val garlandSpec: FloatArray = floatArrayOf(.145f, .025f, .855f, .655f, .088f, .165f)
+    val garlandSpec: FloatArray = floatArrayOf(.145f, .025f, .855f, .655f, .088f, .165f),
+    val showGarland: Boolean = true
 ) {
     val ledgeY get() = altarY + .016f
     fun contains(point: TemplePoint) = point.x in left..right && point.y in archTop..(altarY + .04f)
@@ -26,12 +27,13 @@ data class ShrineSpace(
                 archTop = .04f,
                 floorY = .82f,
                 lamp = TemplePoint(.805f, .88f),
-                idolWidth = .66f,
-                idolHeight = .580f,
-                singleIdolWidth = .54f,
-                bellCeilingY = .105f,
+                idolWidth = .68f,
+                idolHeight = .595f,
+                singleIdolWidth = .56f,
+                bellCeilingY = .090f,
                 incense = TempleSceneLayout.incense,
-                garlandSpec = floatArrayOf(.065f, .005f, .935f, .645f, .072f, .105f)
+                garlandSpec = floatArrayOf(.065f, .005f, .935f, .645f, .072f, .105f),
+                showGarland = false
             )
             "carved" -> ShrineSpace(
                 altarY = .680f,
@@ -40,9 +42,10 @@ data class ShrineSpace(
                 archTop = .11f,
                 floorY = .82f,
                 lamp = TemplePoint(.76f, .88f),
-                idolWidth = .46f,
-                idolHeight = .395f,
-                bellCeilingY = .285f,
+                idolWidth = .505f,
+                idolHeight = .430f,
+                singleIdolWidth = .405f,
+                bellCeilingY = .250f,
                 incense = TempleSceneLayout.incense,
                 garlandSpec = floatArrayOf(.140f, .025f, .860f, .655f, .088f, .165f)
             )
@@ -53,9 +56,10 @@ data class ShrineSpace(
                 archTop = .11f,
                 floorY = .82f,
                 lamp = TemplePoint(.76f, .88f),
-                idolWidth = .46f,
-                idolHeight = .395f,
-                bellCeilingY = .285f,
+                idolWidth = .505f,
+                idolHeight = .430f,
+                singleIdolWidth = .405f,
+                bellCeilingY = .250f,
                 incense = TempleSceneLayout.incense,
                 garlandSpec = floatArrayOf(.145f, .025f, .855f, .655f, .088f, .165f)
             )
@@ -66,9 +70,10 @@ data class ShrineSpace(
                 archTop = .11f,
                 floorY = .82f,
                 lamp = TemplePoint(.76f, .88f),
-                idolWidth = .46f,
-                idolHeight = .395f,
-                bellCeilingY = .285f,
+                idolWidth = .505f,
+                idolHeight = .430f,
+                singleIdolWidth = .405f,
+                bellCeilingY = .250f,
                 incense = TempleSceneLayout.incense,
                 garlandSpec = floatArrayOf(.145f, .025f, .855f, .655f, .088f, .165f)
             )

@@ -27,7 +27,7 @@ public class GeneratePlayStoreGraphics {
 
     private static final File ROOT = new File("/Users/bhuwanjoshi/work/worship");
     private static final File SHRINE_DIR = new File(ROOT, "android/app/src/main/assets/shrine");
-    private static final File LAUNCHER_ART = new File(ROOT, "android/app/src/main/res/drawable-nodpi/launcher_artwork.png");
+    private static final File LAUNCHER_ART = new File(ROOT, "temple_models/source/launcher_artwork.png");
     private static final File PLAY_STORE_DIR = new File(ROOT, "play_store");
     private static final File FASTLANE_META_DIR = new File(ROOT, "android/fastlane/metadata/android");
 
@@ -144,15 +144,39 @@ public class GeneratePlayStoreGraphics {
             return IMAGE_CACHE.get(relPath);
         }
         File f = new File(SHRINE_DIR, relPath);
+        if (!f.exists() && relPath.endsWith(".png")) {
+            f = new File(SHRINE_DIR, relPath.substring(0, relPath.length() - 4) + ".webp");
+        }
         if (!f.exists()) {
             throw new IOException("Missing shrine asset: " + f.getAbsolutePath());
         }
-        BufferedImage raw = ImageIO.read(f);
+        BufferedImage raw = readRasterImage(f);
         if (relPath.startsWith("idols/")) {
             raw = trimIdolAlpha(raw);
         }
         IMAGE_CACHE.put(relPath, raw);
         return raw;
+    }
+
+    private static BufferedImage readRasterImage(File f) throws IOException {
+        BufferedImage direct = ImageIO.read(f);
+        if (direct != null) return direct;
+        File tmpPng = File.createTempFile("shrine_webp_", ".png");
+        try {
+            Process p = new ProcessBuilder("dwebp", "-quiet", f.getAbsolutePath(), "-o", tmpPng.getAbsolutePath())
+                .redirectErrorStream(true).start();
+            if (p.waitFor() != 0) {
+                throw new IOException("dwebp failed for " + f.getAbsolutePath());
+            }
+            BufferedImage img = ImageIO.read(tmpPng);
+            if (img == null) throw new IOException("Unreadable decoded image: " + f.getAbsolutePath());
+            return img;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Interrupted decoding " + f.getAbsolutePath(), e);
+        } finally {
+            tmpPng.delete();
+        }
     }
 
     /** Matches AssetImageCache.trimmedIdol in Android app (strips alpha < 24 edge border). */

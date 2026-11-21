@@ -67,7 +67,7 @@ fun ShrineAgingOverlay(viewport:TempleViewport,dust:Float,webs:Float,space:Shrin
                         }
                     }
                     // A narrow dust deposit rests on the horizontal shelf.
-                    drawRect(Brush.verticalGradient(listOf(Color.Transparent,Color(0xFFB3A183).copy(alpha=dust*.6f),Color.Transparent),u*(space.altarY-.003f),u*(space.altarY+.025f)),at(space.left,space.altarY-.003f),Size(u*span,u*.028f))
+                    drawRect(Brush.verticalGradient(listOf(Color.Transparent,Color(0xFFB3A183).copy(alpha=dust*.6f),Color.Transparent),at(space.left,space.altarY-.003f).y,at(space.left,space.altarY+.025f).y),at(space.left,space.altarY-.003f),Size(u*span,u*.028f))
                 }
             }
             // Separate deposits follow the idols and every object on the lower altar.
@@ -76,6 +76,7 @@ fun ShrineAgingOverlay(viewport:TempleViewport,dust:Float,webs:Float,space:Shrin
             listOf(TemplePoint(.24f,space.floorY),TemplePoint(.5f,space.floorY),TemplePoint(.76f,space.floorY))
                 .forEach {dustPatch(it,.22f,.075f,.65f)}
             dustPatch(space.lamp,.11f,.15f)
+            dustPatch(TempleSceneLayout.waterLota.copy(y=TempleSceneLayout.waterLota.y-.06f),.10f,.12f)
             dustPatch(TempleSceneLayout.plate,.39f,.16f)
             dustPatch(TempleSceneLayout.conch,.16f,.11f)
             dustPatch(TempleSceneLayout.bell,.09f,.15f)

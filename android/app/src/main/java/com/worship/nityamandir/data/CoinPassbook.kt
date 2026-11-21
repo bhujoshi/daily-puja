@@ -121,7 +121,8 @@ internal object CoinPassbook {
                     val category = categories.firstOrNull { it.id == categoryId }
                     val option = category?.options?.firstOrNull { it.id == itemId }
                     val itemCost = cost(categoryId, itemId).takeIf { it > 0 }
-                        ?: ShrineUnlocks.cost(categoryId, itemId).coerceAtLeast(1)
+                        ?: ShrineUnlocks.cost(categoryId, itemId).takeIf { it > 0 }
+                        ?: ShrineUnlocks.historicalCategoryCost(categoryId).coerceAtLeast(1)
                     val datePart = event.at.take(10)
                     val dateHi = formatDate(datePart, hindi = true, today = today)
                     val dateEn = formatDate(datePart, hindi = false, today = today)

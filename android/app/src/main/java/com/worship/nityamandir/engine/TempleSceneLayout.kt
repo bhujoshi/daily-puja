@@ -7,7 +7,11 @@ data class TemplePoint(val x: Float, val y: Float)
 class TempleViewport(val width: Float, val height: Float) {
     val imageWidth = max(width, height / IMAGE_RATIO) * ZOOM
     val left = (width-imageWidth)/2f
-    fun pixel(point: TemplePoint) = TemplePoint(left+point.x*imageWidth,point.y*imageWidth)
+    // Anchor the bottom of the puja thali near the bottom of tall displays while keeping top headroom above the shrine.
+    val top = (height - height * BOTTOM_MARGIN_RATIO - imageWidth * PLATE_BOTTOM_FACTOR)
+        .coerceIn(0f, height * MAX_TOP_SPACE_RATIO)
+    fun pixel(point: TemplePoint) = TemplePoint(left+point.x*imageWidth,top+point.y*imageWidth)
+    fun point(pixelX: Float, pixelY: Float) = TemplePoint((pixelX - left) / imageWidth, (pixelY - top) / imageWidth)
     /** Keep the whole item inside the visible crop, with the same anchor for its tap target. */
     fun keepInsideHorizontalBounds(point: TemplePoint, halfWidth: Float, padding: Float): TemplePoint {
         val inset = halfWidth + padding / imageWidth
@@ -15,7 +19,15 @@ class TempleViewport(val width: Float, val height: Float) {
         val maxX = (width-left) / imageWidth - inset
         return point.copy(x=if(minX<=maxX) point.x.coerceIn(minX,maxX) else .5f)
     }
-    companion object { const val ZOOM = 1.08f; const val IMAGE_RATIO = 1672f / 940f }
+    companion object {
+        const val ZOOM = 1.145f
+        const val IMAGE_RATIO = 1672f / 940f
+        const val PLATE_BOTTOM_FACTOR = 1.325f
+        const val BOTTOM_MARGIN_RATIO = 0.068f
+        const val MAX_TOP_SPACE_RATIO = 0.072f
+        // Keep the background arch/ledge aligned with the 1.08x / 0.25 origin calibration when zooming deeper.
+        const val BACKGROUND_ORIGIN_Y = 0.02f * (ZOOM / 1.08f) / (ZOOM - 1f)
+    }
 }
 
 object TempleSceneLayout {
@@ -30,6 +42,20 @@ object TempleSceneLayout {
     const val INCENSE_WIDTH = .096f
     const val BELL_DISPLAY_WIDTH = .090f
     const val STANDING_LAMP_WIDTH = .098f
+    val waterLota = TemplePoint(.638f,.902f)
+    const val WATER_LOTA_WIDTH = .094f
+    const val WATER_LOTA_POUR_WIDTH = .115f
+    const val WATER_LOTA_DEFAULT_ASPECT = 512f / 390f
+    const val WATER_LOTA_PIVOT_X = .30f
+    const val WATER_LOTA_PIVOT_Y = .26f
+    const val WATER_LOTA_POUR_ANGLE_DEG = -62f
+    // Normalized sprite anchors on copper_lota.png: outer rolled left rim crest and inner throat meniscus.
+    const val WATER_LOTA_LIP_OUTER_U = .128f
+    const val WATER_LOTA_LIP_OUTER_V = .144f
+    const val WATER_LOTA_LIP_INNER_U = .215f
+    const val WATER_LOTA_LIP_INNER_V = .135f
+    // Slight horizontal lead so water exiting the left-tilted lip curves naturally under gravity onto crown.x.
+    const val WATER_LOTA_SPOUT_LEAD_X = .014f
     val plate = TemplePoint(.50f,1.14f)
     val kumkumKatori = TemplePoint(plate.x - .031f, plate.y - .112f)
     val chandanKatori = TemplePoint(plate.x + .0335f, plate.y - .112f)
@@ -187,4 +213,87 @@ object TempleSceneLayout {
         val raised = TemplePoint(aartiRest.x, aartiRest.y-.10f*lift)
         return TemplePoint(raised.x+(orbit.x-raised.x)*travel,raised.y+(orbit.y-raised.y)*travel)
     }
+
+    /** Smoothly travels from the floor resting spot to above the deity crown, tilts to pour, and returns. */
+    fun waterLotaTravel(progress: Float): Float {
+        val p = progress.coerceIn(0f, 1f)
+        return when {
+            p < .14f -> smooth(p / .14f)
+            p > .86f -> smooth((1f - p) / .14f)
+            else -> 1f
+        }
+    }
+
+    fun waterLotaTilt(progress: Float): Float {
+        val p = progress.coerceIn(0f, 1f)
+        return smooth(min((p - .10f) / .10f, (.86f - p) / .09f).coerceIn(0f, 1f))
+    }
+
+    fun waterLotaPosition(restCenter: TemplePoint, pourCenter: TemplePoint, progress: Float): TemplePoint {
+        val travel = waterLotaTravel(progress)
+        return TemplePoint(
+            restCenter.x + (pourCenter.x - restCenter.x) * travel,
+            restCenter.y + (pourCenter.y - restCenter.y) * travel - .03f * sin(PI.toFloat() * travel)
+        )
+    }
+
+    fun waterLotaWidth(progress: Float): Float {
+        val travel = waterLotaTravel(progress)
+        return WATER_LOTA_WIDTH + (WATER_LOTA_POUR_WIDTH - WATER_LOTA_WIDTH) * travel
+    }
+
+    /** Exact world position of a normalized (u, v) point on the copper lota sprite at the given tilt. */
+    fun waterLotaPointOnSprite(
+        center: TemplePoint,
+        width: Float,
+        aspect: Float,
+        tilt: Float,
+        u: Float,
+        v: Float
+    ): TemplePoint {
+        val height = width * aspect
+        val pivotX = center.x + (WATER_LOTA_PIVOT_X - .5f) * width
+        val pivotY = center.y + (WATER_LOTA_PIVOT_Y - .5f) * height
+        val dx = (u - WATER_LOTA_PIVOT_X) * width
+        val dy = (v - WATER_LOTA_PIVOT_Y) * height
+        val rad = WATER_LOTA_POUR_ANGLE_DEG * tilt * (PI.toFloat() / 180f)
+        val c = cos(rad)
+        val s = sin(rad)
+        return TemplePoint(pivotX + dx * c - dy * s, pivotY + dx * s + dy * c)
+    }
+
+    fun waterLotaLip(
+        center: TemplePoint,
+        width: Float,
+        aspect: Float = WATER_LOTA_DEFAULT_ASPECT,
+        tilt: Float = 1f
+    ): TemplePoint = waterLotaPointOnSprite(center, width, aspect, tilt, WATER_LOTA_LIP_OUTER_U, WATER_LOTA_LIP_OUTER_V)
+
+    fun waterLotaInnerLip(
+        center: TemplePoint,
+        width: Float,
+        aspect: Float = WATER_LOTA_DEFAULT_ASPECT,
+        tilt: Float = 1f
+    ): TemplePoint = waterLotaPointOnSprite(center, width, aspect, tilt, WATER_LOTA_LIP_INNER_U, WATER_LOTA_LIP_INNER_V)
+
+    /** Solves the exact lota center so the tilted pouring lip sits directly at the stream origin with zero gap. */
+    fun waterLotaPourCenter(
+        source: TemplePoint,
+        width: Float = WATER_LOTA_POUR_WIDTH,
+        aspect: Float = WATER_LOTA_DEFAULT_ASPECT
+    ): TemplePoint {
+        val desiredLip = TemplePoint(source.x + WATER_LOTA_SPOUT_LEAD_X, source.y)
+        val offsetLip = waterLotaLip(TemplePoint(0f, 0f), width, aspect, 1f)
+        return TemplePoint(desiredLip.x - offsetLip.x, desiredLip.y - offsetLip.y)
+    }
+
+    /** Normalized stream head progression (0 at lip -> 1 at crown) as water begins to pour. */
+    fun waterStreamHead(progress: Float): Float = ((progress - .155f) / .055f).coerceIn(0f, 1f)
+
+    /** Normalized stream tail progression (0 attached to lip -> 1 detached to crown) as lota tilts upright. */
+    fun waterStreamTail(progress: Float): Float = ((progress - .775f) / .060f).coerceIn(0f, 1f)
+
+    /** Smooth stream flow thickness factor synced to lota tilt. */
+    fun waterPourIntensity(progress: Float): Float =
+        smooth(min((progress - .150f) / .050f, (.815f - progress) / .050f).coerceIn(0f, 1f))
 }

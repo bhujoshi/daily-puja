@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import com.worship.nityamandir.engine.IdolWaterSurface
 
 /** Shared in-memory cache and downsampler for bundled shrine and ritual assets. */
 internal object AssetImageCache {
@@ -17,6 +18,7 @@ internal object AssetImageCache {
     ) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.allocationByteCount
     }
+    private val waterSurfaces = mutableMapOf<String, IdolWaterSurface>()
 
     fun bitmap(context: Context, path: String, sampleSize: Int = 1): Bitmap {
         val safeSample = sampleSize.coerceAtLeast(1)
@@ -39,10 +41,13 @@ internal object AssetImageCache {
     fun image(context: Context, path: String, sampleSize: Int = 1): ImageBitmap =
         bitmap(context, path, sampleSize).asImageBitmap()
 
-    fun trimmedIdol(context: Context, path: String): ImageBitmap {
+    fun trimmedIdol(context: Context, path: String): ImageBitmap =
+        trimmedIdolBitmap(context, path).asImageBitmap()
+
+    private fun trimmedIdolBitmap(context: Context, path: String): Bitmap {
         val key = "trimmed:$path"
         synchronized(cache) {
-            cache.get(key)?.let { return it.asImageBitmap() }
+            cache.get(key)?.let { return it }
         }
         val source = bitmap(context, path)
         var left = source.width
@@ -71,7 +76,33 @@ internal object AssetImageCache {
         synchronized(cache) {
             cache.put(key, trimmed)
         }
-        return trimmed.asImageBitmap()
+        return trimmed
+    }
+
+    /** Extracts and caches a compact silhouette & outward-normal grid from the trimmed idol bitmap. */
+    fun idolWaterSurface(context: Context, path: String): IdolWaterSurface {
+        synchronized(waterSurfaces) {
+            waterSurfaces[path]?.let { return it }
+        }
+        val trimmed = trimmedIdolBitmap(context, path)
+        val cols = IdolWaterSurface.DEFAULT_COLS
+        val rows = IdolWaterSurface.DEFAULT_ROWS
+        val solid = FloatArray(cols * rows)
+        val tw = trimmed.width.coerceAtLeast(1)
+        val th = trimmed.height.coerceAtLeast(1)
+        for (r in 0 until rows) {
+            val py = (((r + 0.5f) / rows.toFloat()) * th).toInt().coerceIn(0, th - 1)
+            for (c in 0 until cols) {
+                val px = (((c + 0.5f) / cols.toFloat()) * tw).toInt().coerceIn(0, tw - 1)
+                val alpha = trimmed.getPixel(px, py) ushr 24
+                solid[r * cols + c] = if (alpha >= 24) 1f else 0f
+            }
+        }
+        val surface = IdolWaterSurface.fromSolidGrid(cols, rows, solid)
+        synchronized(waterSurfaces) {
+            waterSurfaces[path] = surface
+        }
+        return surface
     }
 }
 

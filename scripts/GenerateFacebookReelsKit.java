@@ -25,7 +25,7 @@ public class GenerateFacebookReelsKit {
     private static final File ROOT = new File("/Users/bhuwanjoshi/work/worship");
     private static final File SHRINE_DIR = new File(ROOT, "android/app/src/main/assets/shrine");
     private static final File RAW_AUDIO_DIR = new File(ROOT, "android/app/src/main/res/raw");
-    private static final File LAUNCHER_ART = new File(ROOT, "android/app/src/main/res/drawable-nodpi/launcher_artwork.png");
+    private static final File LAUNCHER_ART = new File(ROOT, "temple_models/source/launcher_artwork.png");
     private static final File OUT_DIR = new File(ROOT, "marketing/facebook_reels");
     private static final File PAGE_DIR = new File(OUT_DIR, "page_assets");
     private static final File VIDEO_DIR = new File(OUT_DIR, "videos");
@@ -228,12 +228,12 @@ public class GenerateFacebookReelsKit {
     }
 
     private static void buildRitualAudioTrack(ReelSpec spec, File outWav) throws Exception {
-        String bell = new File(RAW_AUDIO_DIR, "bell.wav").getAbsolutePath();
-        String water = new File(RAW_AUDIO_DIR, "water_offering.wav").getAbsolutePath();
-        String flower = new File(RAW_AUDIO_DIR, "flower_offering.wav").getAbsolutePath();
-        String flute = new File(RAW_AUDIO_DIR, "mindfulness_flute.wav").getAbsolutePath();
-        String note = new File(RAW_AUDIO_DIR, "mindfulness_note.wav").getAbsolutePath();
-        String conch = new File(RAW_AUDIO_DIR, "conch.mp3").getAbsolutePath();
+        String bell = new File(RAW_AUDIO_DIR, "bell.ogg").getAbsolutePath();
+        String water = new File(RAW_AUDIO_DIR, "water_offering.ogg").getAbsolutePath();
+        String flower = new File(RAW_AUDIO_DIR, "flower_offering.ogg").getAbsolutePath();
+        String flute = new File(RAW_AUDIO_DIR, "mindfulness_flute.ogg").getAbsolutePath();
+        String note = new File(RAW_AUDIO_DIR, "mindfulness_note.ogg").getAbsolutePath();
+        String conch = new File(RAW_AUDIO_DIR, "conch.ogg").getAbsolutePath();
 
         String filter;
         switch (spec.mode()) {
@@ -1152,15 +1152,39 @@ public class GenerateFacebookReelsKit {
             return IMAGE_CACHE.get(relPath);
         }
         File f = new File(SHRINE_DIR, relPath);
+        if (!f.exists() && relPath.endsWith(".png")) {
+            f = new File(SHRINE_DIR, relPath.substring(0, relPath.length() - 4) + ".webp");
+        }
         if (!f.exists()) {
             throw new IOException("Missing shrine asset: " + f.getAbsolutePath());
         }
-        BufferedImage raw = ImageIO.read(f);
+        BufferedImage raw = readRasterImage(f);
         if (relPath.startsWith("idols/")) {
             raw = trimIdolAlpha(raw);
         }
         IMAGE_CACHE.put(relPath, raw);
         return raw;
+    }
+
+    private static BufferedImage readRasterImage(File f) throws IOException {
+        BufferedImage direct = ImageIO.read(f);
+        if (direct != null) return direct;
+        File tmpPng = File.createTempFile("reels_webp_", ".png");
+        try {
+            Process p = new ProcessBuilder("dwebp", "-quiet", f.getAbsolutePath(), "-o", tmpPng.getAbsolutePath())
+                .redirectErrorStream(true).start();
+            if (p.waitFor() != 0) {
+                throw new IOException("dwebp failed for " + f.getAbsolutePath());
+            }
+            BufferedImage img = ImageIO.read(tmpPng);
+            if (img == null) throw new IOException("Unreadable decoded image: " + f.getAbsolutePath());
+            return img;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Interrupted decoding " + f.getAbsolutePath(), e);
+        } finally {
+            tmpPng.delete();
+        }
     }
 
     private static BufferedImage trimIdolAlpha(BufferedImage src) {

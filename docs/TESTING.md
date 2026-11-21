@@ -90,8 +90,10 @@ individual varieties, and retaining at least one.
 Guest unlock checks verify the short Unlock action and separate price remain
 visible until tapped, then open sign-in without spending coins. Cards select the
 item; the footer performs Unlock or Apply. Real-screen tests also verify
-numbered puja guidance advances from lighting to bathing and the dock stays compact
-with larger text.
+there is no bottom ritual dock and no text overlays on the sanctum screen before,
+during, or after aarti, while keeping original item colors and enabling all real
+altar items (including the copper water kalash) in free-form order without
+ripples or stepped locks.
 The normal unit suite covers unlock availability, account-specific acknowledgements,
 server pricing, and selecting purchased flowers without removing existing choices.
 

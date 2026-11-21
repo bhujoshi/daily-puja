@@ -8,6 +8,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,8 +18,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -28,9 +27,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
@@ -47,7 +43,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun MandirHomeScreen(modifier:Modifier=Modifier) {
     val context=LocalContext.current
-    val hostView=LocalView.current
     val prefs=remember {context.getSharedPreferences("worship",Context.MODE_PRIVATE)}
     val analytics=remember {com.worship.nityamandir.data.MandirAnalytics.from(context)}
     var hindi by remember {mutableStateOf(prefs.getBoolean("hindi",true))}
@@ -146,29 +141,56 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
     }
     var menu by remember {mutableStateOf(false)}
     var session by remember {mutableStateOf(WorshipSession(deityCount=selection.deityCount))}
-    LaunchedEffect(account.profile) {
-        val next=account.selection()
-        selection=next
-        if(session.deityCount!=next.deityCount) session=WorshipSession(deityCount=next.deityCount)
-    }
     var last by remember {mutableLongStateOf(prefs.getLong("last",System.currentTimeMillis()))}
     var clean by remember {mutableLongStateOf(prefs.getLong("clean",last))}
     var timeOffset by remember {mutableLongStateOf(if(BuildConfig.DEBUG) prefs.getLong("agingOffset",0L) else 0L)}
     var now by remember {mutableLongStateOf(System.currentTimeMillis()+timeOffset)}
     var occasionOverride by remember {mutableStateOf(if(BuildConfig.DEBUG) prefs.getString("occasionOverride",null) else null)}
+    var autoDailyTemple by remember {mutableStateOf(prefs.getBoolean(DailyTempleSync.KEY_AUTO_ENABLED,true))}
     val currentLocalDate=remember(now) {
         java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.of("Asia/Kolkata")).toLocalDate()
     }
+    val todayTemple=remember(currentLocalDate) {
+        DailyTemples.forDate(currentLocalDate)
+    }
+    val accountScope=DailyTempleSync.scopeKey(account.profile?.optString("id"),account.signedIn)
     val activeOccasion=remember(currentLocalDate,occasionOverride) {
         TempleOccasions.activeOccasion(currentLocalDate,occasionOverride)
     }
     val currentSceneOccasion=remember(selection,activeOccasion) {
         TempleOccasions.forSelection(selection,activeOccasion)
     }
+    LaunchedEffect(account.profile) {
+        val todayStr=currentLocalDate.toString()
+        val lastApplied=prefs.getString(DailyTempleSync.lastAppliedPreferenceKey(accountScope),null)
+        val manualOverride=prefs.getString(DailyTempleSync.manualOverridePreferenceKey(accountScope),null)
+        if(!DailyTempleSync.shouldAutoApply(autoDailyTemple,todayStr,lastApplied,manualOverride)) {
+            val next=account.selection()
+            if(next!=selection) {
+                selection=next
+                if(session.deityCount!=next.deityCount) session=WorshipSession(deityCount=next.deityCount)
+            }
+        }
+    }
+    LaunchedEffect(currentLocalDate,autoDailyTemple,accountScope) {
+        val todayStr=currentLocalDate.toString()
+        val lastKey=DailyTempleSync.lastAppliedPreferenceKey(accountScope)
+        val overrideKey=DailyTempleSync.manualOverridePreferenceKey(accountScope)
+        if(DailyTempleSync.shouldAutoApply(autoDailyTemple,todayStr,prefs.getString(lastKey,null),prefs.getString(overrideKey,null))) {
+            prefs.edit().putString(lastKey,todayStr).apply()
+            val next=todayTemple.presetSelection
+            if(next!=selection) {
+                selection=next
+                if(session.deityCount!=next.deityCount) session=WorshipSession(deityCount=next.deityCount)
+            }
+            analytics.logDailyTempleApplied(todayTemple.id,"auto")
+            try { account.saveSelection(next) } catch(_:Exception) { }
+        }
+    }
     LaunchedEffect(activeOccasion?.id,account.profile) {
         val occasion=activeOccasion ?: return@LaunchedEffect
         val autoKey="auto_occasion_${occasion.id}_${currentLocalDate.year}"
-        if(!prefs.getBoolean(autoKey,false) && account.selection().original) {
+        if(!autoDailyTemple && !prefs.getBoolean(autoKey,false) && account.selection().original) {
             prefs.edit().putBoolean(autoKey,true).apply()
             selection=occasion.presetSelection
             if(session.deityCount!=occasion.presetSelection.deityCount) session=WorshipSession(deityCount=occasion.presetSelection.deityCount)
@@ -208,8 +230,6 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
     val bath=remember {Animatable(0f)}
     val aarti=remember {Animatable(0f)}
     val aartiMotion=aarti.value
-    var sceneSize by remember {mutableStateOf(IntSize.Zero)}
-    var sceneOrigin by remember {mutableStateOf(Offset.Zero)}
     LaunchedEffect(timeOffset,foreground) {
         if(!foreground) return@LaunchedEffect
         while(isActive) {now=System.currentTimeMillis()+timeOffset;delay(30000)}
@@ -225,55 +245,68 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
     }
     fun tr(hi:String,en:String)=if(hindi) hi else en
     var bellSource by remember {mutableStateOf("altar")}
+    var nextBathDeity by remember(selection.deityCount) {mutableIntStateOf(0)}
+    var nextTilakDeity by remember(selection.deityCount) {mutableIntStateOf(0)}
+    var nextFlowerDeity by remember(selection.deityCount) {mutableIntStateOf(0)}
     fun ringBell(source:String="altar") {
-        if(foreground && !aging.needsCleaning && !bellRunning) {
+        if(foreground && !aging.needsCleaning && !bellRunning && !aartiRunning) {
             bellSource=source
             bellRunning=true
         }
     }
-    fun soundConch(source:String="dock") {
-        if(foreground && !aging.needsCleaning && !conchRunning) {
+    fun soundConch(source:String="altar") {
+        if(foreground && !aging.needsCleaning && !conchRunning && !aartiRunning) {
             analytics.logRitualConchBlown(source,session.step)
             conchRunning=true
         }
     }
-    fun offerFlowerToDeity(deity:Int, index:Int, source:String="dock") {
-        if(aging.needsCleaning || !foreground) return
+    fun offerFlowerToDeity(deity:Int, index:Int, source:String="altar") {
+        if(aging.needsCleaning || !foreground || aartiRunning) return
         analytics.logRitualFlowerOffered(deity,index,source,session.step)
         val currentCount=session.offeredFlowers.count {it.deity==deity}+flowerFlights.count {it.offering.deity==deity}
         val flightOffering=FlowerOffering(index,deity,IdolPlacement(selection).offering(deity,currentCount))
         flowerFlights.add(FlowerFlight(nextFlowerId++,flightOffering))
     }
-    fun offerFlower(index:Int, source:String="dock") {
-        if(aging.needsCleaning || !foreground) return
+    fun offerFlower(index:Int, source:String="altar") {
+        if(aging.needsCleaning || !foreground || aartiRunning) return
         val covered=session.flowers+flowerFlights.map {it.offering.deity}
-        val target=((0 until selection.deityCount).toList()-covered).randomOrNull() ?: (0 until selection.deityCount).random()
+        val target=(0 until selection.deityCount).firstOrNull {it !in covered}
+            ?: if(selection.deityCount>1) (nextFlowerDeity++)%selection.deityCount else 0
         offerFlowerToDeity(target, index, source)
     }
-    fun light(source:String="dock") {
-        if(!aging.needsCleaning) {
-            analytics.logRitualDiyaLit(source,session.step)
-            session=session.copy(lit=true)
+    fun light(source:String="altar") {
+        if(!aging.needsCleaning && !aartiRunning) {
+            if(!session.lit) {
+                analytics.logRitualDiyaLit(source,session.step)
+                session=session.copy(lit=true)
+            }
             audio.cue(com.worship.nityamandir.R.raw.flower_offering)
         }
     }
-    fun deityAction(deity:Int, source:String="dock") {
-        if(aging.needsCleaning || bathTarget!=null) return
-        when(session.step) {
-            WorshipStep.BATH -> if(deity !in session.bathed) {
-                analytics.logRitualDeityBathed(deity,source,session.step)
-                bathTarget=deity
-            }
-            WorshipStep.TILAK -> {
-                analytics.logRitualTilakApplied(deity,source,session.step)
-                session=session.copy(tilak=session.tilak+deity)
-                audio.cue(com.worship.nityamandir.R.raw.flower_offering)
-            }
-            else -> offerFlowerToDeity(deity,(0 until TempleSceneLayout.FLOWER_COUNT).random(),source)
-        }
+    fun batheDeity(deity:Int?, source:String="altar") {
+        if(aging.needsCleaning || !foreground || bathTarget!=null || aartiRunning) return
+        val target=deity?.takeIf {it in 0 until selection.deityCount}
+            ?: (0 until selection.deityCount).firstOrNull {it !in session.bathed}
+            ?: if(selection.deityCount>1) (nextBathDeity++)%selection.deityCount else 0
+        analytics.logRitualDeityBathed(target,source,session.step)
+        bathTarget=target
     }
-    fun startAarti(source:String="dock") {
+    fun applyTilak(deity:Int?=null, source:String="altar") {
+        if(aging.needsCleaning || !foreground || aartiRunning) return
+        val target=deity?.takeIf {it in 0 until selection.deityCount}
+            ?: (0 until selection.deityCount).firstOrNull {it !in session.tilak}
+            ?: if(selection.deityCount>1) (nextTilakDeity++)%selection.deityCount else 0
+        analytics.logRitualTilakApplied(target,source,session.step)
+        session=session.copy(tilak=session.tilak+target)
+        audio.cue(com.worship.nityamandir.R.raw.flower_offering)
+    }
+    fun deityAction(deity:Int, source:String="altar") {
+        if(aging.needsCleaning || !foreground || aartiRunning) return
+        offerFlowerToDeity(deity,(0 until TempleSceneLayout.FLOWER_COUNT).random(),source)
+    }
+    fun startAarti(source:String="altar") {
         if(!aging.needsCleaning && !aartiRunning) {
+            bellRunning=false
             analytics.logRitualAartiStarted(source,session.step)
             session=session.copy(aartiLit=true)
             aartiRunning=true
@@ -297,9 +330,10 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
             }
         }
     }
-    fun offerPrasad(source:String="dock") {
-        if(foreground && !aging.needsCleaning && !prasadRunning && !session.prasadOffered) {
+    fun offerPrasad(source:String="altar") {
+        if(foreground && !aging.needsCleaning && !prasadRunning && !aartiRunning) {
             analytics.logRitualPrasadOffered(source,session.step)
+            session=session.copy(prasadOffered=false)
             prasadRunning=true
         }
     }
@@ -315,7 +349,9 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
         try {
             audio.cue(com.worship.nityamandir.R.raw.bell,loop=true)
             aarti.snapTo(0f);aarti.animateTo(1f,tween(21000,easing=LinearEasing))
-            session=session.copy(aartiComplete=true);aartiRunning=false
+            session=session.copy(aartiComplete=true,complete=true);aartiRunning=false
+            last=System.currentTimeMillis()+timeOffset;clean=last;now=last
+            prefs.edit().putLong("last",last).putLong("clean",clean).apply()
             bhajan.startAarti()
         } finally {audio.stopCue(com.worship.nityamandir.R.raw.bell)}
     }
@@ -328,7 +364,7 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
             session=session.copy(bellRung=true)
             bellRunning=false
             analytics.logBellRung(bellSource)
-        } finally {audio.stopCue(com.worship.nityamandir.R.raw.bell)}
+        } finally { if(!aartiRunning) audio.stopCue(com.worship.nityamandir.R.raw.bell) }
     }
     LaunchedEffect(conchRunning,foreground) {
         if(!conchRunning) return@LaunchedEffect
@@ -336,30 +372,15 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
         try {
             audio.cue(com.worship.nityamandir.R.raw.conch)
             conch.snapTo(0f);conch.animateTo(1f,tween(13500,easing=LinearEasing))
-            if(session.step==WorshipStep.CONCH) session=session.copy(conchBlown=true)
+            session=session.copy(conchBlown=true)
             conchRunning=false
         } finally {audio.stopCue(com.worship.nityamandir.R.raw.conch)}
-    }
-    LaunchedEffect(session, busy, foreground, aging.needsCleaning) {
-        if(!foreground || aging.needsCleaning || busy || session.complete || !session.canContinue) return@LaunchedEffect
-        val completedStep=session.step
-        delay(650)
-        analytics.logRitualStepCompleted(completedStep,selection.deityCount)
-        session=session.next()
-        if(session.complete) {
-            last=System.currentTimeMillis()+timeOffset;clean=last;now=last
-            prefs.edit().putLong("last",last).putLong("clean",clean).apply()
-        }
-    }
-    var showReviewPrompt by remember {
-        mutableStateOf(com.worship.nityamandir.data.PlayStoreReviewHelper.shouldShowPostPujaReviewPrompt(prefs))
     }
     LaunchedEffect(session.aartiComplete) {
         if(session.aartiComplete) {
             account.recordCompletion()
             com.worship.nityamandir.data.DailyPujaReminder.recordPujaCompletedToday(context)
             com.worship.nityamandir.data.PlayStoreReviewHelper.recordPujaCompleted(prefs)
-            showReviewPrompt=com.worship.nityamandir.data.PlayStoreReviewHelper.shouldShowPostPujaReviewPrompt(prefs)
             analytics.logPujaCompleted(
                 deityCount=selection.deityCount,
                 shrineId=selection["shrine"],
@@ -390,130 +411,110 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
         }
     }
     val cream=Color(0xFFFAF6EE)
+    fun startTapCleaning() {
+        if(aging.needsCleaning && !cleaningSweep) {
+            analytics.logTempleCleaningStarted("tap")
+            cleaningSweep=true
+            session=WorshipSession(deityCount=selection.deityCount)
+        }
+    }
     Box(modifier.fillMaxSize().background(com.worship.nityamandir.ui.theme.DarkSanctumBackground)) {
-        if (!mindfulnessScreen) Box(Modifier.fillMaxSize().onGloballyPositioned {sceneSize=it.size;val location=IntArray(2);hostView.getLocationOnScreen(location);sceneOrigin=it.positionInRoot()+Offset(location[0].toFloat(),location[1].toFloat())}) {
+        if (!mindfulnessScreen) Box(Modifier.fillMaxSize()) {
             if(!customizer) key(selection) { MandirAltarView(session,aging.dustLevel,aging.flowerWitherFactor*(1-wipe),
                 bathTarget,bath.value,flowerFlights.toList(),aartiRunning,aartiMotion,
                 onDeityClick={deityAction(it,"altar")},onDiyaClick={light("altar")},onBellClick={ringBell("altar")},
                 prasadRunning=prasadRunning,prasadProgress=prasad.value,
                 cobwebLevel=aging.cobwebLevel,cleanedAreas=cleanedAreas.toList(),
                 bellRunning=bellRunning || aartiRunning,bellProgress=if(aartiRunning) aartiMotion else bell.value,conchRunning=conchRunning,conchProgress=conch.value,
-                onFlowerClick={offerFlower(it,"altar")},onConchClick={soundConch("altar")},onAartiClick={startAarti("altar")},onPrasadClick={offerPrasad("altar")},selection=selection,
-                showModels=true,activeOccasion=activeOccasion) }
-            if(aging.needsCleaning) Box(Modifier.matchParentSize().pointerInput(timeOffset,selection,cleaningSweep) {
-                detectDragGestures {change,_ ->
-                    change.consume()
-                    if(!cleaningSweep) {
-                        val viewport=TempleViewport(size.width.toFloat(),size.height.toFloat())
-                        val point=TemplePoint((change.position.x-viewport.left)/viewport.imageWidth,change.position.y/viewport.imageWidth)
-                        if(ShrineCleaning.contains(shrineSpace,point) && cleanedAreas.none {kotlin.math.hypot(it.x-point.x,it.y-point.y)<.018f}) {
-                            if(cleanedAreas.isEmpty()) analytics.logTempleCleaningStarted("swipe")
-                            cleanedAreas.add(point);wipe=ShrineCleaning.coverage(shrineSpace,cleanedAreas)
-                            if(wipe>=.9f) {finishCleaning("swipe");session=WorshipSession(deityCount=selection.deityCount)}
+                onFlowerClick={offerFlower(it,"altar")},onConchClick={soundConch("altar")},onAartiClick={startAarti("altar")},onPrasadClick={offerPrasad("altar")},
+                onWaterClick={batheDeity(it,"altar")},onTilakClick={applyTilak(null,"altar")},selection=selection,
+                showModels=true,activeOccasion=activeOccasion,
+                interactionsEnabled=!aging.needsCleaning) }
+            if(aging.needsCleaning) Box(
+                Modifier
+                    .matchParentSize()
+                    .pointerInput(timeOffset,selection,cleaningSweep) {
+                        detectTapGestures { startTapCleaning() }
+                    }
+                    .pointerInput(timeOffset,selection,cleaningSweep) {
+                        detectDragGestures {change,_ ->
+                            change.consume()
+                            if(!cleaningSweep) {
+                                val viewport=TempleViewport(size.width.toFloat(),size.height.toFloat())
+                                val point=viewport.point(change.position.x,change.position.y)
+                                if(ShrineCleaning.contains(shrineSpace,point) && cleanedAreas.none {kotlin.math.hypot(it.x-point.x,it.y-point.y)<.018f}) {
+                                    if(cleanedAreas.isEmpty()) analytics.logTempleCleaningStarted("swipe")
+                                    cleanedAreas.add(point);wipe=ShrineCleaning.coverage(shrineSpace,cleanedAreas)
+                                    if(wipe>=.9f) {finishCleaning("swipe");session=WorshipSession(deityCount=selection.deityCount)}
+                                }
+                            }
                         }
                     }
-                }
-            })
-            if(!menu && !musicSheet && !devotionSheet && !customizer && !mindfulnessScreen) Box(Modifier.align(Alignment.BottomCenter)) { RitualGlassPanel(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)).padding(horizontal=14.dp,vertical=10.dp)
-                .fillMaxWidth().heightIn(max=270.dp).verticalScroll(rememberScrollState()).testTag("ritual-dock"),sceneSize,sceneOrigin,backgroundPath="shrine/backgrounds/${selection["shrine"]}.png") {
-                val buttonColors=ButtonDefaults.buttonColors(containerColor=RitualInk,contentColor=cream,disabledContainerColor=Color(0xCFE2D9CF),disabledContentColor=Color(0xFF81766C))
-                if(aging.needsCleaning) {
-                    Text(tr("पूजा से पहले मंदिर साफ़ करें","Clean the mandir before puja"),fontSize=13.sp)
-                    Button(onClick={analytics.logTempleCleaningStarted("tap");cleaningSweep=true;session=WorshipSession(deityCount=selection.deityCount)},enabled=!cleaningSweep,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),colors=buttonColors) {Text(tr("छूकर मंदिर साफ़ करें","Tap to clean temple"))}
-                } else if(aartiRunning) {
-                    PujaStepGuide(WorshipStep.AARTI,hindi)
-                    RitualChoice(tr("आरती चल रही है …","Offering aarti …"),false,{},Modifier.fillMaxWidth(),enabled=false)
-                } else if(session.aartiComplete) {
-                    if(currentSceneOccasion!=null) {
-                        Text("🪔 ${currentSceneOccasion.blessing(hindi)}",fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=RitualInk)
-                    } else {
-                        Text(tr("पूजा पूरी हुई","Puja complete"),fontSize=13.sp)
-                    }
-                    RitualChoice(tr("मेरी प्रोफ़ाइल","My profile"),false,
-                        {analytics.logAccountAction("post_puja_profile");devotionPage=DevotionPage.PROFILE;devotionSheet=true},Modifier.fillMaxWidth())
-                    if(showReviewPrompt) {
-                        RitualChoice(
-                            tr("⭐ Play Store पर ५-स्टार दें","⭐ Rate 5★ on Play Store"),
-                            false,
-                            {
-                                analytics.logAccountAction("post_puja_rate_play_store")
-                                com.worship.nityamandir.data.PlayStoreReviewHelper.openPlayStoreListing(context,prefs)
-                                showReviewPrompt=false
-                            },
-                            Modifier.fillMaxWidth()
+            )
+        }
+        if(aging.needsCleaning && !menu && !musicSheet && !devotionSheet && !customizer && !mindfulnessScreen) {
+            Box(Modifier.align(Alignment.BottomCenter)) {
+                RitualGlassPanel(
+                    Modifier
+                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
+                        .padding(horizontal=16.dp,vertical=12.dp)
+                        .fillMaxWidth()
+                        .testTag("cleaning-prompt-pill")
+                ) {
+                    Text(
+                        text=if(cleaningSweep) tr("मंदिर की सफ़ाई हो रही है …","Cleaning the mandir …")
+                            else tr("पूजा से पहले मंदिर साफ़ करें","Clean the mandir before puja"),
+                        fontSize=14.sp,
+                        fontWeight=FontWeight.Medium,
+                        color=RitualInk
+                    )
+                    Button(
+                        onClick={startTapCleaning()},
+                        enabled=!cleaningSweep,
+                        modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),
+                        shape=RoundedCornerShape(17.dp),
+                        colors=ButtonDefaults.buttonColors(
+                            containerColor=RitualInk,
+                            contentColor=cream,
+                            disabledContainerColor=Color(0xCFE2D9CF),
+                            disabledContentColor=Color(0xFF81766C)
+                        )
+                    ) {
+                        Text(
+                            text=if(cleaningSweep) tr("साफ़ हो रहा है …","Cleaning …") else tr("छूकर मंदिर साफ़ करें","Tap to clean temple"),
+                            fontSize=16.sp,
+                            fontWeight=FontWeight.SemiBold
                         )
                     }
-                } else {
-                    if(activeOccasion!=null && !activeOccasion.matchesSelection(selection)) {
-                        Surface(
-                            onClick={
-                                val next=activeOccasion.presetSelection
-                                selection=next
-                                session=WorshipSession(deityCount=next.deityCount)
-                                scope.launch { try { account.saveSelection(next) } catch(_:Exception) { } }
-                            },
-                            enabled=!busy,
-                            shape=RoundedCornerShape(14.dp),
-                            color=Color(0xFFF5E6C8),
-                            border=BorderStroke(1.dp,RitualGold),
-                            modifier=Modifier.fillMaxWidth().testTag("home-occasion-banner")
-                        ) {
-                            Row(
-                                Modifier.padding(horizontal=12.dp,vertical=8.dp),
-                                verticalAlignment=Alignment.CenterVertically,
-                                horizontalArrangement=Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    text="🪔 ${activeOccasion.title(hindi)}",
-                                    modifier=Modifier.weight(1f),
-                                    fontSize=13.sp,
-                                    fontWeight=FontWeight.SemiBold,
-                                    color=RitualInk
-                                )
-                                Text(
-                                    text=tr("उत्सव लगाएँ","Apply Utsav"),
-                                    fontSize=13.sp,
-                                    fontWeight=FontWeight.Bold,
-                                    color=Color(0xFFA82424)
-                                )
-                            }
-                        }
-                    }
-                    AnimatedContent(targetState=session.step,transitionSpec={ (slideInHorizontally {it}+fadeIn()) togetherWith (slideOutHorizontally {-it}+fadeOut()) },label="ritual step") { displayedStep ->
-                    Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                    PujaStepGuide(displayedStep,hindi)
-                    when(displayedStep) {
-                        WorshipStep.LIGHT -> RitualChoice(tr("दीप जलाएँ","Light oil lamp"),session.lit,{light("dock")},Modifier.fillMaxWidth())
-                        WorshipStep.FLOWERS -> RitualChoice(tr("फूल अर्पित करें","Offer flowers"),session.flowers.size==selection.deityCount,{offerFlower(0,"dock")},Modifier.fillMaxWidth(),enabled=!ritualBusy)
-                        WorshipStep.BATH, WorshipStep.TILAK -> Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                            val done=when(displayedStep) {WorshipStep.BATH -> session.bathed;WorshipStep.TILAK -> session.tilak;else -> session.flowers}
-                            selection.deityNames(hindi).forEachIndexed {i,label ->
-                                RitualChoice(if(bathTarget==i) "$label …" else label,i in done,{deityAction(i,"dock")},Modifier.weight(1f),enabled=!busy)
-                            }
-                        }
-                        WorshipStep.CONCH -> RitualChoice(tr("शंख बजाएँ","Sound conch"),session.conchBlown,{soundConch("dock")},Modifier.fillMaxWidth())
-                        WorshipStep.PRASAD -> RitualChoice(tr("प्रसाद अर्पित करें","Offer prasad"),session.prasadOffered,{offerPrasad("dock")},Modifier.fillMaxWidth(),enabled=!prasadRunning)
-                        WorshipStep.AARTI -> RitualChoice(if(aartiRunning) tr("आरती चल रही है …","Offering aarti …") else tr("दीप आरती आरंभ करें","Begin diya aarti"),session.aartiComplete,{startAarti("dock")},Modifier.fillMaxWidth(),enabled=!aartiRunning)
-                    }
-                    }
-                    }
                 }
-            } }
+            }
         }
-        // Global options stay outside the ritual dock, so a single action needs only one row.
+        // Top options bar leaves the entire altar and thali free of text before, during, and after aarti.
         if(!menu && !musicSheet && !devotionSheet && !customizer && !mindfulnessScreen) {
             val hasMusic=bhajan.current!=null || bhajan.loading
-            Box(Modifier.align(if(hasMusic) Alignment.TopCenter else Alignment.TopEnd)) {
-                Row((if(hasMusic) Modifier.fillMaxWidth() else Modifier).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)).padding(horizontal=14.dp,vertical=8.dp),
-                    horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.Top) {
-                    if(hasMusic) {
-                        BhajanMiniPlayer(bhajan,hindi,{analytics.logBhajanControlAction("expand","${bhajan.current?.id.orEmpty()}","mini_player");musicSheet=true},Modifier.weight(1f),showTrackNavigation=false,compact=true)
-                    }
-                    SacredMenuButton(
-                        onClick={menu=true},
-                        contentDescription=tr("मंदिर विकल्प","Temple options")
+            Row(
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top))
+                    .padding(horizontal=14.dp,vertical=8.dp),
+                horizontalArrangement=if(hasMusic) Arrangement.spacedBy(8.dp) else Arrangement.End,
+                verticalAlignment=Alignment.Top
+            ) {
+                if(hasMusic) {
+                    BhajanMiniPlayer(
+                        bhajan,
+                        hindi,
+                        {analytics.logBhajanControlAction("expand","${bhajan.current?.id.orEmpty()}","mini_player");musicSheet=true},
+                        Modifier.weight(1f),
+                        showTrackNavigation=false,
+                        compact=true
                     )
                 }
+                SacredMenuButton(
+                    onClick={menu=true},
+                    contentDescription=tr("मंदिर विकल्प","Temple options")
+                )
             }
         }
         if(mindfulnessScreen) ShrineControlsTheme {
@@ -544,8 +545,18 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
         }
         if(customizer) ShrineControlsTheme { ShrineCustomizer(account,customizerDraft ?: selection,hindi,
             onDismiss={customizer=false;customizerDraft=null},onAccount={customizerDraft=it;customizer=false;devotionPage=if(account.signedIn) DevotionPage.PACKAGE else DevotionPage.LOGIN;devotionSheet=true},
-            onApplied={selection=it;customizerDraft=null;session=WorshipSession(deityCount=it.deityCount);customizer=false},
-            player=bhajan,onMusic={customizerDraft=it;customizer=false;musicSheet=true},activeOccasion=activeOccasion) }
+            onApplied={applied ->
+                val todayStr=currentLocalDate.toString()
+                val lastKey=DailyTempleSync.lastAppliedPreferenceKey(accountScope)
+                val overrideKey=DailyTempleSync.manualOverridePreferenceKey(accountScope)
+                if(todayTemple.matchesSelection(applied)) {
+                    prefs.edit().remove(overrideKey).putString(lastKey,todayStr).apply()
+                } else {
+                    prefs.edit().putString(overrideKey,todayStr).putString(lastKey,todayStr).apply()
+                }
+                selection=applied;customizerDraft=null;session=WorshipSession(deityCount=applied.deityCount);customizer=false
+            },
+            player=bhajan,onMusic={customizerDraft=it;customizer=false;musicSheet=true},activeOccasion=activeOccasion,todayTemple=todayTemple) }
         if(devotionSheet) ShrineControlsTheme { DevotionSheet(account,hindi,{devotionSheet=false},onCustomize={devotionSheet=false;customizerDraft=null;customizer=true},canCustomize=!busy,page=devotionPage,
             player=bhajan,onMusic={devotionSheet=false;musicSheet=true},
             onSignedIn={if(customizerDraft!=null) {devotionSheet=false;customizer=true}}) }
@@ -602,6 +613,13 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                         onClick={
                             menu=false
                             val next=activeOccasion.presetSelection
+                            val todayStr=currentLocalDate.toString()
+                            if(!todayTemple.matchesSelection(next)) {
+                                prefs.edit()
+                                    .putString(DailyTempleSync.manualOverridePreferenceKey(accountScope),todayStr)
+                                    .putString(DailyTempleSync.lastAppliedPreferenceKey(accountScope),todayStr)
+                                    .apply()
+                            }
                             selection=next
                             session=WorshipSession(deityCount=next.deityCount)
                             scope.launch { try { account.saveSelection(next) } catch(_:Exception) { } }
@@ -661,7 +679,6 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                         analytics.logDrawerItemSelected("rate_play_store")
                         menu=false
                         com.worship.nityamandir.data.PlayStoreReviewHelper.openPlayStoreListing(context,prefs)
-                        showReviewPrompt=false
                     }
                 )
 
@@ -729,6 +746,42 @@ fun MandirHomeScreen(modifier:Modifier=Modifier) {
                                 }
                             }
                         }
+                    }
+                )
+
+                // Auto Daily Temple Toggle Card
+                SacredDrawerCard(
+                    title=tr("प्रतिदिन स्वचालित मंदिर","Auto Daily Temple"),
+                    subtitle=if(autoDailyTemple) tr("हर दिन के अनुसार मंदिर व देवता अपने आप बदलें","Switch temple & deity automatically each day")
+                        else tr("आपका चुना हुआ मंदिर स्थिर रहेगा","Keep your chosen temple fixed across days"),
+                    leadingIcon={Icon(Icons.Outlined.CalendarToday,null,tint=RitualGold,modifier=Modifier.size(22.dp))},
+                    trailingContent={
+                        Surface(
+                            shape=RoundedCornerShape(50),
+                            color=if(autoDailyTemple) RitualInk else Color(0xFFEDE0CE),
+                            border=BorderStroke(1.dp,if(autoDailyTemple) RitualInk else Color(0x66B3833B))
+                        ) {
+                            Text(
+                                text=if(autoDailyTemple) tr("चालू","ON") else tr("बंद","OFF"),
+                                modifier=Modifier.padding(horizontal=10.dp,vertical=4.dp),
+                                fontSize=12.sp,
+                                fontWeight=FontWeight.SemiBold,
+                                color=if(autoDailyTemple) cream else RitualInk
+                            )
+                        }
+                    },
+                    modifier=Modifier.testTag("drawer-auto-daily-temple"),
+                    onClick={
+                        analytics.logDrawerItemSelected("auto_daily_temple")
+                        val next=!autoDailyTemple
+                        autoDailyTemple=next
+                        val editor=prefs.edit().putBoolean(DailyTempleSync.KEY_AUTO_ENABLED,next)
+                        if(next) {
+                            editor.remove(DailyTempleSync.manualOverridePreferenceKey(accountScope))
+                            editor.remove(DailyTempleSync.lastAppliedPreferenceKey(accountScope))
+                        }
+                        editor.apply()
+                        analytics.logAutoDailyTempleToggled(next)
                     }
                 )
 

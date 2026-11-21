@@ -29,6 +29,7 @@ var knownRoutes = map[string]string{
 	"/api/v2/shrine": "PUT", "/api/v2/purchase": "POST",
 	"/api/v2/coins/unlock": "POST", "/api/v2/shares": "POST",
 	"/api/v2/shares/opened": "POST", "/api/v2/referrals/install": "POST",
+	"/api/v2/account-deletion-request": "POST", "/delete-account": "GET",
 }
 
 func New() *Monitor {

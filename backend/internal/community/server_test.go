@@ -125,12 +125,12 @@ func TestCatalogSelectionIsAuthorizedAndPersistent(t *testing.T) {
 	}
 	_, registered := call(s, "POST", "register", "", `{"email":"custom@example.com","password":"long-password"}`)
 	token := registered["token"].(string)
-	body := `{"selections":{"shrine":"marble","idols":"shiva","flowers":"rose","lamp":"brass","shankh":"ivory","aarti":"traditional","prasad":"halwa"}}`
+	body := `{"selections":{"shrine":"marble","idols":"shiva","flowers":"bouquet","lamp":"brass","shankh":"ivory","aarti":"traditional","prasad":"halwa"}}`
 	if c, _ := call(s, "PUT", "shrine", token, body); c != 403 {
 		t.Fatal("locked account changed shrine", c)
 	}
 	s.db.Accounts["custom@example.com"].Unlocked = true
-	if c, _ := call(s, "PUT", "shrine", token, strings.Replace(body, `"rose"`, `"../../private"`, 1)); c != 400 {
+	if c, _ := call(s, "PUT", "shrine", token, strings.Replace(body, `"bouquet"`, `"../../private"`, 1)); c != 400 {
 		t.Fatal("invalid asset accepted", c)
 	}
 	if c, _ := call(s, "PUT", "shrine", token, body); c != 200 {

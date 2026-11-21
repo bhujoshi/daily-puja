@@ -11,51 +11,51 @@ class ShrineUnlocksTest {
         id, id, id, options.map { ShrineOption(it, it, it, "", "image", "") }
     )
     private val categories = listOf(
-        category("shrine", "marble", "ivory", "carved"),
-        category("flowers", "original", "rose", "ivory"),
-        category("idols", "original", "shiva"),
-        category("lamp", "original", "brass")
+        category("shrine", "marble", "ivory", "carved", "swarna"),
+        category("flowers", "original", "rose", "azalea", "bouquet"),
+        category("idols", "original", "shiva", "shanidev"),
+        category("incense", "original", "dhoop", "mayur_dhoop")
     )
     private fun owns(ids: Set<String>): (String, String) -> Boolean = { category, item ->
         "$category:$item" in ids
     }
 
     @Test fun newUnlocksIncludeOnlyOwnedPaidItemsThatHaveNotBeenSeen() {
-        val owned = setOf("shrine:ivory", "flowers:rose", "idols:shiva", "lamp:brass", "shrine:marble")
-        val fresh = ShrineUnlocks.newUnlocks(categories, setOf("shrine:ivory"), owns(owned))
-        assertEquals(listOf("flowers:rose"), fresh.map { it.id })
-        assertEquals(2, fresh.single().cost)
-        assertEquals("flowers", fresh.single().category.id)
-        assertEquals("rose", fresh.single().option.id)
+        val owned = setOf("shrine:ivory", "flowers:azalea", "flowers:bouquet", "idols:shanidev", "incense:mayur_dhoop")
+        val fresh = ShrineUnlocks.newUnlocks(categories, setOf("flowers:azalea"), owns(owned))
+        assertEquals(listOf("flowers:bouquet", "incense:mayur_dhoop"), fresh.map { it.id })
+        assertEquals(2, fresh.first().cost)
+        assertEquals("flowers", fresh.first().category.id)
+        assertEquals("bouquet", fresh.first().option.id)
+        assertEquals(3, fresh.last().cost)
     }
 
     @Test fun availableUnlocksUseExactBalanceAndExcludeOwnedItems() {
-        val owned = owns(setOf("flowers:rose"))
+        val owned = owns(setOf("flowers:azalea"))
         assertTrue(ShrineUnlocks.availableUnlocks(categories, -1, owned).isEmpty())
         assertTrue(ShrineUnlocks.availableUnlocks(categories, 1, owned).isEmpty())
-        assertEquals(listOf("flowers:ivory"), ShrineUnlocks.availableUnlocks(categories, 2, owned).map { it.id })
-        assertEquals(listOf("flowers:ivory"), ShrineUnlocks.availableUnlocks(categories, 6, owned).map { it.id })
-        assertEquals(listOf("shrine:ivory", "shrine:carved", "flowers:ivory"),
-            ShrineUnlocks.availableUnlocks(categories, 7, owned).map { it.id })
+        assertEquals(listOf("flowers:bouquet"), ShrineUnlocks.availableUnlocks(categories, 2, owned).map { it.id })
+        assertEquals(listOf("flowers:bouquet", "incense:mayur_dhoop"),
+            ShrineUnlocks.availableUnlocks(categories, 3, owned).map { it.id })
         assertTrue(ShrineUnlocks.availableUnlocks(categories, 100, { _, _ -> true }).isEmpty())
     }
 
     @Test fun viewingUnlocksRetainsHistoryAndLeavesFuturePurchasesNew() {
-        val previous = setOf("shrine:retired", "flowers:rose")
-        val owned = setOf("shrine:ivory", "flowers:rose", "idols:shiva")
+        val previous = setOf("shrine:retired", "flowers:azalea")
+        val owned = setOf("shrine:ivory", "flowers:azalea", "idols:shanidev")
         val seen = ShrineUnlocks.seenAfterViewing(categories, previous, owns(owned))
-        assertEquals(previous + "shrine:ivory", seen)
+        assertEquals(previous, seen)
         assertTrue(ShrineUnlocks.newUnlocks(categories, seen, owns(owned)).isEmpty())
-        assertEquals(listOf("shrine:carved"),
-            ShrineUnlocks.newUnlocks(categories, seen, owns(owned + "shrine:carved")).map { it.id })
+        assertEquals(listOf("incense:mayur_dhoop"),
+            ShrineUnlocks.newUnlocks(categories, seen, owns(owned + "incense:mayur_dhoop")).map { it.id })
     }
 
     @Test fun purchaseAcknowledgementOnlyMarksSuccessfullyOwnedPaidItem() {
-        val seen = setOf("shrine:ivory")
-        assertEquals(seen, ShrineUnlocks.seenAfterUnlock(seen, "flowers", "rose", owns = false, cost = 2))
-        assertEquals(seen, ShrineUnlocks.seenAfterUnlock(seen, "idols", "shiva", owns = true, cost = 0))
-        assertEquals(seen + "flowers:rose",
-            ShrineUnlocks.seenAfterUnlock(seen, "flowers", "rose", owns = true, cost = 2))
+        val seen = setOf("flowers:azalea")
+        assertEquals(seen, ShrineUnlocks.seenAfterUnlock(seen, "flowers", "bouquet", owns = false, cost = 2))
+        assertEquals(seen, ShrineUnlocks.seenAfterUnlock(seen, "idols", "shanidev", owns = true, cost = 0))
+        assertEquals(seen + "flowers:bouquet",
+            ShrineUnlocks.seenAfterUnlock(seen, "flowers", "bouquet", owns = true, cost = 2))
     }
 
     @Test fun acknowledgementKeysKeepAccountsSeparateAndHaveNoGuestFallback() {
@@ -65,50 +65,53 @@ class ShrineUnlocksTest {
         val firstKey = ShrineUnlocks.seenPreferenceKey("first")!!
         val secondKey = ShrineUnlocks.seenPreferenceKey("second")!!
         assertNotEquals(firstKey, secondKey)
-        val stored = mapOf(firstKey to setOf("shrine:ivory"))
-        val firstNew = ShrineUnlocks.newUnlocks(categories, stored[firstKey].orEmpty(), owns(setOf("shrine:ivory")))
-        val secondNew = ShrineUnlocks.newUnlocks(categories, stored[secondKey].orEmpty(), owns(setOf("shrine:ivory")))
+        val stored = mapOf(firstKey to setOf("flowers:azalea"))
+        val firstNew = ShrineUnlocks.newUnlocks(categories, stored[firstKey].orEmpty(), owns(setOf("flowers:azalea")))
+        val secondNew = ShrineUnlocks.newUnlocks(categories, stored[secondKey].orEmpty(), owns(setOf("flowers:azalea")))
         assertTrue(firstNew.isEmpty())
-        assertEquals(listOf("shrine:ivory"), secondNew.map { it.id })
+        assertEquals(listOf("flowers:azalea"), secondNew.map { it.id })
         assertEquals(firstKey, ShrineUnlocks.seenPreferenceKey("first"))
     }
 
-    @Test fun serverPricingOverridesFallbackAndFreeItemsNeverCreateBadges() {
-        assertEquals(0, ShrineUnlocks.cost("shrine", "marble"))
-        assertEquals(0, ShrineUnlocks.cost("shrine", "diwali"))
-        assertEquals(0, ShrineUnlocks.cost("shrine", "divya_darshan"))
-        assertEquals(0, ShrineUnlocks.cost("shrine", "kamal_peeth"))
-        assertEquals(0, ShrineUnlocks.cost("shrine", "swarna_peeth"))
-        assertEquals(7, ShrineUnlocks.cost("shrine", "ivory"))
-        assertEquals(7, ShrineUnlocks.cost("shrine", "swarna"))
+    @Test fun allShrinesIdolsAndDailyPresetsAreFreeWhileOptionalExtrasRetainServerPricing() {
+        for (shrine in listOf("original", "marble", "diwali", "divya_darshan", "kamal_peeth", "swarna_peeth", "ivory", "carved", "swarna")) {
+            assertEquals(0, ShrineUnlocks.cost("shrine", shrine))
+            assertEquals(0, ShrineUnlocks.cost("shrine", shrine, 9))
+        }
+        for (idol in listOf("original", "ganesh_hanuman", "radha_krishna", "shiva", "lakshmi", "durga", "ram_darbar", "hanuman", "shanidev")) {
+            assertEquals(0, ShrineUnlocks.cost("idols", idol))
+        }
         assertEquals(0, ShrineUnlocks.cost("garland", "original"))
-        assertEquals(4, ShrineUnlocks.cost("garland", "lotus"))
+        assertEquals(0, ShrineUnlocks.cost("garland", "rose"))
+        assertEquals(0, ShrineUnlocks.cost("garland", "lotus"))
+        assertEquals(0, ShrineUnlocks.cost("garland", "mogra"))
         assertEquals(0, ShrineUnlocks.cost("incense", "original"))
-        assertEquals(3, ShrineUnlocks.cost("incense", "dhoop"))
-        assertEquals(3, ShrineUnlocks.cost("incense", "kamal_dhoop"))
+        assertEquals(0, ShrineUnlocks.cost("incense", "dhoop"))
+        assertEquals(0, ShrineUnlocks.cost("incense", "kamal_dhoop"))
         assertEquals(3, ShrineUnlocks.cost("incense", "mayur_dhoop"))
         assertEquals(0, ShrineUnlocks.cost("lamp", "brass"))
-        assertEquals(3, ShrineUnlocks.cost("lamp", "peacock"))
+        assertEquals(0, ShrineUnlocks.cost("lamp", "peacock"))
         assertEquals(0, ShrineUnlocks.cost("shankh", "ivory"))
-        assertEquals(3, ShrineUnlocks.cost("shankh", "swarna"))
+        assertEquals(0, ShrineUnlocks.cost("shankh", "swarna"))
         assertEquals(0, ShrineUnlocks.cost("aarti", "traditional"))
-        assertEquals(3, ShrineUnlocks.cost("aarti", "karpura"))
+        assertEquals(0, ShrineUnlocks.cost("aarti", "karpura"))
         assertEquals(0, ShrineUnlocks.cost("prasad", "halwa"))
         assertEquals(0, ShrineUnlocks.cost("prasad", "laddu"))
-        assertEquals(3, ShrineUnlocks.cost("prasad", "modak"))
-        assertEquals(2, ShrineUnlocks.cost("flowers", "rose"))
-        assertEquals(2, ShrineUnlocks.cost("flowers", "mogra_flower"))
-        assertEquals(0, ShrineUnlocks.cost("idols", "shiva"))
-        assertEquals(0, ShrineUnlocks.cost("shrine", "original", 9))
-        assertEquals(0, ShrineUnlocks.cost("shrine", "marble", 9))
-        assertEquals(7, ShrineUnlocks.cost("shrine", "ivory", -1))
+        assertEquals(0, ShrineUnlocks.cost("prasad", "modak"))
+        assertEquals(0, ShrineUnlocks.cost("flowers", "rose"))
+        assertEquals(0, ShrineUnlocks.cost("flowers", "orchid"))
+        assertEquals(0, ShrineUnlocks.cost("flowers", "mogra_flower"))
+        assertEquals(2, ShrineUnlocks.cost("flowers", "azalea"))
+        assertEquals(2, ShrineUnlocks.cost("flowers", "bouquet"))
+        assertEquals(3, ShrineUnlocks.cost("incense", "mayur_dhoop", -1))
+
         val pricing: (String, String) -> Int = { category, item ->
-            ShrineUnlocks.cost(category, item, mapOf("shrine" to 4, "flowers" to 0)[category])
+            ShrineUnlocks.cost(category, item, mapOf("incense" to 4, "flowers" to 0)[category])
         }
         assertTrue(ShrineUnlocks.availableUnlocks(categories, 3, { _, _ -> false }, pricing).isEmpty())
-        assertEquals(listOf("shrine:ivory", "shrine:carved"),
+        assertEquals(listOf("incense:mayur_dhoop"),
             ShrineUnlocks.availableUnlocks(categories, 4, { _, _ -> false }, pricing).map { it.id })
-        assertEquals(listOf("shrine:ivory", "shrine:carved"),
+        assertEquals(listOf("incense:mayur_dhoop"),
             ShrineUnlocks.newUnlocks(categories, emptySet(), { _, _ -> true }, pricing).map { it.id })
     }
 }

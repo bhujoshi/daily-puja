@@ -13,7 +13,8 @@ val hasGoogleServicesConfig = listOf(
     "src/debug/google-services.json",
     "src/release/google-services.json"
 ).any { file(it).isFile }
-if (hasGoogleServicesConfig) {
+val isIsolatedVerification = providers.gradleProperty("isolatedVerification").orNull == "true"
+if (hasGoogleServicesConfig && !isIsolatedVerification) {
     apply(plugin = "com.google.gms.google-services")
 }
 
@@ -32,8 +33,8 @@ android {
         applicationId = "com.pavitramandir.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 21
-        versionName = "1.0.20"
+        versionCode = 23
+        versionName = "1.0.22"
         // Use the Google-enabled backend by default; local development can override this URL.
         buildConfigField("String", "ACCOUNT_API_URL", "\"${providers.gradleProperty("accountApiUrl").getOrElse("https://mcp-daily-puja-backend-staging-b3mqb.sprites.app")}\"")
 
@@ -84,12 +85,7 @@ android {
         buildConfig = true
     }
     androidResources {
-        val taskNames = gradle.startParameter.taskNames
-        val isReleaseBuild = taskNames.any { it.contains("Release", ignoreCase = true) } &&
-            taskNames.none { it.contains("AndroidTest", ignoreCase = true) }
-        if (isReleaseBuild) {
-            ignoreAssetsPatterns += listOf("wood.png")
-        }
+        localeFilters += listOf("en", "hi")
     }
     packaging {
         resources {

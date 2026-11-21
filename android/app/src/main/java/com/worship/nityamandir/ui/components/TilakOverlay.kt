@@ -24,49 +24,8 @@ import kotlin.math.sin
 @Composable
 fun TilakOverlay(
     applied: Set<Int>,
-    placement: IdolPlacement,
-    step: WorshipStep
+    placement: IdolPlacement
 ) {
-    // Subtle warm readiness aura on the miniature Kumkum, Chandan & Akshat katoris during the Tilak step
-    if (step == WorshipStep.TILAK && applied.size < placement.heads.size) {
-        Canvas(Modifier.fillMaxSize()) {
-            val view = TempleViewport(size.width, size.height)
-            val u = view.imageWidth
-            val kumkumPt = view.pixel(TempleSceneLayout.kumkumKatori)
-            val chandanPt = view.pixel(TempleSceneLayout.chandanKatori)
-            val akshatPt = view.pixel(TempleSceneLayout.akshatKatori)
-            val haloR = u * .036f
-
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(Color(0x55E03226), Color(0x22D8AF52), Color.Transparent),
-                    center = Offset(kumkumPt.x, kumkumPt.y),
-                    radius = haloR
-                ),
-                radius = haloR,
-                center = Offset(kumkumPt.x, kumkumPt.y)
-            )
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(Color(0x66F3C65F), Color(0x28D8AF52), Color.Transparent),
-                    center = Offset(chandanPt.x, chandanPt.y),
-                    radius = haloR
-                ),
-                radius = haloR,
-                center = Offset(chandanPt.x, chandanPt.y)
-            )
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(Color(0x44FFFDF8), Color(0x18D8AF52), Color.Transparent),
-                    center = Offset(akshatPt.x, akshatPt.y),
-                    radius = haloR * .82f
-                ),
-                radius = haloR * .82f,
-                center = Offset(akshatPt.x, akshatPt.y)
-            )
-        }
-    }
-
     placement.heads.forEachIndexed { index, head ->
         key(index) {
             val reveal = remember { Animatable(0f) }

@@ -72,4 +72,24 @@ class WorshipSessionTest {
         assertEquals(one,one.next())
         assertEquals(WorshipStep.CONCH,one.copy(flowers=setOf(0,1)).next().step)
     }
+
+    @Test fun waterLotaRestsClearOnAltarAndReturnsSmoothlyAfterAbhishek() {
+        val rest = TemplePoint(TempleSceneLayout.waterLota.x, TempleSceneLayout.waterLota.y - .06f)
+        val pour = TemplePoint(.40f, .25f)
+        // Rests between center prasad floor and right oil lamp, clear above the thali rim.
+        assertTrue(TempleSceneLayout.waterLota.x > TempleSceneLayout.prasadFloor.x + .09f)
+        assertTrue(TempleSceneLayout.waterLota.x < ShrineSpace.forId("marble").lamp.x - .09f)
+        assertTrue(TempleSceneLayout.waterLota.y < TempleSceneLayout.plate.y - .20f)
+        assertEquals(rest, TempleSceneLayout.waterLotaPosition(rest, pour, 0f))
+        assertEquals(rest, TempleSceneLayout.waterLotaPosition(rest, pour, 1f))
+        assertEquals(0f, TempleSceneLayout.waterLotaTilt(0f), .0001f)
+        assertEquals(1f, TempleSceneLayout.waterLotaTilt(.5f), .0001f)
+        assertEquals(0f, TempleSceneLayout.waterLotaTilt(1f), .0001f)
+        for (i in 1..200) {
+            val a = TempleSceneLayout.waterLotaPosition(rest, pour, (i - 1) / 200f)
+            val b = TempleSceneLayout.waterLotaPosition(rest, pour, i / 200f)
+            assertTrue(kotlin.math.abs(a.x - b.x) < .03f)
+            assertTrue(kotlin.math.abs(a.y - b.y) < .04f)
+        }
+    }
 }

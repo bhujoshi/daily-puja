@@ -28,14 +28,19 @@ import androidx.compose.ui.window.DialogProperties
 import com.worship.nityamandir.data.*
 import com.worship.nityamandir.engine.WorshipSession
 import com.worship.nityamandir.engine.BhajanPlayer
+import com.worship.nityamandir.engine.DailyTemple
+import com.worship.nityamandir.engine.DailyTemples
 import com.worship.nityamandir.engine.OccasionAartiAnimation
 import com.worship.nityamandir.engine.TempleOccasion
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 
 @Composable
 fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boolean,onDismiss:()->Unit,onAccount:(ShrineSelection)->Unit,onApplied:(ShrineSelection)->Unit,
-    player:BhajanPlayer,onMusic:(ShrineSelection)->Unit,activeOccasion:TempleOccasion?=null) {
+    player:BhajanPlayer,onMusic:(ShrineSelection)->Unit,activeOccasion:TempleOccasion?=null,
+    todayTemple:DailyTemple=DailyTemples.forDate(LocalDate.now(ZoneId.of("Asia/Kolkata")))) {
     val context=LocalContext.current
     val analytics=remember {MandirAnalytics.from(context)}
     val catalog=remember {ShrineCatalog(context)}
@@ -122,6 +127,22 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
     }
     val selectionHint=if(selectedUnlocks.isEmpty()) tr("लगाने पर नई पूजा शुरू होगी।","Starts a new puja when applied.")
         else tr("कीमत: $selectedCost सिक्के","Cost: $selectedCost coins")
+    fun applySelection(target:ShrineSelection, sourceDailyTempleId:String?=null) {
+        if(busy) return
+        busy=true;error="";message=""
+        scope.launch {
+            try {
+                account.saveSelection(target)
+                sourceDailyTempleId?.let { analytics.logDailyTempleApplied(it,"customizer") }
+                analytics.logShrineSelectionApplied(target)
+                showPreview=false
+                onApplied(target)
+            }
+            catch(e:CancellationException) {throw e}
+            catch(e:Exception) {error=failure(e)}
+            finally {busy=false}
+        }
+    }
     val applyOrUnlock:()->Unit = action@{
         if(busy) return@action
         if(selectedUnlocks.isNotEmpty()) {
@@ -131,18 +152,7 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
             }
             requestUnlock(selectedUnlocks)
         } else {
-            busy=true;error="";message=""
-            scope.launch {
-                try {
-                    account.saveSelection(draft)
-                    analytics.logShrineSelectionApplied(draft)
-                    showPreview=false
-                    onApplied(draft)
-                }
-                catch(e:CancellationException) {throw e}
-                catch(e:Exception) {error=failure(e)}
-                finally {busy=false}
-            }
+            applySelection(draft)
         }
     }
     Dialog(onDismissRequest={if(!busy) onDismiss()},properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
@@ -160,8 +170,31 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                     }
                     IconButton(onClick=onDismiss,enabled=!busy) {Icon(Icons.Outlined.Close,tr("बंद करें","Close"))}
                 }
-                Column(Modifier.weight(1f).verticalScroll(optionsScroll),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 if(player.current!=null || player.loading) BhajanMiniPlayer(player,hindi,{onMusic(draft)},Modifier.testTag("mandir-choice-music"),compact=true)
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    catalog.categories.forEach {category ->
+                        FilterChip(selected=categoryId==category.id,onClick={
+                            error="";message=""
+                            draft=revertUnownedOtherCategories(draft,category.id)
+                            categoryId=category.id
+                            analytics.logShrineCategoryViewed(category.id)
+                        },enabled=!busy,label={Text(if(hindi) category.hi else category.en)})
+                    }
+                }
+                Column(Modifier.weight(1f).verticalScroll(optionsScroll),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                val todayActive = todayTemple.matchesSelection(baseline) && todayTemple.matchesSelection(draft)
+                RitualChoice(
+                    label = if (todayActive) tr("आज का मंदिर सक्रिय", "Today's temple active")
+                        else tr("आज का मंदिर सक्रिय करें", "Activate today's temple"),
+                    selected = todayActive,
+                    onClick = {
+                        val preset = catalog.normalize(todayTemple.presetSelection)
+                        draft = preset
+                        applySelection(preset, sourceDailyTempleId = todayTemple.id)
+                    },
+                    modifier = Modifier.fillMaxWidth().testTag("daily-temple-activate-button"),
+                    enabled = !busy
+                )
                 if(activeOccasion!=null) {
                     val presetActive = activeOccasion.matchesSelection(draft)
                     Surface(
@@ -213,16 +246,6 @@ fun ShrineCustomizer(account:DevotionAccount,current:ShrineSelection,hindi:Boole
                                 )
                             }
                         }
-                    }
-                }
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    catalog.categories.forEach {category ->
-                        FilterChip(selected=categoryId==category.id,onClick={
-                            error="";message=""
-                            draft=revertUnownedOtherCategories(draft,category.id)
-                            categoryId=category.id
-                            analytics.logShrineCategoryViewed(category.id)
-                        },enabled=!busy,label={Text(if(hindi) category.hi else category.en)})
                     }
                 }
                 val category=catalog.categories.first {it.id==categoryId}

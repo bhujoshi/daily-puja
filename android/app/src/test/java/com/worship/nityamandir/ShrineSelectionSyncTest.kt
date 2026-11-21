@@ -21,21 +21,21 @@ class ShrineSelectionSyncTest {
     )
 
     @Test fun allBundledFreeTemplesAreOwnedWithoutUnlock() {
-        for (shrine in listOf("marble", "diwali", "divya_darshan", "kamal_peeth", "swarna_peeth")) {
-            val selection = divyaDarshanDraft.with("shrine", shrine)
+        for (shrine in listOf("marble", "diwali", "divya_darshan", "kamal_peeth", "swarna_peeth", "ivory", "carved", "swarna")) {
+            val selection = divyaDarshanDraft.with("shrine", shrine).with("idols", "shanidev")
             assertTrue("Expected $shrine to be owned without purchase", ShrineSelectionSync.ownsSelection(selection))
         }
     }
 
     @Test fun paidItemsRequireOwnershipOrPackageEntitlement() {
-        val ivorySelection = divyaDarshanDraft.with("shrine", "ivory")
-        assertFalse(ShrineSelectionSync.ownsSelection(ivorySelection))
-        assertTrue(ShrineSelectionSync.ownsSelection(ivorySelection, ownedKeys = setOf("shrine:ivory")))
-        assertTrue(ShrineSelectionSync.ownsSelection(ivorySelection, unlockedPackage = true))
+        val mayurDhoopSelection = divyaDarshanDraft.with("incense", "mayur_dhoop")
+        assertFalse(ShrineSelectionSync.ownsSelection(mayurDhoopSelection))
+        assertTrue(ShrineSelectionSync.ownsSelection(mayurDhoopSelection, ownedKeys = setOf("incense:mayur_dhoop")))
+        assertTrue(ShrineSelectionSync.ownsSelection(mayurDhoopSelection, unlockedPackage = true))
 
-        val multiFlower = divyaDarshanDraft.with("flowers", "original,rose")
+        val multiFlower = divyaDarshanDraft.with("flowers", "original,bouquet")
         assertFalse(ShrineSelectionSync.ownsSelection(multiFlower))
-        assertTrue(ShrineSelectionSync.ownsSelection(multiFlower, ownedKeys = setOf("flowers:rose")))
+        assertTrue(ShrineSelectionSync.ownsSelection(multiFlower, ownedKeys = setOf("flowers:bouquet")))
     }
 
     @Test fun unsyncedLocalSelectionSurvivesServerProfileRefreshWithOlderCatalog() {
@@ -91,7 +91,7 @@ class ShrineSelectionSyncTest {
             ShrineSelectionSync.onRemoteSaveFailure(
                 stillSignedIn = false,
                 isConnectionFailure = false,
-                selection = divyaDarshanDraft.with("shrine", "ivory")
+                selection = divyaDarshanDraft.with("incense", "mayur_dhoop")
             )
         )
     }

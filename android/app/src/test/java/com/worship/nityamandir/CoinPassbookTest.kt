@@ -55,6 +55,15 @@ class CoinPassbookTest {
         assertEquals("Flowers · Today", first.subtitleEn)
         assertEquals("फूल · आज", first.subtitleHi)
 
+        // Historical shrine unlock also preserves historical 7-coin spend even after shrines became free
+        val historicalShrine = CoinPassbook.build(
+            balance = 1,
+            history = listOf(RawHistoryEvent("7", "coin_unlock", "2026-10-19T12:00:00Z", "shrine:ivory")),
+            categories = categories,
+            today = today
+        ).entries.single()
+        assertEquals(-7, historicalShrine.delta)
+
         // Second entry: referral coin yesterday
         val second = ledger.entries[1]
         assertEquals(PassbookEntryKind.REFERRAL_REWARD, second.kind)

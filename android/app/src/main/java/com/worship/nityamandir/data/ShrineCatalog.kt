@@ -30,6 +30,7 @@ data class ShrineSelection(val values:Map<String,String> = emptyMap()) {
         "durga" -> listOf(if(hindi) "दुर्गा माँ" else "Durga")
         "ram_darbar" -> listOf(if(hindi) "राम दरबार" else "Ram Darbar")
         "hanuman" -> listOf(if(hindi) "हनुमान जी" else "Hanuman")
+        "shanidev" -> listOf(if(hindi) "शनिदेव महाराज" else "Shani Dev")
         else -> if(hindi) listOf("गणेश जी","लक्ष्मी जी") else listOf("Ganesha","Lakshmi")
     }
 }
@@ -59,20 +60,13 @@ class ShrineCatalog(context:Context) {
         } else {
             category.options
         }
-    fun flowerPaths(selection:ShrineSelection):List<String> {
-        val options=categories.first {it.id=="flowers"}.options
-        return selection.flowerIds.flatMap {id ->
-            if(id=="original") listOf("shrine/flowers/sunflower.glb","shrine/flowers/peony.glb")
-            else options.firstOrNull {it.id==id}?.let {listOf(it.path)} ?: emptyList()
-        }.distinct()
-    }
     fun flowerSpritePaths(selection:ShrineSelection):List<String> {
         val options=categories.first {it.id=="flowers"}.options
         return selection.flowerIds.flatMap {id ->
             if(id=="original") listOf(
-                "shrine/flowers/sunflower.png",
-                "shrine/flowers/marigold_yellow.png",
-                "shrine/flowers/peony.png"
+                "shrine/flowers/sunflower.webp",
+                "shrine/flowers/marigold_yellow.webp",
+                "shrine/flowers/peony.webp"
             )
             else options.firstOrNull {it.id==id}?.let {listOf(it.thumbnail)} ?: emptyList()
         }.distinct()

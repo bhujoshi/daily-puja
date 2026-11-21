@@ -13,17 +13,41 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import com.worship.nityamandir.engine.WorshipStep
 
-/** A short numbered instruction keeps step context inside the compact ritual dock. */
+/** A short numbered instruction keeps step context inside the compact top sanctum pill. */
 @Composable
-fun PujaStepGuide(step: WorshipStep, hindi: Boolean, modifier: Modifier = Modifier) {
+fun PujaStepGuide(
+    step: WorshipStep,
+    hindi: Boolean,
+    modifier: Modifier = Modifier,
+    deityCount: Int = 2,
+    doneCount: Int = 0,
+    aartiRunning: Boolean = false
+) {
+    val multiProgress = if (deityCount > 1) " ($doneCount/$deityCount)" else ""
     val instruction = when (step) {
-        WorshipStep.LIGHT -> if (hindi) "दीप जलाकर पूजा शुरू करें" else "Light the diya to begin"
-        WorshipStep.BATH -> if (hindi) "हर देवता का स्नान कराएँ" else "Bathe each deity"
-        WorshipStep.TILAK -> if (hindi) "हर देवता को चंदन व तिलक लगाएँ" else "Apply chandan & tilak to each deity"
-        WorshipStep.FLOWERS -> if (hindi) "हर देवता को फूल अर्पित करें" else "Place flowers before each deity"
-        WorshipStep.CONCH -> if (hindi) "प्रार्थना में शंख बजाएँ" else "Sound the conch in prayer"
-        WorshipStep.PRASAD -> if (hindi) "श्रद्धा से भोग अर्पित करें" else "Offer food with a grateful heart"
-        WorshipStep.AARTI -> if (hindi) "आरती शुरू करें और पूरी होने दें" else "Begin the aarti and let it finish"
+        WorshipStep.LIGHT -> if (hindi) "दीप पर टैप कर जलाएँ" else "Tap oil lamp to light"
+        WorshipStep.BATH -> if (hindi) {
+            if (deityCount > 1) "लोटा या मूर्ति टैप करें$multiProgress"
+            else "जल लोटे से स्नान कराएँ"
+        } else {
+            if (deityCount > 1) "Tap kalash or deity$multiProgress"
+            else "Tap kalash to bathe"
+        }
+        WorshipStep.TILAK -> if (hindi) {
+            if (deityCount > 1) "तिलक कटोरी या मूर्ति टैप करें$multiProgress"
+            else "तिलक कटोरी पर टैप करें"
+        } else {
+            if (deityCount > 1) "Tap tilak or deity$multiProgress"
+            else "Tap tilak bowls to apply"
+        }
+        WorshipStep.FLOWERS -> if (hindi) "थाली से फूल अर्पित करें$multiProgress" else "Tap flowers to offer$multiProgress"
+        WorshipStep.CONCH -> if (hindi) "थाली पर शंख बजाएँ" else "Tap shankh to sound"
+        WorshipStep.PRASAD -> if (hindi) "थाली से भोग अर्पित करें" else "Tap prasad bowl to offer"
+        WorshipStep.AARTI -> if (aartiRunning) {
+            if (hindi) "आरती · उँगली से दीप घुमाएँ" else "Aarti · Drag to wave lamp"
+        } else {
+            if (hindi) "आरती दीप पर टैप करें" else "Tap aarti lamp to begin"
+        }
     }
     val number = step.ordinal + 1
     val total = WorshipStep.values().size

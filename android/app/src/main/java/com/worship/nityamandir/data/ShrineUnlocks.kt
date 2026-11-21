@@ -8,19 +8,30 @@ data class ShrineUnlock(val category: ShrineCategory, val option: ShrineOption, 
 internal object ShrineUnlocks {
     fun cost(category: String, item: String, categoryCost: Int? = null): Int {
         if (item == "original" ||
-            (category == "shrine" && (item == "marble" || item == "diwali" || item == "divya_darshan" || item == "kamal_peeth" || item == "swarna_peeth")) ||
-            (category == "lamp" && item == "brass") ||
-            (category == "shankh" && item == "ivory") ||
-            (category == "aarti" && item == "traditional") ||
-            (category == "prasad" && (item == "halwa" || item == "laddu"))
+            category == "idols" ||
+            category == "shrine" ||
+            category == "garland" ||
+            category == "lamp" ||
+            category == "shankh" ||
+            category == "aarti" ||
+            category == "prasad" ||
+            (category == "incense" && (item == "dhoop" || item == "kamal_dhoop")) ||
+            (category == "flowers" && (item == "mogra_flower" || item == "rose" || item == "orchid"))
         ) return 0
         return categoryCost?.takeIf { it >= 0 } ?: when (category) {
-            "shrine" -> 7
-            "garland" -> 4
-            "incense", "lamp", "shankh", "aarti", "prasad" -> 3
+            "incense" -> 3
             "flowers" -> 2
             else -> 0
         }
+    }
+
+    /** Fallback coin cost used when rendering historical passbook entries for items later made free. */
+    fun historicalCategoryCost(category: String): Int = when (category) {
+        "shrine" -> 7
+        "garland" -> 4
+        "incense", "lamp", "shankh", "aarti", "prasad" -> 3
+        "flowers" -> 2
+        else -> 1
     }
 
     fun seenPreferenceKey(accountId: String?): String? =

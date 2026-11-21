@@ -15,6 +15,7 @@ type rewardRequest struct {
 	RequestID   string            `json:"request_id"`
 	Email       string            `json:"email"`
 	Password    string            `json:"password"`
+	Reason      string            `json:"reason"`
 	Invite      string            `json:"invite_code"`
 	Steps       []string          `json:"steps"`
 	Selections  map[string]string `json:"selections"`
@@ -51,6 +52,9 @@ func (s *Server) initRewards() {
 	if s.db.InstallUsers == nil {
 		s.db.InstallUsers = map[string]string{}
 	}
+	if s.db.DeletionRequests == nil {
+		s.db.DeletionRequests = map[string]*DeletionRequest{}
+	}
 	for _, a := range s.db.Accounts {
 		if a.Owned == nil {
 			a.Owned = map[string]bool{}
@@ -68,19 +72,19 @@ func (s *Server) initRewards() {
 
 func coinCost(category, item string) int {
 	if item == "original" ||
-		(category == "shrine" && (item == "marble" || item == "diwali" || item == "divya_darshan" || item == "kamal_peeth" || item == "swarna_peeth")) ||
-		(category == "lamp" && item == "brass") ||
-		(category == "shankh" && item == "ivory") ||
-		(category == "aarti" && item == "traditional") ||
-		(category == "prasad" && (item == "halwa" || item == "laddu")) {
+		category == "idols" ||
+		category == "shrine" ||
+		category == "garland" ||
+		category == "lamp" ||
+		category == "shankh" ||
+		category == "aarti" ||
+		category == "prasad" ||
+		(category == "incense" && (item == "dhoop" || item == "kamal_dhoop")) ||
+		(category == "flowers" && (item == "mogra_flower" || item == "rose" || item == "orchid")) {
 		return 0
 	}
 	switch category {
-	case "shrine":
-		return 7
-	case "garland":
-		return 4
-	case "incense", "lamp", "shankh", "aarti", "prasad":
+	case "incense":
 		return 3
 	case "flowers":
 		return 2

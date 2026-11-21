@@ -542,6 +542,21 @@ class MandirAnalytics(private val sink: Sink) {
         logEvent("morning_reminder_opened", mapOf("hour" to DailyPujaReminder.REMINDER_HOUR))
     }
 
+    fun logAutoDailyTempleToggled(enabled: Boolean) {
+        setUserProperty("auto_daily_temple", if (enabled) "on" else "off")
+        logEvent("auto_daily_temple_toggled", mapOf("enabled" to enabled))
+    }
+
+    fun logDailyTempleApplied(dailyTempleId: String, source: String) {
+        logEvent(
+            "daily_temple_applied",
+            mapOf(
+                "daily_temple_id" to dailyTempleId,
+                "source" to source
+            )
+        )
+    }
+
     companion object {
         private const val MAX_EVENT_NAME_LENGTH = 40
         private const val MAX_PARAM_KEY_LENGTH = 40

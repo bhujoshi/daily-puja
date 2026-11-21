@@ -3,9 +3,9 @@ package com.worship.nityamandir.ui
 import android.content.Context
 import androidx.compose.ui.test.*
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
 import com.worship.nityamandir.MainActivity
@@ -35,7 +35,8 @@ class MandirPreviewApplyTest {
         originalReferral = context.getSharedPreferences("referral_install", Context.MODE_PRIVATE).all.toMap()
         prepared = true
         context.getSharedPreferences("worship", Context.MODE_PRIVATE).edit().clear()
-            .putBoolean("hindi", false).commit()
+            .putBoolean("hindi", false)
+            .putBoolean("auto_daily_temple_enabled", false).commit()
         context.getSharedPreferences("devotion", Context.MODE_PRIVATE).edit().clear().commit()
         // Avoid an install-referrer prompt in this offline guest scenario.
         context.getSharedPreferences("referral_install", Context.MODE_PRIVATE).edit().clear()
@@ -77,8 +78,9 @@ class MandirPreviewApplyTest {
             it.config.getOrNull(SemanticsActions.OnClick)?.label == "Open temple"
         }).assertDoesNotExist()
         compose.onNodeWithTag("language-selection").assertDoesNotExist()
+        assertNoOverlayText()
         compose.waitUntil(10_000) {
-            runCatching { compose.onNodeWithText("Light oil lamp").assertIsDisplayed() }.isSuccess
+            runCatching { compose.onNodeWithTag("altar-item-lamp").assertIsDisplayed() }.isSuccess
         }
     }
 
@@ -110,7 +112,10 @@ class MandirPreviewApplyTest {
         compose.onNodeWithTag("language-selection").assertIsDisplayed()
         compose.onNodeWithText("हिंदी").performClick()
         compose.onNodeWithTag("language-selection").assertDoesNotExist()
-        compose.onNodeWithTag("ritual-dock").assertIsDisplayed()
+        assertNoOverlayText()
+        compose.waitUntil(10_000) {
+            runCatching { compose.onNodeWithTag("altar-item-lamp").assertIsDisplayed().assertIsEnabled() }.isSuccess
+        }
         assertEquals(true, context.getSharedPreferences("worship", Context.MODE_PRIVATE).getBoolean("hindi", false))
         scenario!!.recreate()
         compose.onNodeWithTag("language-selection").assertDoesNotExist()
@@ -124,46 +129,153 @@ class MandirPreviewApplyTest {
     @Test fun existingUserWithDefaultHindiSkipsLanguageSelection() {
         relaunchWithLanguageUnset(existingUser = true)
         compose.onNodeWithTag("language-selection").assertDoesNotExist()
-        compose.onNodeWithTag("ritual-dock").assertIsDisplayed()
+        assertNoOverlayText()
+        compose.onNodeWithTag("altar-item-lamp").assertIsDisplayed().assertIsEnabled()
         compose.onNodeWithContentDescription("मंदिर विकल्प").assertIsDisplayed()
     }
 
-    @Test fun pujaGuideExplainsTheCurrentStepAndKeepsTheDockCompact() {
+    @Test fun freeWorshipEnablesAllAltarItemsInAnyOrder() {
         openTemple()
-        compose.onNodeWithContentDescription("Step 1 of 7. Light the diya to begin")
-            .assertIsDisplayed()
-        assertCompactDock()
-        captureLayout("puja-step-light")
-        // The lit diya intentionally animates continuously. Drive frames explicitly
-        // so the test doesn't wait for that animation to become idle.
-        compose.mainClock.autoAdvance = false
-        compose.onNodeWithText("Light oil lamp").performClick()
-        compose.waitUntil(10_000) {
-            compose.mainClock.advanceTimeBy(100)
-            compose.onAllNodesWithContentDescription("Step 2 of 7. Bathe each deity")
-                .fetchSemanticsNodes().isNotEmpty()
+        assertNoOverlayText()
+        val allAltarTags = listOf(
+            "altar-item-lamp",
+            "altar-item-incense",
+            "altar-item-water",
+            "altar-item-tilak",
+            "altar-item-flower-0",
+            "altar-item-conch",
+            "altar-item-prasad",
+            "altar-item-aarti",
+            "altar-item-bell",
+            "altar-deity-0",
+            "altar-deity-1"
+        )
+        allAltarTags.forEach { tag ->
+            compose.onNodeWithTag(tag).assertIsDisplayed().assertIsEnabled()
         }
-        compose.mainClock.advanceTimeBy(2_000) // Finish the step's slide-in transition.
-        compose.onNodeWithContentDescription("Step 2 of 7. Bathe each deity")
-            .assertIsDisplayed()
-        compose.onNode(hasText("Ganesha") and hasAnyAncestor(hasTestTag("ritual-dock")))
-            .assertIsDisplayed().assertHasClickAction()
-        compose.onNode(hasText("Lakshmi") and hasAnyAncestor(hasTestTag("ritual-dock")))
-            .assertIsDisplayed().assertHasClickAction()
-        assertCompactDock()
+        captureLayout("puja-step-light")
+
+        // User can start with any item (e.g., Tilak first) without any forced step order.
+        compose.onNodeWithTag("altar-item-tilak").performClick()
+        // Wait briefly for tilak animation then drive frames explicitly once continuous animations begin.
+        compose.mainClock.autoAdvance = false
+        compose.mainClock.advanceTimeBy(800)
+
+        // All items remain enabled for free-form bathing out of order.
+        allAltarTags.forEach { tag ->
+            compose.onNodeWithTag(tag).assertIsEnabled()
+        }
+        compose.onNodeWithTag("altar-item-water").performClick()
+        compose.mainClock.advanceTimeBy(1200)
+        assertNoOverlayText()
         captureLayout("puja-step-bath")
+
+        // Finish bathing animation and light the lamp afterward; all items stay enabled.
+        compose.mainClock.advanceTimeBy(2500)
+        compose.onNodeWithTag("altar-item-lamp").performClick()
+        compose.mainClock.advanceTimeBy(500)
+        assertNoOverlayText()
+        allAltarTags.forEach { tag ->
+            compose.onNodeWithTag(tag).assertIsEnabled()
+        }
+        captureLayout("puja-step-tilak")
+
+        // Offer a flower directly too; user can do anything freely in any order.
+        compose.onNodeWithTag("altar-item-flower-0").performClick()
+        compose.mainClock.advanceTimeBy(1600)
+        allAltarTags.forEach { tag ->
+            compose.onNodeWithTag(tag).assertIsEnabled()
+        }
+
+        // Starting a long-running ritual like conch or bell keeps other unrelated mandir items clickable.
+        compose.onNodeWithTag("altar-item-conch").performClick()
+        compose.mainClock.advanceTimeBy(200)
+        listOf(
+            "altar-item-lamp",
+            "altar-item-incense",
+            "altar-item-water",
+            "altar-item-tilak",
+            "altar-item-flower-0",
+            "altar-item-prasad",
+            "altar-item-aarti",
+            "altar-item-bell",
+            "altar-deity-0",
+            "altar-deity-1"
+        ).forEach { tag ->
+            compose.onNodeWithTag(tag).assertIsEnabled()
+        }
+        compose.onNodeWithTag("altar-item-bell").performClick()
+        compose.onNodeWithTag("altar-item-incense").performClick()
+        compose.onNodeWithTag("altar-deity-0").performClick()
+
         scenario!!.close()
         scenario = null
         compose.mainClock.autoAdvance = true
     }
 
-    private fun assertCompactDock() {
-        val bounds = compose.onNodeWithTag("ritual-dock").assertIsDisplayed().getUnclippedBoundsInRoot()
-        val height = bounds.bottom - bounds.top
-        assertTrue("Puja dock occupies $height; expected at most 180dp", height <= 180.dp)
-        val guide = compose.onNodeWithTag("puja-step-guide").assertIsDisplayed().getUnclippedBoundsInRoot()
-        val maximumGuideHeight = (40 * context.resources.configuration.fontScale).dp
-        assertTrue("Step guidance must fit within two short lines", guide.bottom - guide.top <= maximumGuideHeight)
+    @Test fun agedTempleShowsCleanPromptAndTappingTempleOrButtonUnlocksAllMandirItems() {
+        scenario!!.close()
+        val staleMs = System.currentTimeMillis() - 48L * 3_600_000L
+        context.getSharedPreferences("worship", Context.MODE_PRIVATE).edit().clear()
+            .putBoolean("hindi", false)
+            .putBoolean("auto_daily_temple_enabled", false)
+            .putLong("last", staleMs)
+            .putLong("clean", staleMs)
+            .commit()
+        scenario = ActivityScenario.launch(MainActivity::class.java)
+
+        compose.waitUntil(10_000) {
+            runCatching { compose.onNodeWithTag("cleaning-prompt-pill").assertIsDisplayed() }.isSuccess
+        }
+        captureLayout("aged-cleaning-prompt")
+
+        // Tapping directly on the altar item area while aged also starts the clean sweep cleanly.
+        compose.onNodeWithTag("altar-item-bell").performTouchInput { click(center) }
+        compose.waitUntil(10_000) {
+            runCatching { compose.onNodeWithTag("cleaning-prompt-pill").assertDoesNotExist() }.isSuccess
+        }
+        openTemple()
+
+        // Re-age via drawer test toggle and verify the clean button also unlocks every mandir item.
+        compose.onNodeWithContentDescription("Temple options").performClick()
+        compose.onNodeWithText("Pass a day (test)").performScrollTo().performClick()
+        compose.waitUntil(10_000) {
+            runCatching { compose.onNodeWithTag("cleaning-prompt-pill").assertIsDisplayed() }.isSuccess
+        }
+        compose.onNodeWithText("Tap to clean temple").assertIsDisplayed().performClick()
+        compose.waitUntil(10_000) {
+            runCatching { compose.onNodeWithTag("cleaning-prompt-pill").assertDoesNotExist() }.isSuccess
+        }
+        openTemple()
+        listOf(
+            "altar-item-lamp",
+            "altar-item-bell",
+            "altar-item-water",
+            "altar-item-tilak",
+            "altar-item-flower-0",
+            "altar-item-conch",
+            "altar-item-prasad",
+            "altar-item-aarti",
+            "altar-deity-0"
+        ).forEach { tag ->
+            compose.onNodeWithTag(tag).assertIsDisplayed().assertIsEnabled()
+        }
+        compose.onNodeWithTag("altar-item-lamp").performClick()
+        compose.onNodeWithTag("altar-item-bell").performClick()
+        assertNoOverlayText()
+    }
+
+    private fun assertNoOverlayText() {
+        compose.onNodeWithTag("ritual-dock").assertDoesNotExist()
+        compose.onNodeWithTag("sanctum-top-guide").assertDoesNotExist()
+        compose.onNodeWithTag("puja-step-guide").assertDoesNotExist()
+        compose.onNodeWithTag("cleaning-prompt-pill").assertDoesNotExist()
+        compose.onNodeWithTag("home-occasion-banner").assertDoesNotExist()
+        assertTrue(
+            "Expected zero visible text nodes on sanctum screen",
+            compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.Text))
+                .fetchSemanticsNodes().isEmpty()
+        )
     }
 
     private fun captureLayout(name: String) {
@@ -177,7 +289,8 @@ class MandirPreviewApplyTest {
     @Test fun guestUnlockOpensSignInAfterTheConsistentPreviewActionIsTapped() {
         openTemple()
         openCustomizer()
-        compose.onNodeWithText("Ivory alcove").performScrollTo().performClick()
+        compose.onNodeWithText("Dhoop & Agarbatti").performScrollTo().performClick()
+        compose.onNodeWithText("Mayur dhoop stand").performScrollTo().performClick()
         compose.onNodeWithText("Preview").performClick()
         // Popup semantics can be registered before its separate window is placed.
         compose.waitUntil(10_000) {
@@ -189,9 +302,43 @@ class MandirPreviewApplyTest {
         compose.onNodeWithContentDescription("Back to choices").assertDoesNotExist()
     }
 
+    @Test fun autoDailyTempleAppliesTodaysDeityAndDrawerToggleWorks() {
+        val todayTemple = com.worship.nityamandir.engine.DailyTemples.forDate(
+            java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"))
+        )
+        scenario!!.close()
+        context.getSharedPreferences("worship", Context.MODE_PRIVATE).edit().clear()
+            .putBoolean("hindi", false).commit()
+        scenario = ActivityScenario.launch(MainActivity::class.java)
+        openTemple()
+        val expectedDeities = todayTemple.presetSelection.deityNames(hindi = false).joinToString()
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithContentDescription(expectedDeities).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithContentDescription("Temple options").performClick()
+        compose.onNodeWithTag("drawer-daily-temple").assertDoesNotExist()
+        compose.onNodeWithTag("drawer-auto-daily-temple").performScrollTo().assertIsDisplayed().performClick()
+        compose.onNode(hasTestTag("drawer-auto-daily-temple") and hasText("OFF")).assertIsDisplayed()
+        // Switch away to Shiva, then reactivate today's temple directly via the simple button in Mandir Sajaye.
+        compose.onNodeWithText("Mandir Sajaye").performScrollTo().performClick()
+        compose.onNodeWithText("Idols").performScrollTo().performClick()
+        compose.onNodeWithText("Shiva").performScrollTo().performClick()
+        compose.onNode(hasTestTag("mandir-selection-action") and hasText("Apply")).performClick()
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithContentDescription("Shiva").fetchSemanticsNodes().isNotEmpty()
+        }
+        openCustomizer()
+        compose.onNodeWithTag("daily-temple-activate-button").performScrollTo().performClick()
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithContentDescription(expectedDeities).fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
     @Test fun applyingPreviewChangesTheMainAltarAndSurvivesReopening() {
         openTemple()
+        compose.onNodeWithTag("altar-garland").assertExists()
         openCustomizer()
+        compose.onNodeWithText("Divya Darshan (Big Idol)").performScrollTo().performClick()
         compose.onNodeWithText("Idols").performScrollTo().performClick()
         compose.onNodeWithText("Shiva").performScrollTo().performClick()
         compose.onNodeWithText("Preview").performClick()
@@ -202,9 +349,13 @@ class MandirPreviewApplyTest {
                 compose.onAllNodesWithContentDescription("Shiva").fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithContentDescription("Shiva").assertIsDisplayed()
-        compose.onNodeWithText("Light oil lamp").assertIsDisplayed()
+        compose.onNodeWithTag("altar-garland").assertDoesNotExist()
+        compose.onNodeWithTag("altar-item-lamp").assertIsEnabled()
+        assertNoOverlayText()
+        captureLayout("puja-big-idol")
         // Reopen from the real menu: the active saved selection must remain selected.
         openCustomizer()
+        compose.onNodeWithText("Divya Darshan (Big Idol)").performScrollTo().assertIsSelected()
         compose.onNodeWithText("Idols").performScrollTo().performClick()
         compose.onNodeWithText("Shiva").performScrollTo().assertIsSelected()
         compose.onNodeWithContentDescription("Close").performClick()
@@ -212,8 +363,10 @@ class MandirPreviewApplyTest {
         scenario!!.recreate()
         compose.waitForIdle()
         compose.onNodeWithContentDescription("Shiva").assertExists()
+        compose.onNodeWithTag("altar-garland").assertDoesNotExist()
         val saved = org.json.JSONObject(context.getSharedPreferences("devotion", Context.MODE_PRIVATE)
             .getString("guest_selection", "{}").orEmpty())
+        assertEquals("divya_darshan", saved.getString("shrine"))
         assertEquals("shiva", saved.getString("idols"))
     }
 }

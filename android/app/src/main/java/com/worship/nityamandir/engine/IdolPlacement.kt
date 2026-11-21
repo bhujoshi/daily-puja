@@ -17,6 +17,7 @@ class IdolPlacement(selection:ShrineSelection) {
         "durga" -> 707f/968f
         "ram_darbar" -> 723f/924f
         "hanuman" -> 609f/969f
+        "shanidev" -> 687f/980f
         else -> 723f/924f
     }
     private val maxWidth=if(selection.deityCount==1) min(space.singleIdolWidth,space.idolWidth) else space.idolWidth
@@ -37,6 +38,7 @@ class IdolPlacement(selection:ShrineSelection) {
         "durga" -> listOf(TemplePoint(.500f,.180f))
         "ram_darbar" -> listOf(TemplePoint(.505f,.175f))
         "hanuman" -> listOf(TemplePoint(.500f,.212f))
+        "shanidev" -> listOf(TemplePoint(.500f,.190f))
         else -> listOf(TemplePoint(.505f,.175f))
     }
     val heads=foreheads.map(::map)
@@ -49,6 +51,7 @@ class IdolPlacement(selection:ShrineSelection) {
         "durga" -> .028f
         "ram_darbar" -> .028f
         "hanuman" -> .028f
+        "shanidev" -> .028f
         else -> .028f
     }))}
     fun bathSource(deity:Int)=crowns[deity].let {TemplePoint(it.x,it.y-.080f)}

@@ -66,11 +66,11 @@ class MandirSajayeFlowTest {
         if (::context.isInitialized) context.clear()
     }
 
-    private fun fixture(coins: Int, signedIn: Boolean = true, ivoryOwned: Boolean = false) {
+    private fun fixture(coins: Int, signedIn: Boolean = true, mayurDhoopOwned: Boolean = false) {
         val profile = JSONObject().put("id", "fixture-${UUID.randomUUID()}")
             .put("coins", coins).put("google_account", false).put("email", "fixture@example.invalid")
-            .put("owned", JSONObject().apply { if (ivoryOwned) put("shrine:ivory", true) })
-            .put("coin_costs", JSONObject().put("shrine", 7).put("garland", 4).put("flowers", 2))
+            .put("owned", JSONObject().apply { if (mayurDhoopOwned) put("incense:mayur_dhoop", true) })
+            .put("coin_costs", JSONObject().put("shrine", 0).put("garland", 0).put("incense", 3).put("flowers", 2))
             .put("selections", JSONObject().put("shrine", "marble"))
             .put("days", JSONArray()).put("history", JSONArray())
             .put("share_count", 0).put("referrals", 0)
@@ -120,47 +120,48 @@ class MandirSajayeFlowTest {
         }
     }
 
-    private fun selectIvoryAndRequestUnlock() {
-        compose.onNodeWithText("Ivory alcove").performScrollTo().performClick()
-        compose.onNodeWithText("Ivory alcove").assertIsSelected()
-        compose.onNodeWithText("Cost: 7 coins").assertIsDisplayed()
+    private fun selectMayurDhoopAndRequestUnlock() {
+        compose.onNodeWithText("Dhoop & Agarbatti").performScrollTo().performClick()
+        compose.onNodeWithText("Mayur dhoop stand").performScrollTo().performClick()
+        compose.onNodeWithText("Mayur dhoop stand").assertIsSelected()
+        compose.onNodeWithText("Cost: 3 coins").assertIsDisplayed()
         compose.onNode(hasTestTag("mandir-selection-action") and hasText("Unlock")).performClick()
         compose.onNodeWithText("Unlock items?").assertIsDisplayed()
         val confirmationDialog = isDialog() and hasAnyDescendant(hasText("Unlock items?"))
-        compose.onNode(hasText("Cost: 7 coins", substring = true) and hasAnyAncestor(confirmationDialog))
+        compose.onNode(hasText("Cost: 3 coins", substring = true) and hasAnyAncestor(confirmationDialog))
             .assertIsDisplayed()
     }
 
     @Test fun cancellingUnlockDoesNotSpendCoinsOrApplyTheDesign() {
-        fixture(coins = 9)
+        fixture(coins = 5)
         showCustomizer()
-        selectIvoryAndRequestUnlock()
+        selectMayurDhoopAndRequestUnlock()
         compose.onNodeWithText("Cancel").performClick()
         compose.onNodeWithText("Unlock items?").assertDoesNotExist()
-        compose.onNodeWithText("Ivory alcove").assertIsSelected()
+        compose.onNodeWithText("Mayur dhoop stand").assertIsSelected()
         compose.runOnIdle {
-            assertEquals(9, account.coins)
-            assertFalse(account.owns("shrine", "ivory"))
+            assertEquals(5, account.coins)
+            assertFalse(account.owns("incense", "mayur_dhoop"))
             assertNull(applied.get())
         }
         assertEquals(0, origin.unlockRequests.get())
         assertEquals(0, origin.saveRequests.get())
     }
 
-    @Test fun confirmingUnlockSpendsOnceSelectsIvoryAndAllowsApply() {
-        fixture(coins = 9)
+    @Test fun confirmingUnlockSpendsOnceSelectsMayurDhoopAndAllowsApply() {
+        fixture(coins = 5)
         showCustomizer()
-        selectIvoryAndRequestUnlock()
+        selectMayurDhoopAndRequestUnlock()
         val confirmationDialog = isDialog() and hasAnyDescendant(hasText("Unlock items?"))
         compose.onNode(hasText("Unlock") and hasAnyAncestor(confirmationDialog)).performClick()
-        compose.waitUntil(5_000) { account.coins == 2 && account.owns("shrine", "ivory") }
+        compose.waitUntil(5_000) { account.coins == 2 && account.owns("incense", "mayur_dhoop") }
         compose.onNodeWithContentDescription("2 coins · Earn coins").assertIsDisplayed()
-        compose.onNodeWithText("Ivory alcove").assertIsSelected()
+        compose.onNodeWithText("Mayur dhoop stand").assertIsSelected()
         compose.runOnIdle { assertNull(applied.get()) }
         compose.onNode(hasTestTag("mandir-selection-action") and hasText("Apply")).performClick()
         compose.waitUntil(5_000) { applied.get() != null }
-        assertEquals("ivory", applied.get()!!["shrine"])
-        compose.runOnIdle { assertEquals("ivory", account.selection()["shrine"]) }
+        assertEquals("mayur_dhoop", applied.get()!!["incense"])
+        compose.runOnIdle { assertEquals("mayur_dhoop", account.selection()["incense"]) }
         assertEquals(1, origin.unlockRequests.get())
         assertEquals(1, origin.saveRequests.get())
         assertEquals(2, origin.coins())
@@ -181,17 +182,47 @@ class MandirSajayeFlowTest {
         assertEquals(0, origin.requests.get())
     }
 
-    @Test fun paidShrineCanBeUnlockedAndAppliedStartingFromPreview() {
-        fixture(coins = 9)
+    @Test fun dailyTemplesAndAllShrinesIncludingShaniDevAreFreeForGuests() {
+        val todayTemple = com.worship.nityamandir.engine.DailyTemples.forDate(
+            java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"))
+        )
+        fixture(coins = 0, signedIn = false)
+        showCustomizer()
+        compose.onNodeWithTag("daily-temple-preset-banner").assertDoesNotExist()
+        compose.onNodeWithTag("daily-temple-chip-saturday").assertDoesNotExist()
+        compose.onNodeWithTag("daily-temple-activate-button").performScrollTo()
+            .assertIsDisplayed().performClick()
+        compose.waitUntil(5_000) { applied.get() != null }
+        assertTrue(todayTemple.matchesSelection(applied.get()!!))
+        assertEquals(0, origin.requests.get())
+    }
+
+    @Test fun shaniDevIdolAndAllShrinesAreFreeForGuests() {
+        fixture(coins = 0, signedIn = false)
         showCustomizer()
         compose.onNodeWithText("Ivory alcove").performScrollTo().performClick()
+        compose.onNodeWithText("Idols").performScrollTo().performClick()
+        compose.onNodeWithText("Shani Dev").performScrollTo().performClick()
+        compose.onNode(hasTestTag("mandir-selection-action") and hasText("Apply"))
+            .assertIsDisplayed().performClick()
+        compose.waitUntil(5_000) { applied.get() != null }
+        assertEquals("ivory", applied.get()!!["shrine"])
+        assertEquals("shanidev", applied.get()!!["idols"])
+        assertEquals(0, origin.requests.get())
+    }
+
+    @Test fun paidIncenseCanBeUnlockedAndAppliedStartingFromPreview() {
+        fixture(coins = 5)
+        showCustomizer()
+        compose.onNodeWithText("Dhoop & Agarbatti").performScrollTo().performClick()
+        compose.onNodeWithText("Mayur dhoop stand").performScrollTo().performClick()
         compose.onNodeWithText("Preview").performClick()
         compose.onNode(hasTestTag("mandir-preview-action") and hasText("Unlock"))
             .assertIsDisplayed().performClick()
         compose.onNodeWithContentDescription("Back to choices").assertDoesNotExist()
         compose.onNodeWithText("Unlock items?").assertIsDisplayed()
-        confirmUnlock(7)
-        compose.waitUntil(5_000) { account.owns("shrine", "ivory") }
+        confirmUnlock(3)
+        compose.waitUntil(5_000) { account.owns("incense", "mayur_dhoop") }
         compose.onNodeWithText("Preview").performClick()
         compose.onNode(hasTestTag("mandir-preview-action") and hasText("Apply"))
             .assertIsDisplayed().assertIsEnabled().performClick()
@@ -201,24 +232,24 @@ class MandirSajayeFlowTest {
             compose.waitUntil(15_000) { applied.get() != null }
         } catch (failure: ComposeTimeoutException) {
             throw AssertionError("Paid preview did not apply: save requests=${origin.saveRequests.get()}, " +
-                "balance=${account.coins}, owns ivory=${account.owns("shrine", "ivory")}.\n" +
+                "balance=${account.coins}, owns mayur_dhoop=${account.owns("incense", "mayur_dhoop")}.\n" +
                 compose.onNodeWithTag("mandir-preview-actions", useUnmergedTree = true).printToString(), failure)
         }
-        assertEquals("ivory", applied.get()!!["shrine"])
+        assertEquals("mayur_dhoop", applied.get()!!["incense"])
         assertEquals(1, origin.unlockRequests.get())
         assertEquals(1, origin.saveRequests.get())
         assertEquals(2, origin.coins())
     }
 
-    private fun selectOrchidAndRose() {
+    private fun selectAzaleaAndLily() {
         compose.onNodeWithText("Flowers").performScrollTo().performClick()
-        compose.onNodeWithText("Orchid").performScrollTo().performClick()
-        compose.onNodeWithText("Rose").performScrollTo().performClick()
-        assertOriginalOrchidAndRoseSelected()
+        compose.onNodeWithText("Azalea").performScrollTo().performClick()
+        compose.onNodeWithText("Lily").performScrollTo().performClick()
+        assertOriginalAzaleaAndLilySelected()
     }
 
-    private fun assertOriginalOrchidAndRoseSelected() {
-        listOf("Sunflower & peony", "Orchid", "Rose").forEach {
+    private fun assertOriginalAzaleaAndLilySelected() {
+        listOf("Sunflower & peony", "Azalea", "Lily").forEach {
             compose.onNodeWithText(it).assertIsOn()
                 .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
         }
@@ -321,14 +352,14 @@ class MandirSajayeFlowTest {
         fixture(coins = 0, signedIn = false)
         showFixtureMusic()
         showCustomizer()
-        selectOrchidAndRose()
+        selectAzaleaAndLily()
         compose.onNodeWithText("Preview").performClick()
         compose.onNode(SemanticsMatcher("Open music player action") {
             it.config.getOrNull(SemanticsActions.OnClick)?.label == "Open music player"
         } and hasAnyAncestor(isPopup())).performClick()
         compose.onNodeWithContentDescription("Back to choices").assertDoesNotExist()
         compose.runOnIdle {
-            assertEquals(listOf("original", "orchid", "rose"), musicDraft.get()!!.flowerIds)
+            assertEquals(listOf("original", "azalea", "bouquet"), musicDraft.get()!!.flowerIds)
             assertNull(applied.get())
         }
         assertEquals(0, origin.requests.get())
@@ -344,30 +375,30 @@ class MandirSajayeFlowTest {
     @Test fun batchFlowerUnlockChargesFourCoinsAndKeepsAllSelectedFlowers() {
         fixture(coins = 10)
         showCustomizer()
-        selectOrchidAndRose()
+        selectAzaleaAndLily()
         compose.onNodeWithText("Cost: 4 coins").assertIsDisplayed()
         compose.onNode(hasTestTag("mandir-selection-action") and hasText("Unlock")).performClick()
         confirmUnlock(4)
         compose.waitUntil(5_000) {
-            account.coins == 6 && account.owns("flowers", "orchid") && account.owns("flowers", "rose")
+            account.coins == 6 && account.owns("flowers", "azalea") && account.owns("flowers", "bouquet")
         }
-        assertOriginalOrchidAndRoseSelected()
+        assertOriginalAzaleaAndLilySelected()
         compose.onNode(hasTestTag("mandir-selection-action") and hasText("Apply")).performClick()
         compose.waitUntil(5_000) { applied.get() != null }
-        assertEquals(listOf("original", "orchid", "rose"), applied.get()!!.flowerIds)
+        assertEquals(listOf("original", "azalea", "bouquet"), applied.get()!!.flowerIds)
         compose.runOnIdle { assertEquals(applied.get()!!.flowerIds, account.selection().flowerIds) }
         assertEquals(2, origin.unlockRequests.get())
-        assertEquals(1, origin.unlockCount("flowers:orchid"))
-        assertEquals(1, origin.unlockCount("flowers:rose"))
+        assertEquals(1, origin.unlockCount("flowers:azalea"))
+        assertEquals(1, origin.unlockCount("flowers:bouquet"))
         assertEquals(1, origin.saveRequests.get())
         assertEquals(6, origin.coins())
     }
 
     @Test fun partialBatchFailureKeepsFirstUnlockAndRetriesOnlyTheRemainingCost() {
         fixture(coins = 10)
-        origin.failNextUnlock("flowers:rose")
+        origin.failNextUnlock("flowers:bouquet")
         showCustomizer()
-        selectOrchidAndRose()
+        selectAzaleaAndLily()
         compose.onNode(hasTestTag("mandir-selection-action") and hasText("Unlock")).performClick()
         confirmUnlock(4)
         compose.waitUntil(5_000) {
@@ -376,25 +407,25 @@ class MandirSajayeFlowTest {
         compose.onNodeWithText("Could not complete this action.", substring = true).assertIsDisplayed()
         compose.runOnIdle {
             assertEquals(8, account.coins)
-            assertTrue(account.owns("flowers", "orchid"))
-            assertFalse(account.owns("flowers", "rose"))
+            assertTrue(account.owns("flowers", "azalea"))
+            assertFalse(account.owns("flowers", "bouquet"))
             assertNull(applied.get())
         }
-        assertOriginalOrchidAndRoseSelected()
+        assertOriginalAzaleaAndLilySelected()
         compose.onNodeWithText("Cost: 2 coins").assertIsDisplayed()
         compose.onNode(hasTestTag("mandir-selection-action") and hasText("Unlock")).performClick()
         val confirmationDialog = isDialog() and hasAnyDescendant(hasText("Unlock items?"))
         compose.onNode(hasText("Your balance: 8 coins", substring = true) and hasAnyAncestor(confirmationDialog))
             .assertIsDisplayed()
         confirmUnlock(2)
-        compose.waitUntil(5_000) { account.coins == 6 && account.owns("flowers", "rose") }
-        assertOriginalOrchidAndRoseSelected()
+        compose.waitUntil(5_000) { account.coins == 6 && account.owns("flowers", "bouquet") }
+        assertOriginalAzaleaAndLilySelected()
         compose.onNode(hasTestTag("mandir-selection-action") and hasText("Apply")).performClick()
         compose.waitUntil(5_000) { applied.get() != null }
-        assertEquals(listOf("original", "orchid", "rose"), applied.get()!!.flowerIds)
+        assertEquals(listOf("original", "azalea", "bouquet"), applied.get()!!.flowerIds)
         assertEquals(3, origin.unlockRequests.get())
-        assertEquals(1, origin.unlockCount("flowers:orchid"))
-        assertEquals(2, origin.unlockCount("flowers:rose"))
+        assertEquals(1, origin.unlockCount("flowers:azalea"))
+        assertEquals(2, origin.unlockCount("flowers:bouquet"))
         assertEquals(1, origin.saveRequests.get())
         assertEquals(6, origin.coins())
     }
@@ -402,17 +433,18 @@ class MandirSajayeFlowTest {
     @Test fun insufficientCoinsRoutesToEarningWithTheRequestedDesign() {
         fixture(coins = 2)
         showCustomizer()
-        compose.onNodeWithText("Ivory alcove").performScrollTo().performClick().assertIsSelected()
-        compose.onNodeWithText("Cost: 7 coins").assertIsDisplayed()
+        compose.onNodeWithText("Dhoop & Agarbatti").performScrollTo().performClick()
+        compose.onNodeWithText("Mayur dhoop stand").performScrollTo().performClick().assertIsSelected()
+        compose.onNodeWithText("Cost: 3 coins").assertIsDisplayed()
         compose.runOnIdle { assertNull(routed.get()) }
         compose.onNode(hasTestTag("mandir-selection-action") and hasText("Unlock")).performClick()
         compose.onNodeWithText("Not enough coins. Complete daily puja or invite friends to earn coins.")
             .assertIsDisplayed()
-        compose.onNodeWithText("Ivory alcove").assertIsSelected()
+        compose.onNodeWithText("Mayur dhoop stand").assertIsSelected()
         compose.runOnIdle {
             assertNull(routed.get())
             assertEquals(2, account.coins)
-            assertFalse(account.owns("shrine", "ivory"))
+            assertFalse(account.owns("incense", "mayur_dhoop"))
         }
         compose.onNodeWithText("Unlock items?").assertDoesNotExist()
         compose.onNodeWithText("Preview").performClick()
@@ -425,13 +457,13 @@ class MandirSajayeFlowTest {
         compose.onNodeWithContentDescription("Back to choices").assertIsDisplayed().performClick()
         compose.runOnIdle { assertNull(routed.get()) }
         assertEquals(0, origin.requests.get())
-        // Switching to an affordable category resets the unowned 7-coin shrine so 2-coin flowers can be bought.
+        // Switching to an affordable category resets the unowned 3-coin incense so 2-coin flowers can be bought.
         compose.onNodeWithText("Flowers").performScrollTo().performClick()
-        compose.onNodeWithText("Orchid").performScrollTo().performClick()
+        compose.onNodeWithText("Azalea").performScrollTo().performClick()
         compose.onNodeWithText("Cost: 2 coins").assertIsDisplayed()
         compose.onNode(hasTestTag("mandir-selection-action") and hasText("Unlock")).performClick()
         confirmUnlock(2)
-        compose.waitUntil(5_000) { account.coins == 0 && account.owns("flowers", "orchid") }
+        compose.waitUntil(5_000) { account.coins == 0 && account.owns("flowers", "azalea") }
         assertNull(routed.get())
         assertNull(applied.get())
     }
@@ -439,13 +471,14 @@ class MandirSajayeFlowTest {
     @Test fun guestRoutesToSignInWithTheRequestedDesignWithoutNetwork() {
         fixture(coins = 0, signedIn = false)
         showCustomizer()
-        compose.onNodeWithText("Ivory alcove").performScrollTo().performClick().assertIsSelected()
-        compose.onNodeWithText("Cost: 7 coins").assertIsDisplayed()
+        compose.onNodeWithText("Dhoop & Agarbatti").performScrollTo().performClick()
+        compose.onNodeWithText("Mayur dhoop stand").performScrollTo().performClick().assertIsSelected()
+        compose.onNodeWithText("Cost: 3 coins").assertIsDisplayed()
         compose.runOnIdle { assertNull(routed.get()) }
         compose.onNode(hasTestTag("mandir-selection-action") and hasText("Unlock")).performClick()
         compose.runOnIdle {
             assertFalse(account.signedIn)
-            assertEquals("ivory", routed.get()!!["shrine"])
+            assertEquals("mayur_dhoop", routed.get()!!["incense"])
         }
         assertEquals(0, origin.requests.get())
         assertNull(applied.get())
@@ -454,21 +487,22 @@ class MandirSajayeFlowTest {
     @Test fun guestPreviewKeepsUnlockLabelAndRoutesToSignInOnlyAfterTapping() {
         fixture(coins = 0, signedIn = false)
         showCustomizer()
-        compose.onNodeWithText("Ivory alcove").performScrollTo().performClick()
+        compose.onNodeWithText("Dhoop & Agarbatti").performScrollTo().performClick()
+        compose.onNodeWithText("Mayur dhoop stand").performScrollTo().performClick()
         compose.onNode(hasTestTag("mandir-selection-action") and hasText("Unlock")).assertIsDisplayed()
-        compose.onNodeWithText("Cost: 7 coins").assertIsDisplayed()
+        compose.onNodeWithText("Cost: 3 coins").assertIsDisplayed()
         compose.onNodeWithText("Unlock selection", substring = true).assertDoesNotExist()
         compose.onNodeWithText("Sign in to unlock").assertDoesNotExist()
         captureLayout("mandir-locked-choice-simple")
         compose.runOnIdle { assertNull(routed.get()) }
         compose.onNodeWithText("Preview").performClick()
         compose.onNode(hasTestTag("mandir-preview-action") and hasText("Unlock")).assertIsDisplayed()
-        compose.onNode(hasText("Cost: 7 coins") and hasAnyAncestor(hasTestTag("mandir-preview-actions")))
+        compose.onNode(hasText("Cost: 3 coins") and hasAnyAncestor(hasTestTag("mandir-preview-actions")))
             .assertIsDisplayed()
         captureLayout("mandir-locked-preview-simple")
         compose.onNodeWithTag("mandir-preview-action").performClick()
         compose.runOnIdle {
-            assertEquals("ivory", routed.get()!!["shrine"])
+            assertEquals("mayur_dhoop", routed.get()!!["incense"])
             assertFalse(account.signedIn)
             assertNull(applied.get())
         }
@@ -477,7 +511,7 @@ class MandirSajayeFlowTest {
     }
 
     @Test fun profileShowsNewOwnedItemAndOpensMandirSajayeDirectly() {
-        fixture(coins = 0, ivoryOwned = true)
+        fixture(coins = 0, mayurDhoopOwned = true)
         val opened = AtomicInteger()
         compose.setContent {
             ShrineControlsTheme {
@@ -490,11 +524,11 @@ class MandirSajayeFlowTest {
                 compose.onAllNodes(hasText("Mandir Sajaye") and isEnabled()).fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("1 newly unlocked item is ready").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Ivory alcove").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Mayur dhoop stand").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Mandir Sajaye").performScrollTo().assertIsEnabled().performClick()
         assertEquals(1, opened.get())
         compose.onNodeWithText("View coins & unlocks").assertDoesNotExist()
-        compose.runOnIdle { assertEquals("ivory", account.newUnlocks(ShrineCatalog(context)).single().option.id) }
+        compose.runOnIdle { assertEquals("mayur_dhoop", account.newUnlocks(ShrineCatalog(context)).single().option.id) }
         assertEquals(0, origin.unlockRequests.get())
     }
 
@@ -563,8 +597,7 @@ class MandirSajayeFlowTest {
                     val owned = profile.getJSONObject("owned")
                     if (!owned.optBoolean(id)) {
                         val cost = when (category) {
-                            "shrine" -> 7
-                            "garland" -> 4
+                            "incense" -> 3
                             "flowers" -> 2
                             else -> 0
                         }

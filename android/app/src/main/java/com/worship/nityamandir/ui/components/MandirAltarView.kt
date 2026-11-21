@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -28,6 +29,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -172,12 +177,15 @@ fun MandirAltarView(
     prasadRunning: Boolean, prasadProgress: Float,
     onFlowerClick: (Int) -> Unit, onConchClick: () -> Unit, onAartiClick: () -> Unit,
     onPrasadClick: () -> Unit = {},
+    onWaterClick: (Int?) -> Unit = {},
+    onTilakClick: () -> Unit = {},
     cobwebLevel: Float = 0f,
     selection: ShrineSelection = ShrineSelection(),
     modifier: Modifier = Modifier,
     cleanedAreas: List<TemplePoint> = emptyList(),
     showModels: Boolean = true,
-    activeOccasion: TempleOccasion? = null
+    activeOccasion: TempleOccasion? = null,
+    interactionsEnabled: Boolean = true
 ) {
     val context = LocalContext.current
     val catalog = remember { ShrineCatalog(context) }
@@ -189,11 +197,13 @@ fun MandirAltarView(
     }
 
     // High-resolution 2D ritual & marketplace sprites
-    val plateBitmap = rememberAssetImage("shrine/accessories/plate.png")
-    val bellBitmap = rememberAssetImage("shrine/accessories/bell.png")
-    val shankhStandBitmap = rememberAssetImage("shrine/accessories/shankh_stand.png")
-    val copperLotaBitmap = rememberAssetImage("shrine/accessories/copper_lota.png")
-    val garlandBitmap = rememberAssetImage(catalog.option("garland", selection).thumbnail)
+    val plateBitmap = rememberAssetImage("shrine/accessories/plate.webp")
+    val bellBitmap = rememberAssetImage("shrine/accessories/bell.webp")
+    val shankhStandBitmap = rememberAssetImage("shrine/accessories/shankh_stand.webp")
+    val copperLotaBitmap = rememberAssetImage("shrine/accessories/copper_lota.webp")
+    val garlandBitmap = if (idolPlacement.space.showGarland) {
+        rememberAssetImage(catalog.option("garland", selection).thumbnail)
+    } else null
     val incenseBitmap = rememberAssetImage(catalog.option("incense", selection).thumbnail)
     val lampBitmap = rememberAssetImage(catalog.option("lamp", selection).thumbnail)
     val shankhBitmap = rememberAssetImage(catalog.option("shankh", selection).thumbnail)
@@ -202,10 +212,10 @@ fun MandirAltarView(
         rememberAssetImage(catalog.option("aarti", selection).thumbnail)
     } else null
     val prasadBitmap = rememberAssetImage(catalog.option("prasad", selection).thumbnail)
-    val peonyBitmap = rememberAssetImage("shrine/flowers/peony.png")
+    val peonyBitmap = rememberAssetImage("shrine/flowers/peony.webp")
     val flowerSpritePaths = remember(selection) {
-        catalog.flowerSpritePaths(selection).filterNot { it.endsWith("peony.png") }
-            .ifEmpty { listOf("shrine/flowers/sunflower.png") }
+        catalog.flowerSpritePaths(selection).filterNot { it.endsWith("peony.webp") }
+            .ifEmpty { listOf("shrine/flowers/sunflower.webp") }
     }
     val flowerBitmaps = flowerSpritePaths.map { rememberAssetImage(it) }
 
@@ -277,6 +287,24 @@ fun MandirAltarView(
             )
         }
     }
+
+    val waterLotaAspect = copperLotaBitmap.height.toFloat() / copperLotaBitmap.width.toFloat().coerceAtLeast(1f)
+    val waterLotaWidth = TempleSceneLayout.WATER_LOTA_WIDTH
+    val waterLotaHeight = waterLotaWidth * waterLotaAspect
+    val waterLotaRestCenter = TemplePoint(TempleSceneLayout.waterLota.x, TempleSceneLayout.waterLota.y - waterLotaHeight / 2f)
+
+    val altarActive = interactionsEnabled && !aartiRunning
+    val allEnabled = altarActive
+
+    val lampActive = altarActive
+    val incenseActive = altarActive
+    val waterActive = altarActive && bathTarget == null
+    val tilakActive = altarActive
+    val flowersActive = altarActive
+    val conchActive = altarActive && !conchRunning
+    val prasadActive = altarActive && !prasadRunning
+    val aartiActive = interactionsEnabled && !aartiRunning
+    val bellEnabled = altarActive && !bellRunning
 
     val wiltFilter = remember(flowerWitherFactor) {
         if (flowerWitherFactor <= 0.01f) null
@@ -414,37 +442,64 @@ fun MandirAltarView(
         val background = remember(selection["shrine"]) {
             AssetImageCache.image(context, catalog.option("shrine", selection).path)
         }
-        // Plane 1 (Deep Sanctum Arch, z = -1.0): 3D perspective tilt & counter-parallax
-        Image(
-            background, null,
+        // Plane 1 (Deep Sanctum Arch, z = -1.0): Extended top wall + 3D perspective tilt & counter-parallax
+        Canvas(
             Modifier.fillMaxSize().graphicsLayer {
                 val extraZoom = 1f + 0.018f * aartiPresence
-                scaleX = TempleViewport.ZOOM * extraZoom
-                scaleY = TempleViewport.ZOOM * extraZoom
+                scaleX = extraZoom
+                scaleY = extraZoom
                 rotationX = sanctumPitchX * 0.55f
                 rotationY = sanctumYawY * 0.55f
                 translationX = -sanctumRelX * parallaxPx * 0.85f
                 translationY = -sanctumRelY * parallaxPx * 0.55f
                 cameraDistance = 22f * density.density
-                transformOrigin = TransformOrigin(.5f, 0.25f)
-            },
-            alignment = Alignment.TopCenter,
-            contentScale = ContentScale.Crop
-        )
-
-        // Plane 2 (Sanctum Arch Garland / Toran, z = -0.55): Mid-back 3D parallax
-        GarlandLayer(
-            bitmap = garlandBitmap,
-            space = idolPlacement.space,
-            viewport = viewport,
-            modifier = Modifier.graphicsLayer {
-                rotationX = sanctumPitchX * 0.68f
-                rotationY = sanctumYawY * 0.68f
-                translationX = -sanctumRelX * parallaxPx * 0.45f
-                translationY = -sanctumRelY * parallaxPx * 0.30f
-                cameraDistance = 20f * density.density
+                transformOrigin = TransformOrigin(.5f, 0.30f)
             }
-        )
+        ) {
+            val dstLeft = viewport.left.toInt()
+            val dstW = viewport.imageWidth.toInt().coerceAtLeast(1)
+            val dstH = (viewport.imageWidth * (background.height.toFloat() / background.width.toFloat())).toInt().coerceAtLeast(1)
+            val dstTop = (viewport.top - 0.02f * (TempleViewport.ZOOM / 1.08f) * size.height).toInt()
+            if (dstTop > -24) {
+                // Clamp-extend the exact top pixel row (y = 0) seamlessly up to the screen top edge.
+                val extTop = -24
+                val extHeight = (dstTop - extTop + 1).coerceAtLeast(1)
+                drawImage(
+                    image = background,
+                    srcOffset = IntOffset(0, 0),
+                    srcSize = IntSize(background.width, 1),
+                    dstOffset = IntOffset(dstLeft, extTop),
+                    dstSize = IntSize(dstW, extHeight),
+                    filterQuality = FilterQuality.Low
+                )
+            }
+            drawImage(
+                image = background,
+                srcOffset = IntOffset(0, 0),
+                srcSize = IntSize(background.width, background.height),
+                dstOffset = IntOffset(dstLeft, dstTop),
+                dstSize = IntSize(dstW, dstH),
+                filterQuality = FilterQuality.High
+            )
+        }
+
+        // Plane 2 (Sanctum Arch Garland / Toran, z = -0.55): Mid-back 3D parallax (omitted on big-idol shrines)
+        if (garlandBitmap != null) {
+            GarlandLayer(
+                bitmap = garlandBitmap,
+                space = idolPlacement.space,
+                viewport = viewport,
+                modifier = Modifier
+                    .testTag("altar-garland")
+                    .graphicsLayer {
+                        rotationX = sanctumPitchX * 0.68f
+                        rotationY = sanctumYawY * 0.68f
+                        translationX = -sanctumRelX * parallaxPx * 0.45f
+                        translationY = -sanctumRelY * parallaxPx * 0.30f
+                        cameraDistance = 20f * density.density
+                    }
+            )
+        }
 
         if (selection["shrine"] == "diwali") {
             DiwaliDecorations(viewport = viewport, animate = showModels)
@@ -513,8 +568,12 @@ fun MandirAltarView(
             }
         }
 
-        val idol = remember(selection["idols"]) {
-            AssetImageCache.trimmedIdol(context, catalog.option("idols", selection).path)
+        val idolAssetPath = catalog.option("idols", selection).path
+        val idol = remember(idolAssetPath) {
+            AssetImageCache.trimmedIdol(context, idolAssetPath)
+        }
+        val idolWaterSurface = remember(idolAssetPath) {
+            AssetImageCache.idolWaterSurface(context, idolAssetPath)
         }
         val idolPoint = viewport.pixel(TemplePoint(idolPlacement.left, idolPlacement.top))
         // Plane 3 (Sacred Deity Idols, z = 0.0): 3D perspective & subtle depth parallax
@@ -590,7 +649,7 @@ fun MandirAltarView(
                                     Color(0xFFD8AF52).copy(alpha = 0.08f * pillarProx),
                                     Color.Transparent
                                 ),
-                                center = Offset(pillarPx.x, pillarPx.y.coerceIn(pillarMidY * u * 0.4f, size.height)),
+                                center = Offset(pillarPx.x, pillarPx.y.coerceIn(viewport.top + pillarMidY * u * 0.4f, size.height)),
                                 radius = rimR
                             ),
                             radius = rimR,
@@ -605,12 +664,13 @@ fun MandirAltarView(
         val prasadLift = if (prasadRunning) TempleSceneLayout.pickup(prasadProgress) else if (session.prasadOffered) 1f else 0f
         val aartiLift = if (aartiRunning) TempleSceneLayout.pickup(aartiProgress) else 0f
         val conchLift = if (conchRunning) TempleSceneLayout.pickup(conchProgress) else 0f
+        val waterTravel = if (bathTarget != null) TempleSceneLayout.waterLotaTravel(bathProgress) else 0f
         val bellLift = if (bellRunning || aartiRunning) {
             val t = if (aartiRunning) aartiProgress else bellProgress
             min(t / .15f, (1f - t) / .15f).coerceIn(0f, 1f)
         } else 0f
 
-        // Floor contact shadows beneath the Puja Thali, standing oil lamp, bell, aarti diya (static + 3D moving cast shadow), and offered prasad.
+        // Floor contact shadows beneath the Puja Thali, standing oil lamp, water lota, bell, aarti diya, and offered prasad.
         Canvas(Modifier.fillMaxSize()) {
             fun shadow(point: TemplePoint, width: Float, height: Float, intensity: Float = 1f) {
                 if (intensity <= 0.01f) return
@@ -628,6 +688,7 @@ fun MandirAltarView(
             }
             shadow(incensePoint, .115f, .030f, 1.05f)
             shadow(oilPoint, .14f, .034f, 1.15f)
+            shadow(TempleSceneLayout.waterLota.copy(y = TempleSceneLayout.waterLota.y - .002f), .105f, .028f, 1.05f * (1f - waterTravel))
             shadow(TempleSceneLayout.plate.copy(y = TempleSceneLayout.plate.y + .028f), .52f, .33f, 1.35f)
             shadow(TempleSceneLayout.bell.copy(y = TempleSceneLayout.bell.y + .108f), .115f, .038f, 1.10f * (1f - .6f * bellLift))
             shadow(TempleSceneLayout.aartiRest.copy(y = TempleSceneLayout.aartiRest.y + .035f), .155f, .052f, 1.10f * (1f - aartiLift))
@@ -705,6 +766,18 @@ fun MandirAltarView(
                 )
             }
             OfferedFlowerAgingOverlay(viewport, flowerWitherFactor, session.offeredFlowers)
+
+            // 2b. Sacred Copper Water Kalash / Lota resting on the altar floor when not pouring
+            if (bathTarget == null) {
+                SpriteLayer(
+                    bitmap = copperLotaBitmap,
+                    center = TempleSceneLayout.waterLota,
+                    widthFraction = waterLotaWidth,
+                    viewport = viewport,
+                    density = density,
+                    bottomAligned = true
+                )
+            }
 
             // 3. Ornate Engraved Brass Puja Thali (with Roli/Chandan katoris & betel leaves)
             SpriteLayer(
@@ -829,14 +902,14 @@ fun MandirAltarView(
                     yawDeg = aartiModelYaw,
                     pitchDeg = aartiModelPitch,
                     rollDeg = aartiModelRoll,
-                    lit = session.lit || session.aartiLit,
+                    lit = session.aartiLit || session.lit,
                     aartiRunning = false
                 )
             }
         }
 
         // Sacred Chandan, Kumkum & Akshat Tilak overlay and offering flight from the Puja Thali katoris
-        TilakOverlay(session.tilak, idolPlacement, step = session.step)
+        TilakOverlay(session.tilak, idolPlacement)
 
         // 10. Active Foreground 2D & 3D Ritual Animations
         if (showModels) {
@@ -928,21 +1001,30 @@ fun MandirAltarView(
                     )
                 }
 
-                // Active 2D Copper Kalash / Lota pouring Abhishek water above deity crown
+                // Active 2D Copper Kalash / Lota traveling from resting spot to deity crown & pouring Abhishek water
                 val target = bathTarget
                 if (target != null) {
                     val t = bathProgress
-                    val lift = min(t / .12f, (1f - t) / .14f).coerceIn(0f, 1f)
+                    val tilt = TempleSceneLayout.waterLotaTilt(t)
                     val source = idolPlacement.bathSource(target)
-                    val lotaPoint = TemplePoint(source.x + .038f * lift, source.y - .045f + .08f * (1f - lift))
+                    val pourCenter = TempleSceneLayout.waterLotaPourCenter(
+                        source = source,
+                        width = TempleSceneLayout.WATER_LOTA_POUR_WIDTH,
+                        aspect = waterLotaAspect
+                    )
+                    val lotaPoint = TempleSceneLayout.waterLotaPosition(waterLotaRestCenter, pourCenter, t)
+                    val lotaWidth = TempleSceneLayout.waterLotaWidth(t)
                     SpriteLayer(
                         bitmap = copperLotaBitmap,
                         center = lotaPoint,
-                        widthFraction = .115f,
+                        widthFraction = lotaWidth,
                         viewport = viewport,
                         density = density,
-                        rotationZ = -54f * lift,
-                        pivot = TransformOrigin(.25f, .25f)
+                        rotationZ = TempleSceneLayout.WATER_LOTA_POUR_ANGLE_DEG * tilt,
+                        pivot = TransformOrigin(
+                            TempleSceneLayout.WATER_LOTA_PIVOT_X,
+                            TempleSceneLayout.WATER_LOTA_PIVOT_Y
+                        )
                     )
                 }
 
@@ -1112,6 +1194,7 @@ fun MandirAltarView(
             pitchDeg = aartiModelPitch,
             rollDeg = aartiModelRoll
         )
+
         if (showModels) Box(Modifier.fillMaxSize().zIndex(10f)) {
             RitualFlamesOverlay(
                 oilLit = session.lit,
@@ -1127,13 +1210,27 @@ fun MandirAltarView(
                 aartiRunning = aartiRunning,
                 aartiDepthScale = aartiRenderScale,
                 aartiBendX = aartiFlameBendX,
-                karpuraMode = selection["aarti"] == "karpura"
+                karpuraMode = selection["aarti"] == "karpura",
+                showIdleAartiFlame = true
             )
         }
-        WaterFlowOverlay(bathTarget, bathProgress, placement = idolPlacement, modifier = Modifier.zIndex(10.5f))
+        WaterFlowOverlay(
+            deity = bathTarget,
+            progress = bathProgress,
+            placement = idolPlacement,
+            surface = idolWaterSurface,
+            lotaRestCenter = waterLotaRestCenter,
+            lotaAspect = waterLotaAspect,
+            modifier = Modifier.zIndex(10.5f)
+        )
         ScreenWaterDroplets(
-            bathTarget = bathTarget, progress = bathProgress, bathed = session.bathed,
-            deityCount = session.deityCount, modifier = Modifier.zIndex(11f)
+            bathTarget = bathTarget,
+            progress = bathProgress,
+            bathed = session.bathed,
+            deityCount = session.deityCount,
+            placement = idolPlacement,
+            surface = idolWaterSurface,
+            modifier = Modifier.zIndex(11f)
         )
 
         fun target(point: TemplePoint, width: Float, height: Float): Modifier {
@@ -1143,57 +1240,97 @@ fun MandirAltarView(
                     .size((viewport.imageWidth * width).toDp(), (viewport.imageWidth * height).toDp())
             }
         }
+        fun Modifier.ritualItemTarget(
+            tag: String,
+            label: String,
+            enabled: Boolean,
+            exposeContentDescription: Boolean = true,
+            onClick: () -> Unit
+        ): Modifier =
+            testTag(tag).let { tagged ->
+                if (enabled) tagged.clickable(onClickLabel = label, onClick = onClick)
+                else tagged.semantics {
+                    if (exposeContentDescription) contentDescription = label
+                    disabled()
+                }
+            }
+
         val names = selection.deityNames(false)
         idolPlacement.heads.forEachIndexed { index, head ->
             val width = if (single) idolPlacement.width else idolPlacement.width / 2
             Box(
                 target(TemplePoint(head.x - width / 2, idolPlacement.top), width, idolPlacement.height)
                     .zIndex(12f)
-                    .clickable(onClickLabel = names[index]) { onDeityClick(index) }
+                    .ritualItemTarget("altar-deity-$index", names[index], allEnabled, exposeContentDescription = false) {
+                        onDeityClick(index)
+                    }
             )
         }
-        // Kumkum & Chandan katoris in the upper-center of the Puja Thali also trigger deity tilak/action when tapped
-        if (session.step == WorshipStep.TILAK) {
-            val nextDeity = (0 until selection.deityCount).firstOrNull { it !in session.tilak } ?: 0
-            Box(
-                target(TemplePoint(TempleSceneLayout.plate.x - .09f, TempleSceneLayout.plate.y - .11f), .18f, .10f)
-                    .zIndex(12f)
-                    .clickable(onClickLabel = "तिलक · Apply tilak") { onDeityClick(nextDeity) }
+        // Kumkum & Chandan katoris in the upper-center of the Puja Thali trigger tilak freely
+        Box(
+            target(TemplePoint(TempleSceneLayout.plate.x - .095f, TempleSceneLayout.plate.y - .152f), .19f, .105f)
+                .zIndex(12f)
+                .ritualItemTarget("altar-item-tilak", "तिलक · Apply tilak", tilakActive, onClick = onTilakClick)
+        )
+        // Copper Water Kalash / Lota on the right altar floor triggers sacred bathing during the Bath step
+        val triggerWater by rememberUpdatedState(onWaterClick)
+        val waterGesture = if (waterActive) {
+            Modifier.pointerInput(viewport, selection.deityCount) {
+                var drag = Offset.Zero
+                detectDragGestures(
+                    onDragStart = { drag = Offset.Zero },
+                    onDragCancel = { drag = Offset.Zero },
+                    onDragEnd = {
+                        val draggedDeity = if (selection.deityCount > 1 && abs(drag.x) > 24.dp.toPx()) {
+                            if (drag.x < -24.dp.toPx()) 0 else 1
+                        } else null
+                        triggerWater(draggedDeity)
+                    },
+                    onDrag = { change, amount -> change.consume(); drag += amount }
+                )
+            }
+        } else Modifier
+        Box(
+            target(
+                TemplePoint(TempleSceneLayout.waterLota.x - .065f, TempleSceneLayout.waterLota.y - waterLotaHeight - .015f),
+                .13f,
+                waterLotaHeight + .03f
             )
-        }
+                .zIndex(12f)
+                .then(waterGesture)
+                .ritualItemTarget("altar-item-water", "जल स्नान · Bathe with water", waterActive) { onWaterClick(null) }
+        )
         Box(
             target(TemplePoint(incensePoint.x - .055f, incensePoint.y - incenseHeight), .11f, incenseHeight + .02f)
                 .zIndex(12f)
-                .clickable(onClickLabel = "धूप जलाएँ · Light incense", onClick = onDiyaClick)
+                .ritualItemTarget("altar-item-incense", "धूप जलाएँ · Light incense", incenseActive, onClick = onDiyaClick)
         )
         Box(
             target(TemplePoint(oilPoint.x - .06f, oilPoint.y - standingLampHeight), .12f, standingLampHeight + .02f)
                 .zIndex(12f)
-                .clickable(onClickLabel = "दीप जलाएँ · Light oil lamp", onClick = onDiyaClick)
+                .ritualItemTarget("altar-item-lamp", "दीप जलाएँ · Light oil lamp", lampActive, onClick = onDiyaClick)
         )
         Box(
             target(TemplePoint(TempleSceneLayout.bell.x - .065f, TempleSceneLayout.bell.y - .10f), .13f, .19f)
                 .zIndex(12f)
-                .clickable(onClickLabel = "घंटी · Bell", onClick = onBellClick)
+                .ritualItemTarget("altar-item-bell", "घंटी · Bell", bellEnabled, onClick = onBellClick)
         )
         val offerFlower by rememberUpdatedState(onFlowerClick)
         repeat(TempleSceneLayout.FLOWER_COUNT) { i ->
             val point = TempleSceneLayout.plateFlower(i)
+            val flowerDrag = if (flowersActive) {
+                Modifier.pointerInput(i) {
+                    detectDragGestures(
+                        onDragEnd = { offerFlower(i) },
+                        onDrag = { change, _ -> change.consume() }
+                    )
+                }
+            } else Modifier
             Box(
                 target(TemplePoint(point.x - .038f, point.y - .038f), .076f, .076f)
                     .zIndex(12f)
-                    .pointerInput(i) {
-                        var drag = Offset.Zero
-                        detectDragGestures(
-                            onDragStart = { drag = Offset.Zero },
-                            onDragCancel = { drag = Offset.Zero },
-                            onDragEnd = {
-                                if (drag.y < -24.dp.toPx() && -drag.y > abs(drag.x)) offerFlower(i)
-                            },
-                            onDrag = { change, amount -> change.consume(); drag += amount }
-                        )
-                    }
-                    .clickable(onClickLabel = "पुष्प ${i + 1} · Offer flower ${i + 1}") { onFlowerClick(i) }
+                    .then(flowerDrag)
+                    .ritualItemTarget("altar-item-flower-$i", "पुष्प ${i + 1} · Offer flower ${i + 1}", flowersActive) { onFlowerClick(i) }
             )
         }
         Box(
@@ -1206,32 +1343,58 @@ fun MandirAltarView(
                 TempleSceneLayout.CONCH_HEIGHT
             )
                 .zIndex(12f)
-                .clickable(onClickLabel = "शंख · Sound conch", onClick = onConchClick)
+                .ritualItemTarget("altar-item-conch", "शंख · Sound conch", conchActive, onClick = onConchClick)
         )
         val currentPrasadPoint = when {
             prasadRunning -> idolPlacement.prasadPosition(prasadProgress)
             session.prasadOffered -> idolPlacement.prasadFloor
             else -> TempleSceneLayout.prasadRest
         }
+        val triggerPrasad by rememberUpdatedState(onPrasadClick)
+        val prasadDrag = if (prasadActive) {
+            Modifier.pointerInput(Unit) {
+                detectDragGestures(
+                    onDragEnd = { triggerPrasad() },
+                    onDrag = { change, _ -> change.consume() }
+                )
+            }
+        } else Modifier
         Box(
             target(TemplePoint(currentPrasadPoint.x - .085f, currentPrasadPoint.y - .085f), .17f, .17f)
                 .zIndex(12f)
-                .pointerInput(Unit) {
-                    var drag = Offset.Zero
-                    detectDragGestures(
-                        onDragStart = { drag = Offset.Zero },
-                        onDragCancel = { drag = Offset.Zero },
-                        onDragEnd = {
-                            if (drag.y < -20.dp.toPx() || drag.getDistance() > 16.dp.toPx()) {
-                                onPrasadClick()
-                            }
-                        },
-                        onDrag = { change, amount -> change.consume(); drag += amount }
-                    )
-                }
-                .clickable(onClickLabel = "प्रसाद अर्पित करें · Offer prasad", onClick = onPrasadClick)
+                .then(prasadDrag)
+                .ritualItemTarget("altar-item-prasad", "प्रसाद अर्पित करें · Offer prasad", prasadActive, onClick = onPrasadClick)
         )
         val triggerAarti by rememberUpdatedState(onAartiClick)
+        val isAartiRunning by rememberUpdatedState(aartiRunning)
+        val aartiDrag = if (aartiActive || (interactionsEnabled && aartiRunning)) {
+            Modifier.pointerInput(viewport) {
+                detectDragGestures(
+                    onDragStart = {
+                        if (!isAartiRunning) triggerAarti()
+                    },
+                    onDragEnd = {
+                        interactiveAartiPoint = null
+                        interactiveAartiVelX = 0f
+                    },
+                    onDragCancel = {
+                        interactiveAartiPoint = null
+                        interactiveAartiVelX = 0f
+                    },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        val cur = interactiveAartiPoint ?: TempleSceneLayout.aartiRest
+                        val dx = dragAmount.x / viewport.imageWidth.coerceAtLeast(1f)
+                        val dy = dragAmount.y / viewport.imageWidth.coerceAtLeast(1f)
+                        interactiveAartiVelX = (interactiveAartiVelX * 0.6f + dx * 16f).coerceIn(-1.5f, 1.5f)
+                        interactiveAartiPoint = TemplePoint(
+                            (cur.x + dx).coerceIn(0.14f, 0.86f),
+                            (cur.y + dy).coerceIn(0.22f, 0.88f)
+                        )
+                    }
+                )
+            }
+        } else Modifier
         Box(
             target(
                 TemplePoint(
@@ -1242,33 +1405,8 @@ fun MandirAltarView(
                 TempleSceneLayout.AARTI_HEIGHT
             )
                 .zIndex(12f)
-                .pointerInput(viewport) {
-                    detectDragGestures(
-                        onDragStart = {
-                            triggerAarti()
-                        },
-                        onDragEnd = {
-                            interactiveAartiPoint = null
-                            interactiveAartiVelX = 0f
-                        },
-                        onDragCancel = {
-                            interactiveAartiPoint = null
-                            interactiveAartiVelX = 0f
-                        },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            val cur = interactiveAartiPoint ?: TempleSceneLayout.aartiRest
-                            val dx = dragAmount.x / viewport.imageWidth.coerceAtLeast(1f)
-                            val dy = dragAmount.y / viewport.imageWidth.coerceAtLeast(1f)
-                            interactiveAartiVelX = (interactiveAartiVelX * 0.6f + dx * 16f).coerceIn(-1.5f, 1.5f)
-                            interactiveAartiPoint = TemplePoint(
-                                (cur.x + dx).coerceIn(0.14f, 0.86f),
-                                (cur.y + dy).coerceIn(0.22f, 0.88f)
-                            )
-                        }
-                    )
-                }
-                .clickable(onClickLabel = "दीप आरती · Diya aarti", onClick = onAartiClick)
+                .then(aartiDrag)
+                .ritualItemTarget("altar-item-aarti", "दीप आरती · Diya aarti", aartiActive, onClick = onAartiClick)
         )
 
         // Interactive 3D Hand-Held Aarti Canvas: during Aarti, devotee can touch & circle the 3D Aarti Thali anywhere around the deities
@@ -1280,8 +1418,9 @@ fun MandirAltarView(
                     .pointerInput(viewport) {
                         detectDragGestures(
                             onDragStart = { touchOffset ->
-                                val tx = ((touchOffset.x - viewport.left) / viewport.imageWidth).coerceIn(0.14f, 0.86f)
-                                val ty = (touchOffset.y / viewport.imageWidth).coerceIn(0.22f, 0.88f)
+                                val pt = viewport.point(touchOffset.x, touchOffset.y)
+                                val tx = pt.x.coerceIn(0.14f, 0.86f)
+                                val ty = pt.y.coerceIn(0.22f, 0.88f)
                                 interactiveAartiPoint = TemplePoint(tx, ty)
                                 interactiveAartiVelX = 0f
                             },
@@ -1295,8 +1434,9 @@ fun MandirAltarView(
                             },
                             onDrag = { change, dragAmount ->
                                 change.consume()
-                                val tx = ((change.position.x - viewport.left) / viewport.imageWidth).coerceIn(0.14f, 0.86f)
-                                val ty = (change.position.y / viewport.imageWidth).coerceIn(0.22f, 0.88f)
+                                val pt = viewport.point(change.position.x, change.position.y)
+                                val tx = pt.x.coerceIn(0.14f, 0.86f)
+                                val ty = pt.y.coerceIn(0.22f, 0.88f)
                                 val dx = dragAmount.x / viewport.imageWidth.coerceAtLeast(1f)
                                 interactiveAartiVelX = (interactiveAartiVelX * 0.6f + dx * 16f).coerceIn(-1.5f, 1.5f)
                                 interactiveAartiPoint = TemplePoint(tx, ty)

@@ -35,9 +35,9 @@ import kotlin.random.Random
 /** Permanent festive dressing, behind idols and ritual objects, independent of puja progress. */
 @Composable
 internal fun DiwaliDecorations(viewport: TempleViewport, animate: Boolean) {
-    val orange = rememberCachedAssetImage("shrine/flowers/sunflower.png")
-    val yellow = rememberCachedAssetImage("shrine/flowers/marigold_yellow.png")
-    val rose = rememberCachedAssetImage("shrine/flowers/rose.png")
+    val orange = rememberCachedAssetImage("shrine/flowers/sunflower.webp")
+    val yellow = rememberCachedAssetImage("shrine/flowers/marigold_yellow.webp")
+    val rose = rememberCachedAssetImage("shrine/flowers/rose.webp")
     val flowers = remember(orange, yellow, rose) { listOf(orange, yellow, rose) }
     val petals = remember {
         val random = Random(108)

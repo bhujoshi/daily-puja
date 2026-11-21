@@ -175,7 +175,22 @@ internal object GlbAartiModelCache {
                 } else -1
                 val uvStride = uvBv?.optInt("byteStride", 8) ?: 8
 
-                val bmp = bitmapForMaterial(prim.optInt("material", 0))
+                val colAcc = if (attrs.has("COLOR_0")) accessors.getJSONObject(attrs.getInt("COLOR_0")) else null
+                val colBv = colAcc?.let { bufferViews.getJSONObject(it.getInt("bufferView")) }
+                val colOff = if (colAcc != null && colBv != null) {
+                    binStart + colBv.optInt("byteOffset", 0) + colAcc.optInt("byteOffset", 0)
+                } else -1
+                val colCompType = colAcc?.optInt("componentType", 5121) ?: 5121
+                val colComponents = if (colAcc?.optString("type", "VEC4") == "VEC3") 3 else 4
+                val colElemBytes = when (colCompType) {
+                    5126 -> 4
+                    5123 -> 2
+                    else -> 1
+                }
+                val colStride = colBv?.optInt("byteStride", colComponents * colElemBytes)
+                    ?: (colComponents * colElemBytes)
+
+                val bmp = if (colOff < 0) bitmapForMaterial(prim.optInt("material", 0)) else null
                 val bmpW = bmp?.width ?: 0
                 val bmpH = bmp?.height ?: 0
 
@@ -201,18 +216,43 @@ internal object GlbAartiModelCache {
                         rawNormals[dst] = 0f; rawNormals[dst + 1] = 1f; rawNormals[dst + 2] = 0f
                     }
 
-                    // Sample embedded baseColorTexture and blend with sacred Temple Brass (#D8AF52)
+                    // Sample pre-baked COLOR_0 or embedded baseColorTexture and blend with sacred Temple Brass (#D8AF52)
                     var tr = 224; var tg = 174; var tb = 76
-                    if (bmp != null && uvOff >= 0 && bmpW > 0 && bmpH > 0) {
+                    var sampled = false
+                    var pr = 0; var pg = 0; var pb = 0
+                    if (colOff >= 0) {
+                        val co = colOff + i * colStride
+                        when (colCompType) {
+                            5121 -> {
+                                pr = buf.get(co).toInt() and 0xFF
+                                pg = buf.get(co + 1).toInt() and 0xFF
+                                pb = buf.get(co + 2).toInt() and 0xFF
+                            }
+                            5123 -> {
+                                pr = ((buf.getShort(co).toInt() and 0xFFFF) * 255) / 65535
+                                pg = ((buf.getShort(co + 2).toInt() and 0xFFFF) * 255) / 65535
+                                pb = ((buf.getShort(co + 4).toInt() and 0xFFFF) * 255) / 65535
+                            }
+                            else -> {
+                                pr = (buf.getFloat(co) * 255f).toInt().coerceIn(0, 255)
+                                pg = (buf.getFloat(co + 4) * 255f).toInt().coerceIn(0, 255)
+                                pb = (buf.getFloat(co + 8) * 255f).toInt().coerceIn(0, 255)
+                            }
+                        }
+                        sampled = true
+                    } else if (bmp != null && uvOff >= 0 && bmpW > 0 && bmpH > 0) {
                         val uo = uvOff + i * uvStride
                         val u = buf.getFloat(uo)
                         val v = buf.getFloat(uo + 4)
                         val tx = (((u % 1f) + 1f) % 1f * (bmpW - 1)).toInt().coerceIn(0, bmpW - 1)
                         val ty = (((v % 1f) + 1f) % 1f * (bmpH - 1)).toInt().coerceIn(0, bmpH - 1)
                         val px = bmp.getPixel(tx, ty)
-                        val pr = (px shr 16) and 0xFF
-                        val pg = (px shr 8) and 0xFF
-                        val pb = px and 0xFF
+                        pr = (px shr 16) and 0xFF
+                        pg = (px shr 8) and 0xFF
+                        pb = px and 0xFF
+                        sampled = true
+                    }
+                    if (sampled) {
                         val luma = (pr * 0.35f + pg * 0.50f + pb * 0.15f) / 255f
                         val shade = (0.58f + 0.52f * luma).coerceIn(0.48f, 1.12f)
                         tr = (228f * shade).toInt().coerceIn(0, 255)

@@ -26,18 +26,20 @@ class ShrineSelectionTest {
         val standardShrines=listOf("original","marble","diwali","ivory","carved","swarna")
         val bigIdolShrines=listOf("divya_darshan","kamal_peeth","swarna_peeth")
         for(shrine in standardShrines + bigIdolShrines) {
-            for(idol in listOf("original","ganesh_hanuman","radha_krishna","shiva","lakshmi","durga","ram_darbar","hanuman")) {
+            for(idol in listOf("original","ganesh_hanuman","radha_krishna","shiva","lakshmi","durga","ram_darbar","hanuman","shanidev")) {
                 val selection=ShrineSelection(mapOf("shrine" to shrine,"idols" to idol))
                 val baseline=IdolPlacement(ShrineSelection(mapOf("shrine" to "marble","idols" to idol)))
                 val placement=IdolPlacement(selection)
                 assertEquals(selection.deityCount,placement.heads.size)
                 if (shrine in standardShrines) {
+                    assertTrue("Standard arched shrine $shrine should display a garland", placement.space.showGarland)
                     assertEquals(baseline.left,placement.left,.0001f)
                     assertEquals(baseline.top,placement.top,.0001f)
                     assertEquals(baseline.width,placement.width,.0001f)
                     assertEquals(baseline.height,placement.height,.0001f)
                     assertEquals(baseline.space.lamp,placement.space.lamp)
                 } else {
+                    assertFalse("Big-idol shrine $shrine should omit the garland", placement.space.showGarland)
                     assertTrue("Big-idol shrine $shrine/$idol should be significantly wider than standard",
                         placement.width > baseline.width * 1.35f)
                     assertTrue("Big-idol shrine $shrine/$idol should be significantly taller than standard",
@@ -97,5 +99,15 @@ class ShrineSelectionTest {
         val bellPixel = tallViewport.pixel(TempleSceneLayout.bell)
         val bellRadiusPixels = tallViewport.imageWidth * TempleSceneLayout.bellHalfWidth
         assertTrue("Bell left edge must be inside screen", bellPixel.x - bellRadiusPixels > 0f)
+
+        // Verify phone viewports keep headroom above the shrine and balanced floor margin below the thali
+        val phoneViewport = com.worship.nityamandir.engine.TempleViewport(1080f, 2400f)
+        assertTrue("Top headroom must exist above shrine", phoneViewport.top >= phoneViewport.height * 0.06f)
+        val thaliBottom = phoneViewport.top + phoneViewport.imageWidth * com.worship.nityamandir.engine.TempleViewport.PLATE_BOTTOM_FACTOR
+        assertTrue("Thali must stay clear of the bottom edge", thaliBottom <= phoneViewport.height - 80f)
+        val platePixel = phoneViewport.pixel(TempleSceneLayout.plate)
+        val roundTrip = phoneViewport.point(platePixel.x, platePixel.y)
+        assertEquals(TempleSceneLayout.plate.x, roundTrip.x, 0.0001f)
+        assertEquals(TempleSceneLayout.plate.y, roundTrip.y, 0.0001f)
     }
 }
